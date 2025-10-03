@@ -1,0 +1,77 @@
+{
+  "primary": "#461bff",
+  "secondary": "#2d1ab4",
+  "body": {
+    "bg": "#d0e0e3"
+  },
+  "footer": {
+    "bg": "#461bff",
+    "text": "#fff",
+    "bgFaixa": "#fff"
+  },
+  "formLogin": {
+    "bg": "#fff",
+    "text": "#585858"
+  },
+  "Button": {
+    "bg": "#461bff",
+    "text": "#fff",
+    "textHover": "#461bff",
+    "borderHover": "#461bff",
+    "bgHover": "#fff"
+  },
+  "Header": {
+    "bg": "#fff"
+  },
+  "MenuNav": {
+    "text": "#333",
+    "textHover": "#461bff"
+  },
+  "SearchBar": {
+    "bg": "#fff",
+    "text": "#585858",
+    "border": "#bbb",
+    "borderFocus": "#461bff"
+  },
+  "Slider": {
+    "bg": "#461bff",
+    "bgDegrade": "#2d1ab4"
+  },
+  "Categorias": {
+    "bg": "#fff",
+    "bgCategoria": "#461bff",
+    "text": "#fff"
+  },
+  "Banner": {
+    "bg": "#fff"
+  },
+  "TemplateEmail": {
+    "bgLogo": "#EEEEEE",
+    "fontColor": "#333333",
+    "codeColor": "#004080",
+    "footerColor": "#f1f1f1"
+  },
+  "Container": {
+    "bg": "#fff"
+  },
+  "TitleSection": {
+    "text": "#333"
+  },
+  "modalProduct": {
+    "overlay": "#333",
+    "bgModal": "#fff",
+    "text": "#333",
+    "border": "#461bff",
+    "button": "#461bff",
+    "hoverButton": "#00C951",
+    "textButton": "#fff"
+  },
+  "politicaCookiesTerms": {
+    "bg": "#461bff",
+    "text": "#fff",
+    "button": "#00C951",
+    "border": "#461bff",
+    "hoverButton": "#00f981",
+    "textButton": "#fff"
+  }
+}

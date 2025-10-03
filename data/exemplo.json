@@ -1,0 +1,227 @@
+{
+  "success": true,
+  "message": "Produtos encontrados",
+  "result": [
+    {
+      "chavePro": "009599",
+      "codPro": "51736-AMIL",
+      "descr": "Lápis  com borracha",
+      "descr2": "Lápis com borracha.\r\nObservação: Nao vem apontado\r\nMedida: ø7 x 190 mm \r\nÁrea de gravação: 40 x 5 mm\r\nGravação em silk, 01 cor, 01 posição",
+      "descrWeb": "Lápis com borracha",
+      "descrWeb2": "Lápis com borracha.\r\nObservação: Nao vem apontado\r\n",
+      "descrCompilada": "51736-TOTALEXPRESS - Lápis com borracha.\r\nObservação: Nao vem apontado. Medida: 190mm x 7mm. Área de gravação: 40mm x 5mm.",
+      "descCompilada2": ".",
+      "landingPage": "1",
+      "urlAmigavel": "51736-amil",
+      "fatorFrete": "1.0000",
+      "associacaoMarca": "",
+      "associacaoMarcaRequerida": "0",
+      "calculoFrete": "1",
+      "estControl": "0",
+      "eventoData": "0",
+      "ordemExibicao": "0",
+      "pesoMultiplo": "0",
+      "peso": "0.0000",
+      "dataCadastrado": "2017-07-13 00:00:00",
+      "dataAtualizado": "2025-05-16 13:26:15",
+      "cores": [
+        {
+          "chaveProCor": "034916",
+          "chavePro": "009599",
+          "descrProCor": "BRANCO",
+          "descrFacialProCor": "",
+          "disponivelProCor": "1",
+          "dataCadastradoProCor": "2024-07-02 17:26:26",
+          "dataAtualizadoProCor": "2025-05-14 22:05:48",
+          "cadastradoProCor": "1"
+        },
+        {
+          "chaveProCor": "034917",
+          "chavePro": "009599",
+          "descrProCor": "ROXO",
+          "descrFacialProCor": "",
+          "disponivelProCor": "1",
+          "dataCadastradoProCor": "2024-07-02 17:26:30",
+          "dataAtualizadoProCor": "2025-05-14 22:05:48",
+          "cadastradoProCor": "1"
+        },
+        {
+          "chaveProCor": "034918",
+          "chavePro": "009599",
+          "descrProCor": "VERMELHO",
+          "descrFacialProCor": "",
+          "disponivelProCor": "1",
+          "dataCadastradoProCor": "2024-07-02 17:26:40",
+          "dataAtualizadoProCor": "2025-05-14 22:05:48",
+          "cadastradoProCor": "1"
+        }
+      ],
+      "precos": [
+        {
+          "chaveProPrc": "0000110686",
+          "chavePro": "009599",
+          "qtdiProPrc": "1.00",
+          "qtdfProPrc": "9999999.00",
+          "vluProPrc": "4.40",
+          "conciliadoProPrc": "1",
+          "dataCadastradoProPrc": "2025-05-14 22:05:48",
+          "dataAtualizadoProPrc": "2023-07-19 00:00:00",
+          "cadastradoProPrc": "1"
+        }
+      ],
+      "imagens": [
+        {
+          "chaveProImg": "034810",
+          "chavePro": "009599",
+          "chavePersonal": "",
+          "urlProImg": "https://unitycorp.com.br/FOTOS/UBP/AMIL/AMIL -51736 - 1000.jpg",
+          "urlProImg40": "",
+          "urlProImg120": "",
+          "urlProImgCor": "",
+          "urlProImgSuper": "https://unitycorp.com.br/FOTOS/UBP/AMIL/AMIL -51736 - 1000.jpg",
+          "tipoArqProImg": "IMAGEM",
+          "corProImg": "AZUL",
+          "homeProImg": "1",
+          "padraoProImg": "1",
+          "dataCadastradoProImg": "2024-07-03 08:37:32",
+          "dataAtualizadoProImg": "2024-07-03 08:37:32",
+          "cadastradoProImg": "1"
+        }
+      ]
+    },
+    {
+      "chavePro": "009602",
+      "codPro": "57253-AMIL",
+      "descr": "Caixa de som em ABS com acabamento emborrachado",
+      "descr2": "Caixa de som em ABS com acabamento emborrachado. Acompanha microfone, transmissão por bluetooth, leitor de cartões TF, com 3W/4?, autonomia de até 2 h, função para atender chamadas, controlo de volume e conexão à playlist do dispositivo móvel. Inclui cabo USB/micro USB para carregar.",
+      "descrWeb": "Caixa de som em ABS com acabamento emborrachado",
+      "descrWeb2": "Caixa de som em ABS com acabamento emborrachado. Acompanha microfone, transmissão por bluetooth, leitor de cartões TF, com 3W/4?, autonomia de até 2 h, função para atender chamadas, controlo de volume e conexão à playlist do dispositivo móvel. Inclui cabo USB/micro USB para carregar. ",
+      "descrCompilada": "57253-TOTALEXPRESS - Caixa de som em ABS com acabamento emborrachado. Acompanha microfone, transmissão por bluetooth, leitor de cartões TF, com 3W/4?, autonomia de até 2 h, função para atender chamadas, controlo de volume e conexão à playlist do dispositivo móvel. Inclui cabo USB/micro USB para carregar. Medida: 59mm x 55mm. Área de gravação: 120mm x 20mm.",
+      "descCompilada2": ".",
+      "landingPage": "1",
+      "urlAmigavel": "57253-amil",
+      "fatorFrete": "1.0000",
+      "associacaoMarca": "",
+      "associacaoMarcaRequerida": "0",
+      "calculoFrete": "1",
+      "estControl": "0",
+      "eventoData": "0",
+      "ordemExibicao": "0",
+      "pesoMultiplo": "0",
+      "peso": "0.0000",
+      "dataCadastrado": "2019-08-02 00:00:00",
+      "dataAtualizado": "2024-12-27 14:24:55",
+      "cores": [
+        {
+          "chaveProCor": "034921",
+          "chavePro": "009602",
+          "descrProCor": "AZUL",
+          "descrFacialProCor": "",
+          "disponivelProCor": "1",
+          "dataCadastradoProCor": "2024-07-03 08:55:13",
+          "dataAtualizadoProCor": "2025-05-14 22:09:46",
+          "cadastradoProCor": "1"
+        }
+      ],
+      "precos": [
+        {
+          "chaveProPrc": "0000110692",
+          "chavePro": "009602",
+          "qtdiProPrc": "1.00",
+          "qtdfProPrc": "999999.00",
+          "vluProPrc": "138.71",
+          "conciliadoProPrc": "1",
+          "dataCadastradoProPrc": "2025-05-14 22:09:46",
+          "dataAtualizadoProPrc": "2023-07-19 00:00:00",
+          "cadastradoProPrc": "1"
+        }
+      ],
+      "imagens": [
+        {
+          "chaveProImg": "034816",
+          "chavePro": "009602",
+          "chavePersonal": "",
+          "urlProImg": "https://unitycorp.com.br/FOTOS/UBP/AMIL/AMIL -97253- 1000.jpg",
+          "urlProImg40": "",
+          "urlProImg120": "",
+          "urlProImgCor": "",
+          "urlProImgSuper": "https://unitycorp.com.br/FOTOS/UBP/AMIL/AMIL -97253- 1000.jpg",
+          "tipoArqProImg": "IMAGEM",
+          "corProImg": "AZUL",
+          "homeProImg": "1",
+          "padraoProImg": "1",
+          "dataCadastradoProImg": "2024-07-03 08:55:32",
+          "dataAtualizadoProImg": "2024-07-03 08:55:32",
+          "cadastradoProImg": "1"
+        }
+      ]
+    },
+    {
+      "chavePro": "009604",
+      "codPro": "92293-AMIL",
+      "descr": "Mochila trolley para notebook. Nylon 999. Material à prova de água. ",
+      "descr2": "Mochila trolley para notebook. Nylon 999. Material à prova de água. Compartimento principal almofadado para notebook até 17''. Segundo compartimento forrado e com diversos bolsos. Bolso frontal com zipper e bolsos laterais com tela. Com estrutura removível e 2 rodas. Pega extensível em alumínio, com mola (altura da pega estendida: 550 mm). ",
+      "descrWeb": "Mochila trolley para notebook. Nylon 999. Material à prova de água. ",
+      "descrWeb2": "Mochila trolley para notebook. Nylon 999. Material à prova de água. Compartimento principal almofadado para notebook até 17''. Segundo compartimento forrado e com diversos bolsos. Bolso frontal com zipper e bolsos laterais com tela. Com estrutura removível e 2 rodas. Pega extensível em alumínio, com mola (altura da pega estendida: 550 mm). ",
+      "descrCompilada": "92293-TOTALEXPRESS - Mochila trolley para notebook. Nylon 999. Material à prova de água. Compartimento principal almofadado para notebook até 17''. Segundo compartimento forrado e com diversos bolsos. Bolso frontal com zipper e bolsos laterais com tela. Com estrutura removível e 2 rodas. Pega extensível em alumínio, com mola (altura da pega estendida: 550 mm). Medida: 460mm x 350mm x 210mm. Área de gravação: 40mm x 10mm.",
+      "descCompilada2": ".",
+      "landingPage": "1",
+      "urlAmigavel": "92293-amil",
+      "fatorFrete": "1.0000",
+      "associacaoMarca": "",
+      "associacaoMarcaRequerida": "0",
+      "calculoFrete": "1",
+      "estControl": "0",
+      "eventoData": "0",
+      "ordemExibicao": "0",
+      "pesoMultiplo": "0",
+      "peso": "0.0000",
+      "dataCadastrado": "2017-07-19 00:00:00",
+      "dataAtualizado": "2024-12-30 15:10:10",
+      "cores": [
+        {
+          "chaveProCor": "034926",
+          "chavePro": "009604",
+          "descrProCor": "PRETO",
+          "descrFacialProCor": "",
+          "disponivelProCor": "1",
+          "dataCadastradoProCor": "2024-07-03 09:05:16",
+          "dataAtualizadoProCor": "2025-05-14 22:11:16",
+          "cadastradoProCor": "1"
+        }
+      ],
+      "precos": [
+        {
+          "chaveProPrc": "0000110696",
+          "chavePro": "009604",
+          "qtdiProPrc": "1.00",
+          "qtdfProPrc": "1000.00",
+          "vluProPrc": "565.12",
+          "conciliadoProPrc": "1",
+          "dataCadastradoProPrc": "2025-05-14 22:11:16",
+          "dataAtualizadoProPrc": "2023-07-20 00:00:00",
+          "cadastradoProPrc": "1"
+        }
+      ],
+      "imagens": [
+        {
+          "chaveProImg": "034822",
+          "chavePro": "009604",
+          "chavePersonal": "",
+          "urlProImg": "https://unitycorp.com.br/FOTOS/UBP/AMIL/AMIL -92293- 1000.jpg",
+          "urlProImg40": "",
+          "urlProImg120": "",
+          "urlProImgCor": "",
+          "urlProImgSuper": "https://unitycorp.com.br/FOTOS/UBP/AMIL/AMIL -92293- 1000.jpg",
+          "tipoArqProImg": "IMAGEM",
+          "corProImg": "PRETO",
+          "homeProImg": "1",
+          "padraoProImg": "1",
+          "dataCadastradoProImg": "2024-07-03 09:58:29",
+          "dataAtualizadoProImg": "2024-07-03 09:58:29",
+          "cadastradoProImg": "1"
+        }
+      ]
+    }
+  ]
+}
