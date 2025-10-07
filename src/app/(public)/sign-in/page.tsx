@@ -2,7 +2,6 @@ import { Metadata } from "next";
 import Image from "next/image";
 import { ContainerForms } from "./Form";
 import Bg_image from "../../assets/bg-signIn.jpg";
-
 export const metadata: Metadata = {
   title: "Login - Amil",
   description: "Faça login para acessar sua conta Amil.",

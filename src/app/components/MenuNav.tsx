@@ -54,6 +54,12 @@ export default function MenuNav() {
               <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
                 Usuário cadastrados
               </Link>
+              <Link
+                href="/adicionar-usuario"
+                className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer"
+              >
+                Adicionar usuário
+              </Link>
               <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
                 Usuários importar
               </Link>

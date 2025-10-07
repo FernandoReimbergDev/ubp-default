@@ -8,11 +8,12 @@ import { useAuth } from "../../../Context/AuthContext";
 import type { LoginForm } from "./schemas";
 import { loginSchema } from "./schemas";
 import { AuthButtons } from "@/app/components/AuthButtons";
-// import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, requestAccess, requestCodePassword, userName, setStep } = useAuth();
+  const sso_enabled = false;
 
   const {
     register,
@@ -100,7 +101,8 @@ export function LoginForm() {
         <Button disabled={isSubmitting} type="submit">
           Continuar <ArrowRight />
         </Button>
-        <AuthButtons />
+        {sso_enabled && <AuthButtons />}
+
         <div className="h-6 ">{isSubmitting && <span className="loader"></span>}</div>
       </form>
       <button

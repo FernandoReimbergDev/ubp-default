@@ -196,12 +196,14 @@ export const fetchAddressFromCep: HandleMaskParams = async (value, setValue, tri
     setValue("bairro", data.bairro || "");
     setValue("municipio", data.localidade || "");
     setValue("uf", data.uf || "");
+    setValue("ibge", data.ibge || "");
     setValue("ddd", data.ddd || "");
 
     trigger("logradouro");
     trigger("bairro");
     trigger("municipio");
     trigger("uf");
+    trigger("ibge");
     trigger("ddd");
   } catch {
     setError("cep", {
