@@ -52,6 +52,39 @@ async function isValidJwt(token?: string) {
   }
 }
 
+async function readJwtPayload(token?: string): Promise<Record<string, unknown> | null> {
+  if (!token) return null;
+  try {
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeRoles(userRoles: unknown): string[] {
+  if (!userRoles) return [];
+  const list = Array.isArray(userRoles) ? userRoles : [userRoles];
+  return list
+    .map((r) => {
+      if (typeof r === "string") return r;
+      if (r && typeof r === "object" && "name" in r && typeof (r as any).name === "string") {
+        return (r as any).name as string;
+      }
+      return undefined;
+    })
+    .filter((v): v is string => typeof v === "string")
+    .map((v) => v.toLowerCase());
+}
+
+function userHasAnyRequiredRole(userRoles: unknown, required: string | string[]): boolean {
+  const roles = normalizeRoles(userRoles);
+  if (!roles.length) return false;
+  const requiredList = (Array.isArray(required) ? required : [required]).map((r) => r.toLowerCase());
+  return roles.some((role) => requiredList.includes(role));
+}
+
 // --- Middleware --- //
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -64,6 +97,12 @@ export async function middleware(request: NextRequest) {
   // 2) Checar autenticação via cookie 'auth'
   const accessToken = request.cookies.get("auth")?.value;
   const isAuthenticated = await isValidJwt(accessToken);
+  const payload = isAuthenticated ? await readJwtPayload(accessToken) : null;
+  const rolesFromJwt = (payload?.roles ?? payload?.role ?? []) as unknown; // suporta roles como string/string[]/objetos
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[MW] payload:", payload);
+    console.log("[MW] rolesFromJwt raw:", rolesFromJwt);
+  }
 
   // 3) Regras para rotas públicas
   if (publicExact || isPublicPrefix) {
@@ -86,7 +125,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(to);
   }
 
-  // 5) Autenticado e rota privada → segue o baile
+  // 5) Autenticado e rota privada → checar roles por rota
+  // Mapa simples de ACL por pathname exato ou por prefixo se necessário
+  const acl: { path: string; required: string | string[] }[] = [
+    { path: "/adicionar-usuario", required: ["Administrador"] },
+  ];
+
+  const rule = acl.find((r) => r.path === pathname);
+  if (rule) {
+    if (process.env.NODE_ENV !== "production") {
+      // Log de diagnóstico em dev
+      console.log("[ACL] pathname:", pathname, "roles:", normalizeRoles(rolesFromJwt), "required:", rule.required);
+    }
+  }
+  if (rule && !userHasAnyRequiredRole(rolesFromJwt, rule.required)) {
+    // Redireciona para página de não autorizado
+    return NextResponse.redirect(new URL("/not-autorized", request.url));
+  }
+
+  // Caso passe, segue o baile
   return NextResponse.next();
 }
 

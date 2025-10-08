@@ -245,6 +245,10 @@ export type UsuarioContext = {
 
 export type AuthContextType = {
   cliente: UsuarioContext | null;
+  roles: string[];
+  hasRole: (role: string) => boolean;
+  hasAnyRole: (roles: string[]) => boolean;
+  fetchUserData: () => Promise<boolean>; // NOVO
   step: string;
   setStep: React.Dispatch<React.SetStateAction<"username" | "signIn" | "code" | "password" | "resetPassword">>;
   email: string;

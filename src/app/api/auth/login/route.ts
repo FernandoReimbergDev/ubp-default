@@ -33,13 +33,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, details: data }, { status: response.status });
     }
 
+    const result = data.result;
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[LOGIN] result keys:", result ? Object.keys(result) : null);
+      console.log("[LOGIN] sample role fields:", {
+        role: (result as any)?.role,
+        roles: (result as any)?.roles,
+        rules: (result as any)?.rules,
+      });
+    }
     const user = {
-      id: data.result.id,
+      id: result.id,
     };
+
+    // Extrai roles como array de strings (nome) para o middleware
+    // Tenta extrair de result.role, result.roles, result.rules
+    const rawRoles: unknown = (result as any)?.role ?? (result as any)?.roles ?? (result as any)?.rules ?? [];
+    const rolesFromApi: string[] = Array.isArray(rawRoles)
+      ? rawRoles
+          .map((r: unknown) => {
+            if (typeof r === "string") return r;
+            if (r && typeof r === "object" && "name" in (r as any) && typeof (r as any).name === "string") {
+              return (r as any).name as string;
+            }
+            return undefined;
+          })
+          .filter((v: unknown): v is string => typeof v === "string")
+      : [];
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[LOGIN] rolesFromApi:", rolesFromApi);
+    }
 
     // Token leve para o middleware (não criptografado)
     const secret = new TextEncoder().encode(JWT_SECRET);
-    const accessToken = await new SignJWT({ sub: user.id, iss: "unitybrindes" })
+    const accessToken = await new SignJWT({ sub: user.id, iss: "unitybrindes", role: rolesFromApi })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime("15m")
       .sign(secret);

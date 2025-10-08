@@ -15,7 +15,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [cliente, setCliente] = useState<UsuarioContext | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [roles, setRoles] = useState<string[]>([]);
 
+  const hasRole = (role: string) => roles.includes(role.toLowerCase());
+  const hasAnyRole = (requiredRoles: string[]) => requiredRoles.some((role) => hasRole(role));
+
+  const fetchUserData = async () => {
+    try {
+      const res = await fetch("/api/me", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        // Token inválido ou expirado
+        setCliente(null);
+        setRoles([]);
+        Cookies.remove("cliente");
+        return false;
+      }
+
+      const { user, roles: userRoles } = await res.json();
+      setCliente(user);
+      setRoles(userRoles);
+      Cookies.set("cliente", JSON.stringify(user), { expires: 7 });
+
+      return true;
+    } catch (error) {
+      console.error("Erro ao buscar dados do usuário:", error);
+      setCliente(null);
+      setRoles([]);
+      Cookies.remove("cliente");
+      return false;
+    }
+  };
   // Reidrata sessão ao carregar
   useEffect(() => {
     const stored = Cookies.get("cliente");
@@ -24,7 +57,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCliente(JSON.parse(stored));
       } catch {
         Cookies.remove("cliente");
+        setLoading(false);
+        return;
       }
+
+      // Busca dados frescos em background
+      fetchUserData().finally(() => setLoading(false));
     }
     setLoading(false);
   }, []);
@@ -105,18 +143,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!res.ok) {
         setCliente(null);
+        setRoles([]);
         Cookies.remove("cliente");
         return false;
       }
 
-      const { user } = await res.json();
-      setCliente(user);
-      Cookies.set("cliente", JSON.stringify(user), { expires: 7 });
+      // Após login bem-sucedido, buscar dados completos
+      await fetchUserData();
       router.push("/");
 
       return true;
     } catch (err) {
       setCliente(null);
+      setRoles([]);
       Cookies.remove("cliente");
       console.error("Erro ao fazer login:", err);
       return false;
@@ -134,6 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       Cookies.remove("cliente");
       setCliente(null);
+      setRoles([]);
       setUserName("");
       setStep("username");
       router.push("/sign-in");
@@ -167,6 +207,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         cliente,
+        roles,
+        hasRole,
+        hasAnyRole,
+        fetchUserData,
         step,
         setStep,
         code,

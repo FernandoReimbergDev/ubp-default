@@ -5,7 +5,8 @@ import { useAuth } from "../Context/AuthContext";
 import { useState } from "react";
 
 export default function MenuNav() {
-  const { signOut } = useAuth();
+  const { signOut, hasAnyRole } = useAuth();
+  console.log(hasAnyRole(["Administrador", "representante"]));
   const [dropdownAdm, setDropdownAdm] = useState(false);
   const [dropdownMais, setDropdownMais] = useState(false);
 
@@ -17,62 +18,64 @@ export default function MenuNav() {
     <ul className="flex flex-col xl:flex-row xl:items-center items-start py-4 gap-4 mr-4 font-semibold text-MenuNav-text text-sm bg-Header-bg h-full">
       <Link href="/produtos">Produtos</Link>
 
-      <div className="group relative bg-Header-bg">
-        <span>
-          <span
-            className="flex items-center cursor-pointer select-none"
-            onClick={() => {
-              handleOpenDropDown(setDropdownAdm, dropdownAdm);
-            }}
-          >
-            Administração {!dropdownAdm ? <ChevronDown className="xl:hidden" /> : <ChevronUp className="xl:hidden" />}
-          </span>
-          <div
-            className={`xl:max-h-0 overflow-hidden xl:absolute top-0 group-hover:xl:max-h-[500px] transition-all duration-500 xl:transition-none ${
-              !dropdownAdm ? "max-h-0" : "max-h-96 py-4"
-            } xl:py-0`}
-          >
-            <div className="bg-Header-bg transition-height overflow-hidden duration-300 ease-in-out px-4 xl:py-4 xl:mt-[3rem] lg:w-fit text-nowrap flex flex-col gap-4 rounded">
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Consulta estoque
-              </Link>
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Disponibilidade Produto
-              </Link>
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Pedidos
-              </Link>
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Produto Solicitações Disponibilidade
-              </Link>
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Relatório Vendas
-              </Link>
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Relatório Vendas Produtos
-              </Link>
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Usuário cadastrados
-              </Link>
-              <Link
-                href="/adicionar-usuario"
-                className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer"
-              >
-                Adicionar usuário
-              </Link>
-              <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
-                Usuários importar
-              </Link>
-              <Link
-                href="/gerenciar-banner"
-                className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer"
-              >
-                Editar Banner
-              </Link>
+      {hasAnyRole(["Administrador"]) && (
+        <div className="group relative bg-Header-bg">
+          <span>
+            <span
+              className="flex items-center cursor-pointer select-none"
+              onClick={() => {
+                handleOpenDropDown(setDropdownAdm, dropdownAdm);
+              }}
+            >
+              Administração {!dropdownAdm ? <ChevronDown className="xl:hidden" /> : <ChevronUp className="xl:hidden" />}
+            </span>
+            <div
+              className={`xl:max-h-0 overflow-hidden xl:absolute top-0 group-hover:xl:max-h-[500px] transition-all duration-500 xl:transition-none ${
+                !dropdownAdm ? "max-h-0" : "max-h-96 py-4"
+              } xl:py-0`}
+            >
+              <div className="bg-Header-bg transition-height overflow-hidden duration-300 ease-in-out px-4 xl:py-4 xl:mt-[3rem] lg:w-fit text-nowrap flex flex-col gap-4 rounded">
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Consulta estoque
+                </Link>
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Disponibilidade Produto
+                </Link>
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Pedidos
+                </Link>
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Produto Solicitações Disponibilidade
+                </Link>
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Relatório Vendas
+                </Link>
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Relatório Vendas Produtos
+                </Link>
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Usuário cadastrados
+                </Link>
+                <Link
+                  href="/adicionar-usuario"
+                  className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer"
+                >
+                  Adicionar usuário
+                </Link>
+                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                  Usuários importar
+                </Link>
+                <Link
+                  href="/gerenciar-banner"
+                  className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer"
+                >
+                  Editar Banner
+                </Link>
+              </div>
             </div>
-          </div>
-        </span>
-      </div>
+          </span>
+        </div>
+      )}
 
       <div className="group relative">
         <span>
