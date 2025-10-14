@@ -53,7 +53,7 @@ export async function POST() {
 
         res.on("end", () => {
           const body = Buffer.concat(chunks).toString();
-          // console.log('RESPOSTA DA API EXTERNA:', body);
+          console.log("RESPOSTA DA API EXTERNA:", body);
 
           try {
             const parsed = JSON.parse(body);
