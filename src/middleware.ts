@@ -98,7 +98,7 @@ export async function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("auth")?.value;
   const isAuthenticated = await isValidJwt(accessToken);
   const payload = isAuthenticated ? await readJwtPayload(accessToken) : null;
-  const rolesFromJwt = (payload?.roles ?? payload?.role ?? []) as unknown; // suporta roles como string/string[]/objetos
+  const rolesFromJwt = (payload?.role ?? payload?.roles ?? []) as unknown; // suporta roles como string/string[]/objetos
   if (process.env.NODE_ENV !== "production") {
     console.log("[MW] payload:", payload);
     console.log("[MW] rolesFromJwt raw:", rolesFromJwt);

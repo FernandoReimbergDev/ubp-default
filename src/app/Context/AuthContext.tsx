@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasRole = (role: string) => roles.includes(role.toLowerCase());
   const hasAnyRole = (requiredRoles: string[]) => requiredRoles.some((role) => hasRole(role));
 
-  const fetchUserData = async () => {
+  const fetchUserData = async (retryCount = 0) => {
     try {
       const res = await fetch("/api/me", {
         method: "GET",
@@ -37,12 +37,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const { user, roles: userRoles } = await res.json();
       setCliente(user);
-      setRoles(userRoles);
+      setRoles(userRoles || []); // Garantir que roles seja sempre array
       Cookies.set("cliente", JSON.stringify(user), { expires: 7 });
 
       return true;
     } catch (error) {
       console.error("Erro ao buscar dados do usuário:", error);
+
+      // Retry em caso de erro de rede (máximo 2 tentativas)
+      if (retryCount < 2 && error instanceof TypeError) {
+        console.log(`Tentativa ${retryCount + 1} de 3 para buscar dados do usuário`);
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Aguarda 1 segundo
+        return fetchUserData(retryCount + 1);
+      }
+
+      // Se esgotou tentativas ou é erro diferente, limpa dados
       setCliente(null);
       setRoles([]);
       Cookies.remove("cliente");
@@ -54,17 +63,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const stored = Cookies.get("cliente");
     if (stored) {
       try {
-        setCliente(JSON.parse(stored));
+        const parsedCliente = JSON.parse(stored);
+        setCliente(parsedCliente);
+
+        // Busca dados frescos em background, mas não zera roles se falhar
+        fetchUserData().finally(() => setLoading(false));
       } catch {
         Cookies.remove("cliente");
         setLoading(false);
         return;
       }
-
-      // Busca dados frescos em background
+    } else {
+      // Se não há cliente armazenado, busca dados do servidor
       fetchUserData().finally(() => setLoading(false));
     }
-    setLoading(false);
   }, []);
 
   const requestAccess = async (userName: string) => {

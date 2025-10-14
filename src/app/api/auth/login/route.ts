@@ -34,17 +34,6 @@ export async function POST(req: NextRequest) {
     }
 
     const result = data.result;
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[LOGIN] result keys:", result ? Object.keys(result) : null);
-      console.log("[LOGIN] sample role fields:", {
-        role: (result as any)?.role,
-        roles: (result as any)?.roles,
-        rules: (result as any)?.rules,
-      });
-    }
-    const user = {
-      id: result.id,
-    };
 
     // Extrai roles como array de strings (nome) para o middleware
     // Tenta extrair de result.role, result.roles, result.rules
@@ -60,6 +49,12 @@ export async function POST(req: NextRequest) {
           })
           .filter((v: unknown): v is string => typeof v === "string")
       : [];
+
+    const user = {
+      id: result.id,
+      firstName: result.firstName || result.name || "Usuário",
+      role: rolesFromApi,
+    };
     if (process.env.NODE_ENV !== "production") {
       console.log("[LOGIN] rolesFromApi:", rolesFromApi);
     }

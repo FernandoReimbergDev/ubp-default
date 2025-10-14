@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
     const newAccessToken = await new SignJWT({
       sub: typeof payload.id === "string" ? payload.id : String(payload.id ?? ""),
       name: typeof payload.firstName === "string" ? payload.firstName : "Usuário",
-      iss: "unitybrindes",
+      iss: "unitybrindes.com.br",
+      role: payload.role || [], // Incluir roles do refresh token
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime("15m")

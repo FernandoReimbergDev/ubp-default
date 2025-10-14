@@ -18,11 +18,14 @@ export async function GET(req: NextRequest) {
     // Aqui você pode buscar dados mais completos do usuário se necessário
     // Por enquanto, retornando o que já temos no payload
     const userId = payload.sub;
-    const roles = normalizeRoles(payload.role || []);
+    const roles = normalizeRoles(payload.role || payload.roles || []);
 
     return NextResponse.json({
       success: true,
-      user: { id: userId },
+      user: {
+        id: userId,
+        firstName: payload.name || "Usuário",
+      },
       roles: roles,
     });
   } catch (error) {

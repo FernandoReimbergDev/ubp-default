@@ -189,7 +189,7 @@ export function FormAdicionarUsuario() {
             </div>
 
             <div className="px-2">
-              <div className="px-2 py-4 flex items-center gap-8 h-fit justify-center self-center border border-gray-300 rounded-lg">
+              <div className="px-2 py-2 flex items-center gap-8 h-fit justify-center self-center border border-gray-300 rounded-lg">
                 <div className="flex items-center gap-2">
                   <input type="radio" value="PF" id="pessoa_fisica" {...register("entityType")} />
                   <label className="text-xs 2xl:text-sm font-medium text-gray-700">Pessoa Física</label>
