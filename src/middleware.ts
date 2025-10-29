@@ -11,6 +11,7 @@ const publicRoutes = [
   { path: "/politica-de-cookies", whenAuthenticated: "next" as const },
   { path: "/politica-de-privacidade", whenAuthenticated: "next" as const },
   { path: "/termos-de-uso", whenAuthenticated: "next" as const },
+  { path: "/fale-conosco", whenAuthenticated: "next" as const },
 ];
 
 // Prefixos públicos (qualquer rota que COMEÇA com isso é pública)
@@ -99,10 +100,10 @@ export async function middleware(request: NextRequest) {
   const isAuthenticated = await isValidJwt(accessToken);
   const payload = isAuthenticated ? await readJwtPayload(accessToken) : null;
   const rolesFromJwt = (payload?.role ?? payload?.roles ?? []) as unknown; // suporta roles como string/string[]/objetos
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[MW] payload:", payload);
-    console.log("[MW] rolesFromJwt raw:", rolesFromJwt);
-  }
+  // if (process.env.NODE_ENV !== "production") {
+  //   console.log("[MW] payload:", payload);
+  //   console.log("[MW] rolesFromJwt raw:", rolesFromJwt);
+  // }
 
   // 3) Regras para rotas públicas
   if (publicExact || isPublicPrefix) {
@@ -132,12 +133,12 @@ export async function middleware(request: NextRequest) {
   ];
 
   const rule = acl.find((r) => r.path === pathname);
-  if (rule) {
-    if (process.env.NODE_ENV !== "production") {
-      // Log de diagnóstico em dev
-      console.log("[ACL] pathname:", pathname, "roles:", normalizeRoles(rolesFromJwt), "required:", rule.required);
-    }
-  }
+  // if (rule) {
+  //   if (process.env.NODE_ENV !== "production") {
+  //     // Log de diagnóstico em dev
+  //     console.log("[ACL] pathname:", pathname, "roles:", normalizeRoles(rolesFromJwt), "required:", rule.required);
+  //   }
+  // }
   if (rule && !userHasAnyRequiredRole(rolesFromJwt, rule.required)) {
     // Redireciona para página de não autorizado
     return NextResponse.redirect(new URL("/not-autorized", request.url));

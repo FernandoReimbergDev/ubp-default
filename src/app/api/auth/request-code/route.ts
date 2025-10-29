@@ -11,9 +11,8 @@ import { API_REQ_APPLICATION, ENVIRONMENT, STORE_ID } from "../../../utils/env";
 export async function POST(req: NextRequest) {
   try {
     const storeId = STORE_ID;
-    const { email } = await req.json();
-
-    if (!storeId || !email || typeof email !== "string") {
+    const { username, email } = await req.json();
+    if (!storeId || !username || typeof username !== "string") {
       return NextResponse.json({ success: false, message: "Dados inválidos." }, { status: 400 });
     }
 
@@ -25,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     const postData = JSON.stringify({
       storeId: Number(storeId),
-      username: email,
+      username: username,
     });
 
     const responseData = await new Promise<{ success: boolean; message: string; result?: PasswordRecoveryResult }>(
@@ -49,6 +48,7 @@ export async function POST(req: NextRequest) {
           res.on("data", (chunk) => {
             chunks.push(chunk);
           });
+
 
           res.on("end", () => {
             const body = Buffer.concat(chunks).toString();
@@ -174,9 +174,6 @@ export async function POST(req: NextRequest) {
           success: true,
           status: "code-sent",
           message: "Código enviado para o e-mail informado.",
-          result: {
-            passwordRecoveryCode: `${responseData.result?.passwordRecoveryCode}`,
-          },
         },
         { status: 200 }
       );

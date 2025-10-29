@@ -10,7 +10,7 @@ import { useState } from "react";
 
 export function CodeForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const { verifyCode, requestCodePassword, email } = useAuth();
+  const { verifyCode, requestCodePassword, email, userName } = useAuth();
   const {
     register,
     handleSubmit,
@@ -21,7 +21,7 @@ export function CodeForm() {
   });
 
   async function handleCodeSubmit(data: CodeForm) {
-    const result = await verifyCode(email, data.accessCode || "");
+    const result = await verifyCode(userName, data.accessCode || "");
 
     if (!result.success) {
       setError("accessCode", {
@@ -35,7 +35,13 @@ export function CodeForm() {
 
   async function handleResendCode() {
     setIsLoading(true);
-    const result = await requestCodePassword(email);
+    const result = await requestCodePassword(userName, email);
+    if (!result.success) {
+      setError("accessCode", {
+        type: "manual",
+        message: "Código inválido",
+      });
+    }
   }
 
   const onSubmit: SubmitHandler<CodeForm> = async (data) => {
@@ -62,6 +68,8 @@ export function CodeForm() {
           Continuar <ArrowRight />
         </Button>
         <div className="h-6 ">{isSubmitting && <span className="loader"></span>}</div>
+        {errors.accessCode && <p className="text-red-500 text-xs font-semibold">{errors.accessCode.message}</p>}
+
       </form>
       <button
         type="button"
@@ -72,7 +80,6 @@ export function CodeForm() {
         Reenviar código?
       </button>
 
-      {errors.accessCode && <p className="text-red-500 text-xs font-semibold">{errors.accessCode.message}</p>}
     </>
   );
 }

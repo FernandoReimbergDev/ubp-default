@@ -6,7 +6,7 @@ import { getDecryptedToken } from '../../../services/getDecryptedToken'
 export async function POST(req: NextRequest) {
     try {
         const storeId = STORE_ID;
-        const { email, accessCode } = await req.json();
+        const { username, accessCode } = await req.json();
 
         if (!storeId) {
             console.error('ID da plataforma não encontrado:', storeId);
@@ -16,19 +16,21 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (!email) {
+        if (!username) {
             return NextResponse.json(
-                { success: false, message: 'E-mail inválido.' },
+                { success: false, message: 'usuario inválido.' },
                 { status: 400 }
             );
         }
 
         if (!accessCode || isNaN(Number(accessCode))) {
             return NextResponse.json(
-                { success: false, message: 'Código de acesso inválido.' },
+                { success: false, message: 'Código de recuperação inválido.' },
                 { status: 400 }
             );
         }
+
+        console.log("storeId:", storeId, "username:", username, "accessCode:", accessCode)
 
         const token = await getDecryptedToken(API_REQ_APPLICATION);
 
@@ -50,8 +52,8 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({
                 storeId: Number(storeId),
-                username: email,
-                accessCode: Number(accessCode)
+                username: username,
+                accessCode: accessCode
             })
         };
 
@@ -63,8 +65,6 @@ export async function POST(req: NextRequest) {
             console.error('Erro na API externa:', data);
             return NextResponse.json({ success: false, details: data }, { status: response.status });
         }
-
-        console.log("Resposta da API externa:", data);
         return NextResponse.json({
             success: true,
             status: "awaiting-password",

@@ -2,9 +2,9 @@
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCart } from "../Context/CartContext";
-import { ProdutoCart } from "../types/responseTypes";
+import { ProdutoCart, ProdutoEstoqueItem, ProdutoEstoqueResponse } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { TitleSection } from "./TitleSection";
@@ -17,6 +17,8 @@ interface ModalProps {
 export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   const { cart, removeProduct, updateQuantity, updateColorOrSize } = useCart();
   const [quantities, setQuantities] = useState<{ [id: string]: string }>({});
+  const [stockByItem, setStockByItem] = useState<{ [id: string]: ProdutoEstoqueItem | undefined }>({});
+  const [loadingByItem, setLoadingByItem] = useState<{ [id: string]: boolean }>({});
 
   // Inicializa os valores com o conteúdo do carrinho
   useEffect(() => {
@@ -53,18 +55,77 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     return total + (isNaN(quantity) ? 0 : quantity * product.price);
   }, 0);
 
+  const hasInvalidQuantities = cart.some((item) => {
+    const requested = parseInt(quantities[item.id] || "0", 10);
+    if (!requested || requested <= 0) return true;
+    const stock = stockByItem[item.id]?.quantidadeSaldo;
+    const available = stock ? Math.trunc(Number(String(stock).replace(",", "."))) : undefined;
+    return typeof available === "number" && requested > available;
+  });
+
+  const fetchItemStock = useCallback(async (item: ProdutoCart, signal?: AbortSignal) => {
+    if (!item.chavePro) {
+      setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
+      return;
+    }
+    setLoadingByItem((prev) => ({ ...prev, [item.id]: true }));
+    try {
+      const res = await fetch("/api/send-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reqMethod: "GET",
+          reqEndpoint: `/product-stock/${item.chavePro}`,
+          reqHeaders: {
+            "X-Environment": "HOMOLOGACAO",
+            storeId: "32",
+            landingPagePro: "1",
+            disponivelProCor: "1",
+            descrProCor: item.color,
+            descrProTamanho: item.size || "",
+          },
+        }),
+        signal,
+      });
+
+      const result: { data: ProdutoEstoqueResponse } = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.data?.message || "Erro ao buscar produtos");
+      }
+      setStockByItem((prev) => ({ ...prev, [item.id]: result.data.result?.[0] }));
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      console.error("error ao requisitar produtos para api externa", error);
+      setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
+    } finally {
+      setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    cart.forEach((item) => {
+      // Busca estoque quando quantidade, cor ou tamanho mudarem
+      fetchItemStock(item, controller.signal);
+    });
+    return () => controller.abort();
+  }, [cart, quantities, fetchItemStock]);
+
   return (
     <div className="ContainerModal h-full w-full">
       <div
-        className={`h-[calc(h-screen-400px)] w-screen bg-black fixed inset-0 left-0 top-0 opacity-50 z-50 ${
-          isOpen && cart.length > 0 ? "visible" : "hidden"
-        }`}
+        className={`h-[calc(h-screen-400px)] w-screen bg-black fixed inset-0 left-0 top-0 opacity-50 z-50 ${isOpen && cart.length > 0 ? "visible" : "hidden"
+          }`}
         onClick={handleClick}
       ></div>
       <div
-        className={`h-[100dvh] md:h-screen w-full md:w-[550px] 2xl:w-[576px] right-0 fixed bg-white z-50  p-1 flex flex-col items-start justify-start pt-2 transition-all duration-500  ${
-          isOpen && cart.length > 0 ? "translate-x-0" : "translate-x-[100vw]"
-        } `}
+        className={`h-[100dvh] md:h-screen w-full md:w-[550px] 2xl:w-[576px] right-0 fixed bg-white z-50  p-1 flex flex-col items-start justify-start pt-2 transition-all duration-500  ${isOpen && cart.length > 0 ? "translate-x-0" : "translate-x-[100vw]"
+          } `}
       >
         <X
           onClick={handleClick}
@@ -119,7 +180,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                               name="tamanho"
                               id="tamanho"
                               value={product.size}
-                              onChange={(e) => updateColorOrSize(product.id, e.target.value)}
+                              onChange={(e) => updateColorOrSize(product.id, undefined, e.target.value)}
                               className="border border-gray-400 uppercase rounded px-1 text-xs"
                             >
                               {product.tamanhos.map((tamanho, i) => (
@@ -162,6 +223,17 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                       <div className="mt-2">
                         <p className="text-sm">Subtotal: {calculateSubtotal(product)}</p>
                       </div>
+                      {(() => {
+                        const stock = stockByItem[product.id]?.quantidadeSaldo;
+                        const requested = parseInt(quantities[product.id] || "0", 10);
+                        const available = stock ? Math.trunc(Number(String(stock).replace(",", "."))) : undefined;
+                        if (typeof available === "number" && requested > available) {
+                          return (
+                            <span className="text-red-500 text-xs">{`Quantidade disponível: ${String(stock).split(".")[0]}`}</span>
+                          );
+                        }
+                        return null;
+                      })()}
                       {(!quantities[product.id] || parseInt(quantities[product.id]) <= 0) && (
                         <span className="text-red-500 text-xs">Digite uma quantidade mínima para prosseguir</span>
                       )}
@@ -184,6 +256,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
             <span className="font-semibold pl-1 text-sm md:text-base">{formatPrice(totalValue)}</span>
           </p>
           <p className="text-xs">*Frete não incluso</p>
+          {hasInvalidQuantities && (
+            <p className="text-xs text-red-500">Ajuste as quantidades para prosseguir</p>
+          )}
           <div className="flex w-full flex-col-reverse sm:flex-row gap-2 mt-1 justify-center md:justify-end">
             <Button
               onClick={handleClick}
@@ -193,8 +268,16 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
             </Button>
             <Link href={"/entrega"}>
               <Button
-                className="w-full sm:w-fit cursor-pointer text-xs md:text-sm bg-green-500 hover:bg-green-400 rounded-md text-Button-text px-4 py-2"
-                onClick={handleClick}
+                className="disabled:bg-gray-500 w-full sm:w-fit cursor-pointer text-xs md:text-sm bg-green-500 hover:bg-green-400 rounded-md text-Button-text px-4 py-2"
+                disabled={hasInvalidQuantities || cart.length === 0}
+                onClick={(e) => {
+                  if (hasInvalidQuantities || cart.length === 0) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                  }
+                  handleClick?.(e as any);
+                }}
               >
                 Finalizar Compra
               </Button>

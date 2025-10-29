@@ -46,7 +46,7 @@ export default function MenuNav() {
                 >
                   Disponibilidade Produto
                 </Link>
-                <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
+                <Link href="/administracao/pedido-confirmado" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">
                   Pedidos
                 </Link>
                 <Link href="/" className="flex gap-2 items-center hover:text-MenuNav-textHover cursor-pointer">

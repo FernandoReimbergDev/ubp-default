@@ -123,11 +123,10 @@ export function FormFaleConosco() {
                 type="text"
                 id="razao_social"
                 {...register("razao_social")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.razao_social
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.razao_social
                     ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                     : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                }`}
+                  }`}
               />
               {errors.razao_social && <span className="text-red-500 text-xs">{errors.razao_social.message}</span>}
             </div>
@@ -138,11 +137,10 @@ export function FormFaleConosco() {
                 type="text"
                 id="nome_completo"
                 {...register("fullName")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.fullName
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fullName
                     ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                     : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                }`}
+                  }`}
               />
               {errors.fullName && <span className="text-red-500 text-xs">{errors.fullName.message}</span>}
             </div>
@@ -153,11 +151,10 @@ export function FormFaleConosco() {
                 type="email"
                 id="email"
                 {...register("email")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.email
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email
                     ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                     : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                }`}
+                  }`}
               />
               {errors.email && <span className="text-red-500 text-xs">{errors.email.message}</span>}
             </div>
@@ -170,11 +167,10 @@ export function FormFaleConosco() {
                     type="text"
                     id="ddd"
                     {...register("ddd")}
-                    className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.ddd
+                    className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ddd
                         ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                         : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                    }`}
+                      }`}
                   />
                 </div>
                 <div className="px-2 w-full grow">
@@ -185,11 +181,10 @@ export function FormFaleConosco() {
                     {...register("telefone")}
                     placeholder="0000-0000"
                     onChange={(e) => handlePhoneMask(e.target.value, setValue, trigger, setError, clearErrors)}
-                    className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.telefone
+                    className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.telefone
                         ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                         : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -207,11 +202,10 @@ export function FormFaleConosco() {
                 placeholder="00.000.000/0001-00"
                 onChange={(e) => handleCnpjCpfMask(e.target.value, setValue, trigger, setError, clearErrors)}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 rounded-md border transition-all duration-150
-                                        ${
-                                          errors.cnpj_cpf
-                                            ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                                            : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                                        }`}
+                                        ${errors.cnpj_cpf
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  }`}
                 maxLength={18}
               />
               {errors.cnpj_cpf && <span className="text-red-500 text-xs">{errors.cnpj_cpf.message}</span>}
@@ -223,11 +217,10 @@ export function FormFaleConosco() {
                 type="text"
                 id="subject"
                 {...register("subject")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.subject
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.subject
                     ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                     : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                }`}
+                  }`}
               />
               {errors.subject && <span className="text-red-500 text-xs">{errors.subject.message}</span>}
             </div>
@@ -245,9 +238,8 @@ export function FormFaleConosco() {
               <button
                 type="submit"
                 disabled={submitting}
-                className={`px-4 py-2 rounded-md cursor-pointer  ${
-                  submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
-                } text-white text-xs 2xl:text-sm`}
+                className={`px-4 py-2 rounded-md cursor-pointer  ${submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
+                  } text-white text-xs 2xl:text-sm`}
               >
                 {submitting ? `'ENVIANDO...'` : "ENVIAR"}
               </button>

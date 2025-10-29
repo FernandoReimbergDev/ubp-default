@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT, JWT_SECRET, JWT_REFRESH_SECRET } from '../../../utils/env';
 import { getDecryptedToken } from '../../../services/getDecryptedToken'
-import jwt from 'jsonwebtoken';
+import { SignJWT } from 'jose';
+import { encrypt } from '../../../services/cryptoCookie';
 
 export async function POST(req: NextRequest) {
     try {
@@ -76,17 +77,28 @@ export async function POST(req: NextRequest) {
         }
 
 
-        const accessToken = jwt.sign(
-            { userId: data.result.id, email },
-            JWT_SECRET,
-            { expiresIn: '15m' }
-        );
+        // Assinar tokens usando jose, alinhado ao login
+        const accessSecret = new TextEncoder().encode(JWT_SECRET);
+        const accessToken = await new SignJWT({
+            sub: String(data.result.id),
+            iss: 'unitybrindes',
+            role: []
+        })
+            .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+            .setExpirationTime('15m')
+            .sign(accessSecret);
 
-        const refreshToken = jwt.sign(
-            { userId: data.result.id },
-            JWT_REFRESH_SECRET,
-            { expiresIn: '7d' }
-        );
+        const refreshSecret = new TextEncoder().encode(JWT_REFRESH_SECRET);
+        const refreshPayload = {
+            id: data.result.id,
+            firstName: data.result.firstName || 'Usuário',
+            role: [] as string[],
+        };
+        const refreshToken = await new SignJWT(refreshPayload)
+            .setProtectedHeader({ alg: 'HS256' })
+            .setExpirationTime('7d')
+            .sign(refreshSecret);
+        const encryptedRefreshToken = encrypt(refreshToken);
 
         const res = NextResponse.json({
             success: true,
@@ -97,20 +109,21 @@ export async function POST(req: NextRequest) {
             },
         }, { status: response.status });
 
-        res.cookies.set('accessToken', accessToken, {
+        // Cookies alinhados ao login
+        res.cookies.set('auth', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             path: '/',
             maxAge: 60 * 15,
-            sameSite: 'strict',
+            sameSite: 'lax',
         });
 
-        res.cookies.set('refreshToken', refreshToken, {
+        res.cookies.set('refreshToken', encryptedRefreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            path: '/api/token/refresh',
+            path: '/',
             maxAge: 60 * 60 * 24 * 7,
-            sameSite: 'strict',
+            sameSite: 'lax',
         });
 
         return res;

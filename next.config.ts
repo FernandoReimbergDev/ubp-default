@@ -28,6 +28,8 @@ const nextConfig = {
         hostname: "n-unity-100",
       },
     ],
+    qualities: [75, 100], // 👈 adicione aqui as qualidades permitidas
+
   },
   // Aqui libera IPs e origens específicas em dev
   allowedDevOrigins: [

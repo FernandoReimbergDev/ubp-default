@@ -9,7 +9,7 @@ interface BannerProps {
 export function Banner({ imgSrc, alt }: BannerProps) {
   return (
     <div className="bg-Banner-bg w-full h-48 rounded-xl flex flex-col items-center justify-center revelScroll overflow-hidden relative">
-      <Image src={Logo || imgSrc} alt={alt} width={315} height={112} className="object-contain" />
+      <Image src={Logo || imgSrc} alt={alt} width={315} height={112} className="object-contain" priority />
     </div>
   );
 }

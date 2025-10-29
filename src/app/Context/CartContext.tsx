@@ -1,8 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
-import { CartContextType, ProdutoCart } from "../types/responseTypes";
+import { CartContextType, ProdutoCart, ProdutoEstoqueResponse } from "../types/responseTypes";
 import { useAuth } from "./AuthContext";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -18,20 +17,46 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   const initializeCart = useCallback(async () => {
     const stored = Cookies.get(userKey);
-    if (stored) {
-      const localCart: ProdutoCart[] = JSON.parse(stored);
-      try {
-        const response = await axios.post("/api/validates-estoque", { produtos: localCart });
-        if (response.data.success) {
-          setCart(localCart);
-          Cookies.set(userKey, JSON.stringify(localCart), { expires: 7 });
-        } else {
-          setCart([]);
-          Cookies.remove(userKey);
-        }
-      } catch {
-        setCart([]);
+    if (!stored) return;
+    const localCart: ProdutoCart[] = JSON.parse(stored);
+    try {
+      const controller = new AbortController();
+      const validations = await Promise.allSettled(
+        localCart.map(async (item) => {
+          const res = await fetch("/api/send-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              reqMethod: "GET",
+              reqEndpoint: `/product-stock/${item.chavePro}`,
+              reqHeaders: {
+                "X-Environment": "HOMOLOGACAO",
+                storeId: "32",
+                landingPagePro: "1",
+                disponivelProCor: "1",
+                descrProCor: item.color,
+                descrProTamanho: item.size || "",
+              },
+            }),
+            signal: controller.signal,
+          });
+          const result: { data: ProdutoEstoqueResponse } = await res.json();
+          if (!res.ok) throw new Error(result.data?.message || "Falha na validação de estoque");
+          return result.data.result?.[0];
+        })
+      );
+
+      const allOk = validations.every((v) => v.status === "fulfilled");
+      if (allOk) {
+        setCart(localCart);
+        Cookies.set(userKey, JSON.stringify(localCart), { expires: 7 });
+      } else {
+        setCart(localCart); // mantém o carrinho mas já haverá validação em tempo real no ModalCart
+        Cookies.set(userKey, JSON.stringify(localCart), { expires: 7 });
       }
+    } catch {
+      setCart([]);
+      Cookies.remove(userKey);
     }
   }, [userKey]);
 

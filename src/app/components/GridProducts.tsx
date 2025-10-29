@@ -28,7 +28,6 @@ export const GridProducts = () => {
     openModal(product);
   };
 
-  // Novo mapeamento do formato atual da API
   const produtosAdaptados: ProdutosGrid[] = useMemo(() => {
     return products.map((pro, index) => {
       const imagensValidas = pro.imagens
@@ -38,6 +37,7 @@ export const GridProducts = () => {
       return {
         id: index,
         codePro: pro.codPro,
+        chavePro: pro.chavePro,
         product: pro.descr,
         description: pro.descr2,
         price: Number(pro.precos?.[0]?.vluProPrc || 0),
@@ -46,7 +46,9 @@ export const GridProducts = () => {
         images: imagensValidas || [],
         alt: `imagem do produto ${pro.codPro}`,
         colors: pro.cores?.map((cor) => cor.descrProCor) || [],
-        sizes: [], // Se um dia vier tamanho, adapta aqui
+        sizes: [] as string[], // Se um dia vier tamanho, adapta aqui
+        quantidadeEstoquePro: String(pro.quantidadeEstoquePro ?? ""),
+        estControl: pro.estControl,
       };
     });
   }, [products]);
@@ -76,6 +78,8 @@ export const GridProducts = () => {
               alt={produto.alt}
               nameProduct={produto.product}
               priceProduct={produto.price}
+              stock={produto.quantidadeEstoquePro}
+              estControl={produto.estControl}
               promotion={false}
               percent_discont={0}
               btn={

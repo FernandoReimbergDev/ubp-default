@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { AuthContextType, UsuarioContext } from "../types/responseTypes";
 import Cookies from "js-cookie";
 
@@ -79,6 +79,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // const requestAccess = async (userName: string) => {
+  //   try {
+  //     const res = await fetch("/api/send-request", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         reqMethod: "POST",
+  //         reqEndpoint: "/pre-authenticate",
+  //         reqHeaders: {
+  //           "X-Environment": "HOMOLOGACAO",
+  //           storeId: "32",
+  //           username: userName
+  //         },
+  //       }),
+  //     });
+
+
+  //     const data = await res.json();
+  //     if (!data.success || !res.ok) {
+  //       return {
+  //         success: false,
+  //         status: data.status,
+  //         message: data.message || "Falha ao requisitar acesso",
+  //         email: data.email, // garantir que está aqui
+  //       };
+  //     }
+
+  //     setUserName(userName);
+  //     setEmail(data.email);
+  //     setStep(data.status === "code-sent" ? "code" : "signIn");
+  //     return {
+  //       success: true,
+  //       status: data.status,
+  //       message: data.message || "Acesso requisitado com sucesso",
+  //       email: data.email,
+  //     };
+  //   } catch (err: unknown) {
+  //     return {
+  //       success: false,
+  //       message: "Erro interno ao requisitar acesso",
+  //       err,
+  //     };
+  //   }
+  // };
+
   const requestAccess = async (userName: string) => {
     try {
       const res = await fetch("/api/auth/request-access", {
@@ -93,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           success: false,
           status: data.status,
           message: data.message || "Falha ao requisitar acesso",
-          email: data.email, // garantir que está aqui
+          email: data.email,
         };
       }
 
@@ -110,14 +157,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const verifyCode = async (email: string, accessCode: string) => {
+  const verifyCode = async (userName: string, accessCode: string) => {
     try {
       const res = await fetch("/api/auth/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, accessCode }),
+        body: JSON.stringify({ username: userName, accessCode }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        return { success: false, message: data.message };
+      }
       setCode(accessCode);
       setStep("resetPassword");
       return { success: res.ok, message: data.message };
@@ -192,20 +242,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const requestCodePassword = async (email: string) => {
+  const requestCodePassword = useCallback(async (username: string, email: string, signal?: AbortSignal) => {
     try {
       const res = await fetch("/api/auth/request-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ username: username, email: email }), // use the function arg
+        signal,
       });
 
       const data = await res.json();
+      if (!res.ok) {
+        return {
+          success: false,
+          message: data.message,
+        };
+      }
       setStep("resetPassword");
       return {
         success: res.ok,
         message: data.message,
-        result: data.result,
       };
     } catch {
       return {
@@ -213,7 +269,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         message: "Erro interno ao solicitar código de recuperação.",
       };
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

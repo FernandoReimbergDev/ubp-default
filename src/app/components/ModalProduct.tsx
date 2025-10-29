@@ -1,10 +1,10 @@
 "use client";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus, Plus, ShoppingCart, Tag, X } from "lucide-react";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useCart } from "../Context/CartContext";
 import { useToast } from "../Context/ToastProvider";
-import { ModalProps, ProdutoCart } from "../types/responseTypes";
+import { ModalProps, ProdutoCart, ProdutoEstoqueItem, ProdutoEstoqueResponse } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { ZoomProduct } from "./ZoomProduct";
@@ -19,6 +19,71 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const [currentImage, setCurrentImage] = useState<string>(ProductData.srcFrontImage);
   const [descriFull, setDescriFull] = useState(false);
   const toast = useToast();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [product, setProduct] = useState<ProdutoEstoqueItem>();
+
+  const hasKnownStock = typeof ProductData.quantidadeEstoquePro === "string" && ProductData.quantidadeEstoquePro.trim() !== "";
+  const parsedStock = hasKnownStock
+    ? Math.trunc(Number(ProductData.quantidadeEstoquePro.replace(",", ".")))
+    : undefined;
+
+  const isOutOfStock = ProductData.estControl === "1" && hasKnownStock && (parsedStock ?? 0) <= 0;
+
+  const fetchProductsStock = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/send-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reqMethod: "GET",
+          reqEndpoint: `/product-stock/${ProductData.chavePro}`,
+          reqHeaders: {
+            "X-Environment": "HOMOLOGACAO",
+            storeId: "32",
+            landingPagePro: "1",
+            disponivelProCor: "1",
+            descrProCor: selectedColor,
+            descrProTamanho: selectedSize
+          },
+        }),
+        signal,
+      });
+
+      console.log(ProductData.chavePro, selectedColor, selectedSize)
+
+      const result: {
+        success: boolean;
+        data?: ProdutoEstoqueResponse;
+        message?: string;
+        details?: unknown;
+      } = await res.json();
+
+      if (!res.ok) {
+
+        const detailsStr = typeof result.details === "string" ? result.details : undefined;
+        if (detailsStr === "Estoque não encontrado com os parâmetro(s) fornecido(s).") {
+          toast.alert("Ops... Produto esgotado!");
+          return;
+        }
+
+        throw new Error(result.message || "Erro ao buscar produtos");
+      }
+      if (result.data?.result?.[0]) {
+        setProduct(result.data.result[0]);
+      }
+
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      console.error("error ao requisitar produtos para api externa", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleDescriFull = () => {
     setDescriFull((prevState) => !prevState);
@@ -31,13 +96,16 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
+    fetchProductsStock()
   };
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size);
+    fetchProductsStock()
   };
 
   const handleQuantityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQtdMsg(false);
+    fetchProductsStock()
     const value = event.target.value;
     // Permite apenas números positivos ou vazio
     if (/^\d*$/.test(value)) {
@@ -74,6 +142,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       const productToCart: ProdutoCart = {
         id,
         codPro: ProductData.codePro,
+        chavePro: ProductData.chavePro,
         description: ProductData.description,
         productName: ProductData.product,
         price: ProductData.price,
@@ -110,6 +179,11 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             <Tag className="md:size-8 size-4" />-{ProductData.percent_discont}%
           </div>
         )}
+        {isOutOfStock && (
+          <div className="absolute -left-12 top-14 -rotate-45 bg-red-500 text-white text-xs md:text-sm font-bold tracking-wide shadow-lg px-20 py-2 z-20 select-none pointer-events-none">
+            ESGOTADO
+          </div>
+        )}
         <div className="w-full lg:w-[50%] h-fit lg:h-full flex relative flex-col items-center justify-center p-2 lg:p-4 rounded-lg">
           <div
             className="w-40 h-40 lg:w-80 lg:h-80 object-cover cursor-zoom-in overflow-hidden  border-primary shadow-md rounded-xl relative"
@@ -133,10 +207,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   src={image}
                   width={50}
                   height={50}
+                  quality={100}
                   alt={`Product image ${index}`}
-                  className={`md:w-16 w-12 lg:w-24 cursor-pointer rounded-lg ${
-                    currentImage === image ? "border-2 border-primary" : ""
-                  }`}
+                  className={`md:w-16 w-12 lg:w-24 cursor-pointer rounded-lg ${currentImage === image ? "border-2 border-primary" : ""
+                    }`}
                   onMouseEnter={() => handleMouseEnter(image)}
                 />
               ))}
@@ -177,11 +251,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                     ProductData.sizes.map((size: string, index: number) => (
                       <label
                         key={size + index}
-                        className={`px-3 py-2 2xl:px-4 2xl:py-2 rounded-lg cursor-pointer text-sm lg:text-sm 2xl:text-base ${
-                          selectedSize === size
-                            ? "bg-modalProduct-button text-white"
-                            : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
-                        }`}
+                        className={`px-3 py-2 2xl:px-4 2xl:py-2 rounded-lg cursor-pointer text-sm lg:text-sm 2xl:text-base ${selectedSize === size
+                          ? "bg-modalProduct-button text-white"
+                          : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
+                          }`}
                       >
                         <input
                           type="radio"
@@ -203,11 +276,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 {ProductData.colors.map((color: string, index: number) => (
                   <label
                     key={color + index}
-                    className={`px-3 py-2 2xl:px-4 2xl:py-2 rounded-lg cursor-pointer text-sm lg:text-sm 2xl:text-base ${
-                      selectedColor === color
-                        ? "bg-modalProduct-button text-white"
-                        : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
-                    }`}
+                    className={`px-3 py-2 2xl:px-4 2xl:py-2 rounded-lg cursor-pointer text-sm lg:text-sm 2xl:text-base ${selectedColor === color
+                      ? "bg-modalProduct-button text-white"
+                      : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
+                      }`}
                   >
                     <input
                       type="radio"
@@ -227,20 +299,25 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 Quantidade:
               </label>
               <div className="flex gap-2 items-center justify-start">
-                <span
+                <button
+                  type="button"
+                  disabled={loading}
+                  aria-disabled={loading}
                   onClick={() => {
+                    if (loading) return;
                     const qty = parseInt(quantity || "0", 10);
                     if (qty > 1) {
                       const newQty = qty - 1;
                       setQuantity(String(newQty));
                       setSubtotal(newQty * ProductData.price);
                       setQtdMsg(false);
+                      fetchProductsStock()
                     }
                   }}
-                  className="w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton cursor-pointer text-xl"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton cursor-pointer text-xl"
                 >
                   <Minus size={18} />
-                </span>
+                </button>
                 <input
                   className="border-2 pl-2 w-20 h-9 rounded-md outline-modalProduct-border"
                   type="text"
@@ -252,25 +329,44 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   pattern="[0-9]*"
                   placeholder="0"
                 />
-                <span
+                <button
+                  type="button"
+                  disabled={loading}
+                  aria-disabled={loading}
                   onClick={() => {
+                    if (loading) return;
                     const qty = parseInt(quantity || "0", 10);
                     const newQty = qty + 1;
                     setQuantity(String(newQty));
                     setSubtotal(newQty * ProductData.price);
                     setQtdMsg(false);
+                    fetchProductsStock();
                   }}
-                  className="w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton cursor-pointer text-xl"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton cursor-pointer text-xl"
                 >
                   <Plus size={18} />
-                </span>
+                </button>
               </div>
 
+              {product?.quantidadeSaldo &&
+                parseInt(quantity || "0", 10) >
+                Math.trunc(Number(String(product.quantidadeSaldo).replace(",", "."))) && (
+                  <span className="mt-4 text-red-500">{`Quantidade disponivel: ${String(
+                    product.quantidadeSaldo
+                  ).split(".")[0]}`}</span>
+                )}
+
+              <span className={`text-sm pointer-events-none select-none flex gap-6 items-center ${loading ? "opacity-100" : "opacity-0"}`}>
+                <span>Consultando Estoque</span>
+                <span className="loader"></span>
+              </span>
               <span className="opacity-60 text-sm pointer-events-none select-none mt-2">
                 *Quantidade mínima {1} unidade.
               </span>
+
             </div>
             <div className="flex gap-4 pointer-events-none select-none">
+
               <div>
                 <label className="font-bold select-none" htmlFor="price">
                   Valor unitário:
@@ -299,24 +395,46 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               </div>
             </div>
             {QtdMsg && <span className="text-red-500 text-sm">Digite uma quantidade Valida para prosseguir</span>}
-            <Button
-              type="submit"
-              name="BtnComprar"
-              className="flex gap-2 items-center justify-center select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:py-2 lg:px-4  cursor-pointer"
-            >
-              <ShoppingCart size={18} />
-              Comprar
-            </Button>
+            {isOutOfStock && (
+              <Button
+                type="button"
+                name="BtnAvisar"
+                className="flex gap-2 items-center justify-center select-none bg-orange-400 hover:bg-orange-500 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:py-2 lg:px-4  cursor-pointer"
+              >
+                Avise-me quando chegar!
+              </Button>
+
+            )}
+            {!isOutOfStock && (
+              <Button
+                type="submit"
+                name="BtnComprar"
+                disabled={(() => {
+                  const stock = product?.quantidadeSaldo;
+                  const requested = parseInt(quantity || "0", 10);
+                  const available = stock ? Math.trunc(Number(String(stock).replace(",", "."))) : undefined;
+                  const qtyInvalid = typeof available === "number" && requested > available;
+                  return loading || qtyInvalid;
+                })()}
+                className="disabled:bg-gray-500 flex gap-2 items-center justify-center select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:py-2 lg:px-4  cursor-pointer"
+              >
+                <ShoppingCart size={18} />
+                Comprar
+              </Button>
+
+            )}
+
           </form>
         </div>
-      </div>
+      </div >
       {zoomModal && (
         <ZoomProduct
           productImagens={ProductData.images}
           targetZoom={currentImage}
           closeZoom={() => setZoomModal(false)}
         />
-      )}
-    </div>
-  );
+      )
+      }
+    </div >
+  )
 }

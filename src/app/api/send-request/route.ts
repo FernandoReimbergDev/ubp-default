@@ -29,8 +29,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Erro ao obter token." }, { status: 500 });
     }
 
-    let fullUrl = baseUrl + reqEndpoint;
-
     const postData = JSON.stringify({
       storeId: storeId,
       ...reqHeaders,
@@ -59,8 +57,7 @@ export async function POST(request: Request) {
 
         res.on("end", () => {
           const body = Buffer.concat(chunks).toString();
-          console.log("RESPOSTA DA API EXTERNA:", body);
-
+          // console.log("RESPOSTA DA API EXTERNA:", body);
           try {
             const parsed = JSON.parse(body);
             if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {

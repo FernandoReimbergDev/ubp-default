@@ -25,6 +25,7 @@ export interface ProdutosResponse {
 }
 
 export type Produto = {
+  quantidadeEstoquePro: string;
   chavePro: string;
   codPro: string;
   descr: string;
@@ -93,12 +94,48 @@ export type PrecoProduto = {
   cadastradoProPrc: string;
 };
 
+// Tipagens para consulta de estoque do produto
+export interface ProdutoEstoqueItem {
+  pedidoId: string;
+  compraId: string;
+  chavePlataforma: string;
+  chavePro: string;
+  codPro: string;
+  descrProcor: string;
+  descrProTamanho: string;
+  quantidadeAnterior: string;
+  valorUnitarioAnterior: string;
+  valorTotalAnterior: string;
+  quantidadeEntrada: string;
+  valorUnitarioEntrada: string;
+  valorTotalEntrada: string;
+  quantidadeSaida: string;
+  valorUnitarioSaida: string;
+  valorTotalSaida: string;
+  quantidadeSaldo: string;
+  valorUnitarioSaldo: string;
+  valorTotalSaldo: string;
+  tipoMovimento: string;
+  tipoOperacao: string;
+  observacao: string;
+  dataCadastrado: string;
+  dataAtualizado: string;
+}
+
+export interface ProdutoEstoqueResponse {
+  success: boolean;
+  message: string;
+  result: ProdutoEstoqueItem[];
+}
+
 export interface CardProdutoProps {
   srcFront: string;
   alt: string;
   nameProduct: string;
   priceProduct: number;
   btn: React.ReactNode;
+  stock: string;
+  estControl: string;
   promotion?: boolean;
   percent_discont?: number;
   click?: (event: React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>) => void;
@@ -116,7 +153,10 @@ export type ProdutosGrid = {
   alt: string;
   colors: string[];
   sizes: string[];
+  chavePro: string;
   bannerImg?: string[];
+  quantidadeEstoquePro: string;
+  estControl: string;
 };
 
 export type CartContextType = {
@@ -140,9 +180,12 @@ export interface ProductDataProps {
   product: string;
   description: string;
   codePro: string;
+  chavePro: string;
   images: string[];
   promotion?: boolean;
   percent_discont?: number;
+  estControl: string;
+  quantidadeEstoquePro: string;
 }
 
 export interface ModalProps {
@@ -153,6 +196,7 @@ export interface ModalProps {
 export type ProdutoCart = {
   id: string; // ID único do item no carrinho
   codPro: string;
+  chavePro: string;
   productName: string;
   description: string;
   price: number;
@@ -271,7 +315,7 @@ export type AuthContextType = {
     password: string,
     confirmPassword: string
   ) => Promise<{ success: boolean; message?: string }>;
-  requestCodePassword: (email: string) => Promise<{
+  requestCodePassword: (userName: string, email: string) => Promise<{
     success: boolean;
     message: string;
     result?: {

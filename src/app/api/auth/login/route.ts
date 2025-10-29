@@ -40,14 +40,14 @@ export async function POST(req: NextRequest) {
     const rawRoles: unknown = (result as any)?.role ?? (result as any)?.roles ?? (result as any)?.rules ?? [];
     const rolesFromApi: string[] = Array.isArray(rawRoles)
       ? rawRoles
-          .map((r: unknown) => {
-            if (typeof r === "string") return r;
-            if (r && typeof r === "object" && "name" in (r as any) && typeof (r as any).name === "string") {
-              return (r as any).name as string;
-            }
-            return undefined;
-          })
-          .filter((v: unknown): v is string => typeof v === "string")
+        .map((r: unknown) => {
+          if (typeof r === "string") return r;
+          if (r && typeof r === "object" && "name" in (r as any) && typeof (r as any).name === "string") {
+            return (r as any).name as string;
+          }
+          return undefined;
+        })
+        .filter((v: unknown): v is string => typeof v === "string")
       : [];
 
     const user = {
@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
       firstName: result.firstName || result.name || "Usuário",
       role: rolesFromApi,
     };
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[LOGIN] rolesFromApi:", rolesFromApi);
-    }
+    // if (process.env.NODE_ENV !== "production") {
+    //   console.log("[LOGIN] rolesFromApi:", rolesFromApi);
+    // }
 
     // Token leve para o middleware (não criptografado)
     const secret = new TextEncoder().encode(JWT_SECRET);

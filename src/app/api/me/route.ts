@@ -11,12 +11,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Token não encontrado" }, { status: 401 });
     }
 
-    // Validar JWT
     const secret = new TextEncoder().encode(JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
 
-    // Aqui você pode buscar dados mais completos do usuário se necessário
-    // Por enquanto, retornando o que já temos no payload
     const userId = payload.sub;
     const roles = normalizeRoles(payload.role || payload.roles || []);
 

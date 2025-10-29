@@ -8,11 +8,10 @@ import { useAuth } from "../../../Context/AuthContext";
 import type { LoginForm } from "./schemas";
 import { loginSchema } from "./schemas";
 import { AuthButtons } from "@/app/components/AuthButtons";
-import { signIn, signOut, useSession } from "next-auth/react";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, requestAccess, requestCodePassword, userName, setStep } = useAuth();
+  const { signIn, requestCodePassword, userName, setStep, email } = useAuth();
   const sso_enabled = false;
 
   const {
@@ -46,34 +45,11 @@ export function LoginForm() {
     await handleLogin(data);
   };
 
-  async function handleReqAccess() {
-    console.log(userName, "chamei o req access");
-    const result = await requestAccess(userName);
-
-    if (!result.success) {
-      setError("userName", {
-        type: "manual",
-        message: result.message || "Usuário não encontrado.",
-      });
-      return;
-    }
-
-    if (result.email) {
-      console.log(result.email, "chamei o req code");
-      await requestCodePassword(result.email);
-    } else {
-      setError("userName", {
-        type: "manual",
-        message: "Email não encontrado para este usuário.",
-      });
-    }
-    setStep("code");
-  }
-
   async function handleForgotPassword(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     setIsLoading(true);
-    await handleReqAccess();
+    await requestCodePassword(userName, email);
+    setStep("code");
   }
 
   return (
