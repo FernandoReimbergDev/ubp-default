@@ -14,7 +14,7 @@ export function LogoSquare() {
 
 export function LogoHorizontal() {
   return (
-    <Link href={"/"} className="flex items-center justify-center h-auto w-26">
+    <Link href={"/"} className="flex items-center justify-center h-full max-w-42  sm:max-w-56">
       <Image src={logoHorizontal} alt={`Logotipo ${"AMIL"}`} priority className="object-contain" />
     </Link>
   );

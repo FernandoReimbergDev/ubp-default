@@ -40,12 +40,13 @@ export default function Search() {
           })}
         </div>
       </Container>
-      <Container>
-        <Banner imgSrc={Logo} alt="Logotipo da empresa" />
-      </Container>
+
       <Container>
         <TitleSection text="Explore os Produtos" icon={<ShoppingBag size={24} className="text-green-600" />} />
         <GridProducts />
+      </Container>
+      <Container>
+        <Banner imgSrc={Logo} alt="Logotipo da empresa" />
       </Container>
     </div>
   );

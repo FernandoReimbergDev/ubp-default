@@ -17,6 +17,7 @@ export const JWT_SECRET = requireEnv("JWT_SECRET");
 export const JWT_REFRESH_SECRET = requireEnv("JWT_REFRESH_SECRET");
 export const COOKIE_ENCRYPTION_SECRET = requireEnv("JWT_REFRESH_SECRET");
 export const BASE_URL = requireEnv("BASE_URL");
+export const NOME_LOJA = requireEnv("NOME_LOJA");
 
 // Configurações de pagamento
 export const LIMITE_PARCELAMENTO = parseInt(requireEnv("LIMITE_PARCELAMENTO"), 10);

@@ -6,8 +6,8 @@ import { CartProvider } from "../Context/CartContext";
 import { ToastProvider } from "../Context/ToastProvider";
 
 export const metadata: Metadata = {
-  title: "Amil | Unity Brindes",
-  description: "Loja Virtual Amil",
+  title: "Caixa Vida e Previdência Store | Unity Brindes",
+  description: "Loja Virtual Caixa Vida e Previdência",
 };
 
 export default async function PublicLayout({

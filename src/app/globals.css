@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-primary: #461bff;
-  --color-secondary: #2d1ab4;
-  --color-body-bg: #d0e0e3;
+  --color-primary: #005CA9;
+  --color-secondary: #2D8AD8;
+  --color-body-bg: #EAEAEA;
   --color-footer-bg: #461bff;
   --color-footer-text: #fff;
   --color-footer-bgFaixa: #fff;
   --color-formLogin-bg: #fff;
   --color-formLogin-text: #585858;
-  --color-Button-bg: #461bff;
+  --color-Button-bg: #005CA9;
   --color-Button-text: #fff;
-  --color-Button-textHover: #461bff;
-  --color-Button-borderHover: #461bff;
+  --color-Button-textHover: #005CA9;
+  --color-Button-borderHover: #005CA9;
   --color-Button-bgHover: #fff;
   --color-Header-bg: #fff;
   --color-MenuNav-text: #333;
@@ -20,14 +20,14 @@
   --color-SearchBar-bg: #fff;
   --color-SearchBar-text: #585858;
   --color-SearchBar-border: #bbb;
-  --color-SearchBar-borderFocus: #461bff;
-  --color-Slider-bg: #461bff;
-  --color-Slider-bgDegrade: #2d1ab4;
+  --color-SearchBar-borderFocus: #005CA9;
+  --color-Slider-bg: #005CA9;
+  --color-Slider-bgDegrade: #005Cb9;
   --color-Categorias-bg: #fff;
-  --color-Categorias-bgCategoria: #461bff;
+  --color-Categorias-bgCategoria: #005CA9;
   --color-Categorias-text: #fff;
   --color-Banner-bg: #fff;
-  --color-TemplateEmail-bgLogo: #eeeeee;
+  --color-TemplateEmail-bgLogo: #EEEEEE;
   --color-TemplateEmail-fontColor: #333333;
   --color-TemplateEmail-codeColor: #004080;
   --color-TemplateEmail-footerColor: #f1f1f1;
@@ -38,11 +38,11 @@
   --color-modalProduct-text: #333;
   --color-modalProduct-border: #461bff;
   --color-modalProduct-button: #461bff;
-  --color-modalProduct-hoverButton: #00c951;
+  --color-modalProduct-hoverButton: #00C951;
   --color-modalProduct-textButton: #fff;
   --color-politicaCookiesTerms-bg: #461bff;
   --color-politicaCookiesTerms-text: #fff;
-  --color-politicaCookiesTerms-button: #00c951;
+  --color-politicaCookiesTerms-button: #00C951;
   --color-politicaCookiesTerms-border: #461bff;
   --color-politicaCookiesTerms-hoverButton: #00f981;
   --color-politicaCookiesTerms-textButton: #fff;

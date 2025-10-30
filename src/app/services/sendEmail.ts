@@ -3,6 +3,7 @@ const EMAIL_HOST = process.env.EMAIL_HOST;
 const EMAIL_PORT = Number(process.env.EMAIL_PORT);
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
+const NOME_LOJA = process.env.NOME_LOJA;
 
 const transporter = nodemailer.createTransport({
   host: EMAIL_HOST,
@@ -17,7 +18,7 @@ const transporter = nodemailer.createTransport({
 export async function sendEmail(to: string, subject: string, text: string, html?: string) {
   try {
     await transporter.sendMail({
-      from: `"Amil | Unity Brindes" <${EMAIL_USER}>`,
+      from: `${NOME_LOJA} <${EMAIL_USER}>`,
       to,
       subject,
       text,

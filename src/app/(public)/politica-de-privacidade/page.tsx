@@ -1,6 +1,5 @@
 import { PublicHeader } from "@/app/components/PublicHeader";
 import Link from "next/link";
-
 export default function politicaPrivacidade() {
   return (
     <div className="w-screen">

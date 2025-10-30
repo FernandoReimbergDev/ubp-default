@@ -8,8 +8,8 @@ interface BannerProps {
 
 export function Banner({ imgSrc, alt }: BannerProps) {
   return (
-    <div className="bg-Banner-bg w-full h-48 rounded-xl flex flex-col items-center justify-center revelScroll overflow-hidden relative">
-      <Image src={Logo || imgSrc} alt={alt} width={315} height={112} className="object-contain" priority />
+    <div className="bg-Banner-bg w-full h-fit py-16 rounded-xl flex flex-col items-center justify-center revelScroll overflow-hidden relative">
+      <Image src={Logo || imgSrc} alt={alt} className="object-contain md:max-w-[80%]" priority />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 {
-  "primary": "#461bff",
-  "secondary": "#2d1ab4",
+  "primary": "#005CA9",
+  "secondary": "#2D8AD8",
   "body": {
-    "bg": "#d0e0e3"
+    "bg": "#EAEAEA"
   },
   "footer": {
     "bg": "#461bff",
@@ -14,10 +14,10 @@
     "text": "#585858"
   },
   "Button": {
-    "bg": "#461bff",
+    "bg": "#005CA9",
     "text": "#fff",
-    "textHover": "#461bff",
-    "borderHover": "#461bff",
+    "textHover": "#005CA9",
+    "borderHover": "#005CA9",
     "bgHover": "#fff"
   },
   "Header": {
@@ -31,15 +31,15 @@
     "bg": "#fff",
     "text": "#585858",
     "border": "#bbb",
-    "borderFocus": "#461bff"
+    "borderFocus": "#005CA9"
   },
   "Slider": {
-    "bg": "#461bff",
-    "bgDegrade": "#2d1ab4"
+    "bg": "#005CA9",
+    "bgDegrade": "#005Cb9"
   },
   "Categorias": {
     "bg": "#fff",
-    "bgCategoria": "#461bff",
+    "bgCategoria": "#005CA9",
     "text": "#fff"
   },
   "Banner": {
