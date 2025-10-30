@@ -34,7 +34,7 @@ const nextConfig = {
   // Aqui libera IPs e origens específicas em dev
   allowedDevOrigins: [
     "http://localhost:3000",
-    "http://192.168.20.36:3000",
+    "http://192.168.20.36",
     "https://amil.unitycorp.com.br",
     "http://n-unity-100:3000",
   ],

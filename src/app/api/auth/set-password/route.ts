@@ -8,7 +8,9 @@ import { encrypt } from '../../../services/cryptoCookie';
 export async function POST(req: NextRequest) {
     try {
         const storeId = STORE_ID;
-        const { email, accessCode, password, confirmPassword } = await req.json();
+        const { userName, accessCode, password, confirmPassword } = await req.json();
+
+        console.log(userName, accessCode, password, confirmPassword)
 
         if (!storeId) {
             console.error('ID da plataforma não encontrado:', storeId);
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (!email || !password) {
+        if (!userName || !password) {
             return NextResponse.json(
                 { success: false, message: 'Parametros inválidos.' },
                 { status: 400 }
@@ -60,8 +62,8 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({
                 storeId: Number(storeId),
-                username: email,
-                accessCode: Number(accessCode),
+                username: userName,
+                accessCode: accessCode,
                 password: password,
                 passwordConfirm: confirmPassword
             })
@@ -77,39 +79,47 @@ export async function POST(req: NextRequest) {
         }
 
 
-        // Assinar tokens usando jose, alinhado ao login
+        // Extrair roles e payload de usuário como no login
+        const result = (data as any)?.result ?? {};
+        const rawRoles: unknown = result?.role ?? result?.roles ?? result?.rules ?? [];
+        const rolesFromApi: string[] = Array.isArray(rawRoles)
+            ? rawRoles
+                .map((r: unknown) => {
+                    if (typeof r === 'string') return r;
+                    if (r && typeof r === 'object' && 'name' in (r as any) && typeof (r as any).name === 'string') {
+                        return (r as any).name as string;
+                    }
+                    return undefined;
+                })
+                .filter((v: unknown): v is string => typeof v === 'string')
+            : [];
+
+        const user = {
+            id: result?.id,
+            firstName: result?.firstName || result?.name || 'Usuário',
+            role: rolesFromApi,
+        };
+
+        // Gerar tokens idênticos ao login
         const accessSecret = new TextEncoder().encode(JWT_SECRET);
-        const accessToken = await new SignJWT({
-            sub: String(data.result.id),
-            iss: 'unitybrindes',
-            role: []
-        })
+        const accessToken = await new SignJWT({ sub: user.id, iss: 'unitybrindes', role: rolesFromApi })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime('15m')
             .sign(accessSecret);
 
         const refreshSecret = new TextEncoder().encode(JWT_REFRESH_SECRET);
-        const refreshPayload = {
-            id: data.result.id,
-            firstName: data.result.firstName || 'Usuário',
-            role: [] as string[],
-        };
-        const refreshToken = await new SignJWT(refreshPayload)
+        const refreshToken = await new SignJWT(user)
             .setProtectedHeader({ alg: 'HS256' })
             .setExpirationTime('7d')
             .sign(refreshSecret);
         const encryptedRefreshToken = encrypt(refreshToken);
 
-        const res = NextResponse.json({
-            success: true,
-            message: data.message,
-            user: {
-                id: data.result.id,
-                email: data.result.email,
-            },
-        }, { status: response.status });
+        // Resposta e cookies alinhados ao login
+        const res = new NextResponse(JSON.stringify({ success: true, user }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
 
-        // Cookies alinhados ao login
         res.cookies.set('auth', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',

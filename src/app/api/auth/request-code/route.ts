@@ -16,6 +16,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Dados inválidos." }, { status: 400 });
     }
 
+    console.log(username, email)
+
     const token = await getDecryptedToken(API_REQ_APPLICATION);
 
     if (!token) {

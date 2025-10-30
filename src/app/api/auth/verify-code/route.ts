@@ -30,8 +30,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        console.log("storeId:", storeId, "username:", username, "accessCode:", accessCode)
-
         const token = await getDecryptedToken(API_REQ_APPLICATION);
 
         if (!token) {

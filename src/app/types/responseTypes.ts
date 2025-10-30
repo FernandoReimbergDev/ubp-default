@@ -310,12 +310,16 @@ export type AuthContextType = {
   }>;
   verifyCode: (email: string, accessCode: string) => Promise<{ success: boolean; message?: string }>;
   setPassword: (
-    email: string,
-    accessCode: string,
+    // userName: string,
+    // accessCode: string,
     password: string,
     confirmPassword: string
   ) => Promise<{ success: boolean; message?: string }>;
-  requestCodePassword: (userName: string, email: string) => Promise<{
+  setNewPassword: (
+    password: string,
+    confirmPassword: string
+  ) => Promise<{ success: boolean; message?: string }>;
+  requestCodePassword: () => Promise<{
     success: boolean;
     message: string;
     result?: {

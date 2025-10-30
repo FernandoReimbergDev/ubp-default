@@ -11,8 +11,6 @@ export async function POST(req: NextRequest) {
     const storeId = STORE_ID;
     const { userName } = await req.json();
 
-    console.log(userName);
-
     if (!userName) {
       return NextResponse.json({ success: false, message: "Username inválido." }, { status: 400 });
     }
@@ -39,12 +37,10 @@ export async function POST(req: NextRequest) {
       }),
     };
 
-    // Chamada correta com await:
     const response = await fetch(url, options);
     const data = await response.json();
-
+    console.log(data)
     if (!response.ok) {
-      // Repasse o status e o corpo da API externa diretamente
       return new NextResponse(JSON.stringify(data), {
         status: response.status,
         headers: { "Content-Type": "application/json" },
@@ -137,7 +133,7 @@ export async function POST(req: NextRequest) {
             `;
 
       await sendEmail(
-        userName,
+        data.result.email,
         "Seu código de verificação",
         `Seu código é: ${data.result.firstAccessActivationCode}`,
         htmlTemplate
@@ -147,7 +143,8 @@ export async function POST(req: NextRequest) {
           success: true,
           status: "code-sent",
           message: "Código enviado para o e-mail informado.",
-          email: data.result.email, // <-- incluir email
+          email: data.result.email,
+          firstAccess: data.result.firstAccess,
         },
         { status: 200 }
       );
@@ -159,11 +156,11 @@ export async function POST(req: NextRequest) {
         status: "can-login",
         email: data.result.email,
         message: data.message,
+        firstAccess: data.result.firstAccess
       },
       { status: 200 }
     );
   } catch (err: unknown) {
-    // Só retorna erro genérico se for erro do seu backend
     return NextResponse.json({ success: false, message: "Erro interno ao requisitar acesso.", err }, { status: 500 });
   }
 }

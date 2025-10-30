@@ -11,7 +11,7 @@ import { AuthButtons } from "@/app/components/AuthButtons";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, requestCodePassword, userName, setStep, email } = useAuth();
+  const { signIn, requestCodePassword, userName, setStep } = useAuth();
   const sso_enabled = false;
 
   const {
@@ -48,8 +48,10 @@ export function LoginForm() {
   async function handleForgotPassword(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     setIsLoading(true);
-    await requestCodePassword(userName, email);
+    await requestCodePassword();
+    setIsLoading(false);
     setStep("code");
+
   }
 
   return (
@@ -79,7 +81,7 @@ export function LoginForm() {
         </Button>
         {sso_enabled && <AuthButtons />}
 
-        <div className="h-6 ">{isSubmitting && <span className="loader"></span>}</div>
+        <div className="h-6 ">{isSubmitting || isLoading && <span className="loader"></span>}</div>
       </form>
       <button
         type="button"

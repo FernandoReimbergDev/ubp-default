@@ -6,10 +6,11 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { InputField, InputIcon, InputRoot } from "../../../components/Input";
 import { codeSchema, type CodeForm } from "../steps/schemas";
 import { maskEmail } from "@/app/services/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function CodeForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(30);
   const { verifyCode, requestCodePassword, email, userName } = useAuth();
   const {
     register,
@@ -19,6 +20,14 @@ export function CodeForm() {
   } = useForm<CodeForm>({
     resolver: yupResolver(codeSchema),
   });
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => {
+      setCooldown((c) => (c > 0 ? c - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   async function handleCodeSubmit(data: CodeForm) {
     const result = await verifyCode(userName, data.accessCode || "");
@@ -33,15 +42,19 @@ export function CodeForm() {
     }
   }
 
-  async function handleResendCode() {
+  async function handleResendCode(e?: React.MouseEvent<HTMLButtonElement>) {
+    e?.preventDefault();
+    e?.stopPropagation();
     setIsLoading(true);
-    const result = await requestCodePassword(userName, email);
+    const result = await requestCodePassword();
     if (!result.success) {
       setError("accessCode", {
         type: "manual",
         message: "Código inválido",
       });
     }
+    setCooldown(60);
+    setIsLoading(false);
   }
 
   const onSubmit: SubmitHandler<CodeForm> = async (data) => {
@@ -63,21 +76,22 @@ export function CodeForm() {
           </InputIcon>
           <InputField {...register("accessCode")} type="text" placeholder="Código de verificação" />
         </InputRoot>
+        {errors.accessCode && <p className="text-red-500 text-xs font-semibold">{errors.accessCode.message}</p>}
 
-        <Button disabled={isSubmitting} type="submit">
+        <Button disabled={isSubmitting || isLoading} type="submit">
           Continuar <ArrowRight />
         </Button>
         <div className="h-6 ">{isSubmitting && <span className="loader"></span>}</div>
-        {errors.accessCode && <p className="text-red-500 text-xs font-semibold">{errors.accessCode.message}</p>}
 
       </form>
       <button
         type="button"
         className="text-blue-700 text-sm hover:underline text-right w-full pr-2 cursor-pointer"
-        onClick={handleResendCode}
-        disabled={isLoading}
+        onClick={(e) => handleResendCode(e)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); } }}
+        disabled={isLoading || cooldown > 0}
       >
-        Reenviar código?
+        {cooldown > 0 ? `Reenviar em ${cooldown}s` : "Reenviar código?"}
       </button>
 
     </>

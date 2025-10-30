@@ -24,8 +24,6 @@ export const emailSchema = object({
 export type emailForm = InferType<typeof emailSchema>;
 
 export const passwordSchema = object({
-  email: string().email("Digite um e-mail válido").required("O e-mail é obrigatório"),
-  accessCode: string().required("Código obrigatório"),
   password: string().required("Senha obrigatória"),
   confirmPassword: string()
     .oneOf([ref("password")], "As senhas devem ser iguais")
@@ -34,8 +32,6 @@ export const passwordSchema = object({
 export type PasswordForm = InferType<typeof passwordSchema>;
 
 export const resetSchema = object({
-  email: string().email("Digite um e-mail válido").required("O e-mail é obrigatório"),
-  resetCodeInput: string().required("Código obrigatório"),
   password: string().required("Senha obrigatória"),
   confirmPassword: string()
     .oneOf([ref("password")], "As senhas devem ser iguais")
