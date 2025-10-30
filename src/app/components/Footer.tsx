@@ -56,9 +56,7 @@ export function Footer() {
           <li>
             <Link href="/termos-de-uso">Termos de uso</Link>
           </li>
-          <li>
-            <Link href="/fale-conosco">Fale Conosco</Link>
-          </li>
+
         </ul>
         <p className="text-[var(--text-footer)] mt-2.5 text-center pb-2 text-sm">
           © 2025 - Unity Brindes | Todos Direitos Reservados

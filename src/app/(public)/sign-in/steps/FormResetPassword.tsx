@@ -13,7 +13,6 @@ export function ResetPasswordForm() {
     register,
     handleSubmit,
     setError,
-    setValue,
     formState: { isSubmitting, errors },
   } = useForm<ResetForm>({
     resolver: yupResolver(resetSchema),

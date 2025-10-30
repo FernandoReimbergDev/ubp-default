@@ -9,79 +9,79 @@ import { PasswordRecoveryResult } from "../../../types/responseTypes";
 import { API_REQ_APPLICATION, ENVIRONMENT, STORE_ID } from "../../../utils/env";
 
 export async function POST(req: NextRequest) {
-  try {
-    const storeId = STORE_ID;
-    const { username, email } = await req.json();
-    if (!storeId || !username || typeof username !== "string") {
-      return NextResponse.json({ success: false, message: "Dados inválidos." }, { status: 400 });
-    }
+	try {
+		const storeId = STORE_ID;
+		const { username, email } = await req.json();
+		if (!storeId || !username || typeof username !== "string") {
+			return NextResponse.json({ success: false, message: "Dados inválidos." }, { status: 400 });
+		}
 
-    console.log(username, email)
+		console.log(username, email)
 
-    const token = await getDecryptedToken(API_REQ_APPLICATION);
+		const token = await getDecryptedToken(API_REQ_APPLICATION);
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: "Erro ao obter token." }, { status: 500 });
-    }
+		if (!token) {
+			return NextResponse.json({ success: false, message: "Erro ao obter token." }, { status: 500 });
+		}
 
-    const postData = JSON.stringify({
-      storeId: Number(storeId),
-      username: username,
-    });
+		const postData = JSON.stringify({
+			storeId: Number(storeId),
+			username: username,
+		});
 
-    const responseData = await new Promise<{ success: boolean; message: string; result?: PasswordRecoveryResult }>(
-      (resolve, reject) => {
-        const options: https.RequestOptions = {
-          method: "GET",
-          hostname: "unitybrindes.com.br",
-          path: "/password-recovery-code",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(postData).toString(),
-            "X-Environment": ENVIRONMENT,
-            Authorization: `Bearer ${token}`,
-            Cookie: "PHPSESSID=ptcn93kuejvhigi0k0gv010c97",
-          },
-        };
+		const responseData = await new Promise<{ success: boolean; message: string; result?: PasswordRecoveryResult }>(
+			(resolve, reject) => {
+				const options: https.RequestOptions = {
+					method: "GET",
+					hostname: "unitybrindes.com.br",
+					path: "/password-recovery-code",
+					headers: {
+						"Content-Type": "application/json",
+						"Content-Length": Buffer.byteLength(postData).toString(),
+						"X-Environment": ENVIRONMENT,
+						Authorization: `Bearer ${token}`,
+						Cookie: "PHPSESSID=ptcn93kuejvhigi0k0gv010c97",
+					},
+				};
 
-        const externalReq = https.request(options, (res) => {
-          const chunks: Uint8Array[] = [];
+				const externalReq = https.request(options, (res) => {
+					const chunks: Uint8Array[] = [];
 
-          res.on("data", (chunk) => {
-            chunks.push(chunk);
-          });
+					res.on("data", (chunk) => {
+						chunks.push(chunk);
+					});
 
 
-          res.on("end", () => {
-            const body = Buffer.concat(chunks).toString();
-            try {
-              const parsed = JSON.parse(body);
-              if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                resolve({
-                  success: true,
-                  message: parsed.message || "Código enviado com sucesso",
-                  ...(parsed.result && { result: parsed.result }),
-                });
-              } else {
-                console.error("Erro da API externa:", parsed);
-                reject(new Error(parsed.message || "Erro ao solicitar código"));
-              }
-            } catch {
-              reject(new Error("Erro ao interpretar resposta da API externa"));
-            }
-          });
-        });
+					res.on("end", () => {
+						const body = Buffer.concat(chunks).toString();
+						try {
+							const parsed = JSON.parse(body);
+							if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+								resolve({
+									success: true,
+									message: parsed.message || "Código enviado com sucesso",
+									...(parsed.result && { result: parsed.result }),
+								});
+							} else {
+								console.error("Erro da API externa:", parsed);
+								reject(new Error(parsed.message || "Erro ao solicitar código"));
+							}
+						} catch {
+							reject(new Error("Erro ao interpretar resposta da API externa"));
+						}
+					});
+				});
 
-        externalReq.on("error", (err) => {
-          reject(err);
-        });
+				externalReq.on("error", (err) => {
+					reject(err);
+				});
 
-        externalReq.write(postData);
-        externalReq.end();
-      }
-    );
-    if (responseData.result?.passwordRecoveryCode) {
-      const htmlTemplate = `
+				externalReq.write(postData);
+				externalReq.end();
+			}
+		);
+		if (responseData.result?.passwordRecoveryCode) {
+			const htmlTemplate = `
             <!DOCTYPE html>
             <html lang="pt-BR">
                 <head>
@@ -165,34 +165,34 @@ export async function POST(req: NextRequest) {
     </html>
             `;
 
-      await sendEmail(
-        email,
-        "Seu código de verificação",
-        `Seu código é: ${responseData.result?.passwordRecoveryCode}`,
-        htmlTemplate
-      );
-      return NextResponse.json(
-        {
-          success: true,
-          status: "code-sent",
-          message: "Código enviado para o e-mail informado.",
-        },
-        { status: 200 }
-      );
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("Erro interno ao solicitar código", err.message);
-      return NextResponse.json(
-        { success: false, message: "Erro interno ao solicitar código", details: err.message },
-        { status: 500 }
-      );
-    } else {
-      console.error("Erro interno desconhecido ao solicitar código:", err);
-      return NextResponse.json(
-        { success: false, message: "Erro interno desconhecido ao solicitar código" },
-        { status: 500 }
-      );
-    }
-  }
+			await sendEmail(
+				email,
+				"Seu código de verificação",
+				`Seu código é: ${responseData.result?.passwordRecoveryCode}`,
+				htmlTemplate
+			);
+			return NextResponse.json(
+				{
+					success: true,
+					status: "code-sent",
+					message: "Código enviado para o e-mail informado.",
+				},
+				{ status: 200 }
+			);
+		}
+	} catch (err: unknown) {
+		if (err instanceof Error) {
+			console.error("Erro interno ao solicitar código", err.message);
+			return NextResponse.json(
+				{ success: false, message: "Erro interno ao solicitar código", details: err.message },
+				{ status: 500 }
+			);
+		} else {
+			console.error("Erro interno desconhecido ao solicitar código:", err);
+			return NextResponse.json(
+				{ success: false, message: "Erro interno desconhecido ao solicitar código" },
+				{ status: 500 }
+			);
+		}
+	}
 }

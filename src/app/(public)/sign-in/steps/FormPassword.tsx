@@ -1,7 +1,7 @@
 import { Button } from "@/app/components/Button";
 import { useAuth } from "@/app/Context/AuthContext";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { ArrowRight, KeyRound, Lock, Mail, RectangleEllipsis } from "lucide-react";
+import { ArrowRight, KeyRound, RectangleEllipsis } from "lucide-react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { InputField, InputIcon, InputRoot } from "../../../components/Input";
 import { passwordSchema, type PasswordForm } from "./schemas";
@@ -38,22 +38,6 @@ export function PasswordForm() {
       <form className="space-y-4 w-full overflow-hidden" autoComplete="on" onSubmit={handleSubmit(onSubmit)}>
         <h2 className="font-Poppins font-semibold text-slate-600 text-2xl flex items-center gap-2">Entrar</h2>
         <p className="font-montserrat">Cadastre sua Senha</p>
-        {/* 
-        <InputRoot data-error={!!errors.userName} hidden>
-          <InputIcon>
-            <Mail className={errors.userName ? "text-red-500" : ""} />
-          </InputIcon>
-          <InputField {...register("userName")} type="text" placeholder="Nome de usuario" />
-        </InputRoot>
-        {errors.userName && <p className="text-red-500 text-xs font-semibold">{errors.userName.message}</p>}
-
-        <InputRoot data-error={!!errors.accessCode}>
-          <InputIcon>
-            <Lock className={errors.accessCode ? "text-red-500" : ""} />
-          </InputIcon>
-          <InputField {...register("accessCode")} type="text" placeholder="Código de verificação" />
-        </InputRoot> */}
-
 
         {/* Nova Senha */}
         <InputRoot data-error={!!errors.password}>
