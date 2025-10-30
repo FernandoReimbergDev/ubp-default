@@ -17,6 +17,10 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "cx.unitycorp.com.br",
+      },
+      {
+        protocol: "https",
         hostname: "amil.unitycorp.com.br",
       },
       {
@@ -25,7 +29,7 @@ const nextConfig = {
       },
       {
         protocol: "http",
-        hostname: "n-unity-100",
+        hostname: "unity-n-14",
       },
     ],
     qualities: [75, 100], // 👈 adicione aqui as qualidades permitidas
@@ -35,8 +39,9 @@ const nextConfig = {
   allowedDevOrigins: [
     "http://localhost:3000",
     "http://192.168.20.36",
+    "https://cx.unitycorp.com.br",
     "https://amil.unitycorp.com.br",
-    "http://n-unity-100:3000",
+    "http://unity-n-14:3000",
   ],
 };
 

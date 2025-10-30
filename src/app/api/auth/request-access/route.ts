@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { sendEmail } from "../../../services/sendEmail";
-import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT } from "../../../utils/env";
+import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT, NOME_LOJA } from "../../../utils/env";
 import colors from "../../../../../cores.json";
-import assinatura from "../../../../../public/rodape-email.png";
 import { getDecryptedToken } from "../../../services/getDecryptedToken";
 
 export async function POST(req: NextRequest) {
@@ -74,7 +73,7 @@ export async function POST(req: NextRequest) {
                         .header {
                         background-color: ${colors.TemplateEmail.bgLogo};
                         padding: 20px;
-                        text-align: center;
+                        text-align: left;
                         }
 
                         .header img {
@@ -82,7 +81,7 @@ export async function POST(req: NextRequest) {
                         }
 
                         .content {
-                        padding: 30px;
+                        padding: 20px;
                         color: ${colors.TemplateEmail.fontColor};
                         font-size: 14px;
                         }
@@ -112,16 +111,16 @@ export async function POST(req: NextRequest) {
         <body>
         <div class="container">
         <div class="header">
-            <img src="https://amil.unitycorp.com.br/assets/images/logo/logo-colorido.png" alt="Unity Brindes" />
+            <img src="https://www2.unitycorp.com.br/teste/logo-header.png" alt={"logo" ${NOME_LOJA}}/>
         </div>
         <div class="content">
             <h1>Olá!</h1>
-            <p>Você solicitou um código de verificação para acessar a plataforma da <strong>Amil</strong>.</p>
+            <p>Você solicitou um código de verificação para acessar a plataforma da <strong>${NOME_LOJA}</strong>.</p>
             <div class="code">${data.result.firstAccessActivationCode}</div>
             <p>Este código expira em 5 minutos.</p>
             <p>Se você não solicitou este código, pode ignorar este e-mail com segurança.</p>
             <p>Atenciosamente,<br />Equipe Unity Brindes</p>
-            <img src=${assinatura} alt="Unity Brindes assinatura" />
+                  <img src="https://www2.unitycorp.com.br/teste/rodape-email.png" alt="assinatura e-mail Unity Brindes" />
         </div>
         <div class="footer">
             Este é um e-mail automático. Por favor, não responda.

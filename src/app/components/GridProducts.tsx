@@ -8,8 +8,7 @@ import { useMemo, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import { SkeletonCardProduto } from "./SkeletonCardProduto";
 import { ProdutosGrid } from "../types/responseTypes";
-import { formatPrice } from "../utils/formatter";
-import Image from "next/image";
+import { AsideFilter } from "./AsideFilter";
 
 export const GridProducts = () => {
   const { products, loading, error } = useProducts();
@@ -74,54 +73,13 @@ export const GridProducts = () => {
       <div className="mx-auto w-full max-w-7xl space-y-6">
 
         <section className="grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]">
-          <aside className="rounded-lg bg-white shadow-sm p-4">
-            <h2 className="mb-3 text-lg font-medium text-gray-900">Filtros</h2>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-800">Preço</p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    placeholder="Mín"
-                    className="w-1/2 rounded-md border border-gray-300 px-2 py-1 text-sm"
-                  />
-                  <span className="text-gray-500">-</span>
-                  <input
-                    type="number"
-                    placeholder="Máx"
-                    className="w-1/2 rounded-md border border-gray-300 px-2 py-1 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-800">Avaliação</p>
-                <div className="space-y-1 text-sm text-gray-700">
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" /> 4★ e acima
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" /> 3★ e acima
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" /> 2★ e acima
-                  </label>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-800">Disponibilidade</p>
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" /> Em estoque
-                </label>
-              </div>
-              <button className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-black">
-                Aplicar filtros
-              </button>
-            </div>
-          </aside>
+
+          <AsideFilter />
+
 
           <div className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-              <p className="text-sm text-gray-600">Mostrando 12 de 128 itens</p>
+              <p className="text-sm text-gray-600">Mostrando 12 de 103 itens</p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Ordenar por</span>
                 <select className="rounded-md border border-gray-300 px-2 py-1 text-sm">
@@ -177,8 +135,8 @@ export const GridProducts = () => {
             </div>
           </div>
         </section>
-
-        <section className="rounded-lg bg-white p-6 shadow-sm">
+        {isModalOpen && selectedProduct && <ModalProduto ProductData={selectedProduct} onClose={closeModal} />}
+        {/* <section className="rounded-lg bg-white p-6 shadow-sm">
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Fique por dentro das novidades</h3>
@@ -188,6 +146,7 @@ export const GridProducts = () => {
               <input
                 type="email"
                 placeholder="Seu e-mail"
+                defaultValue={email}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
               />
               <button className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black">
@@ -195,7 +154,7 @@ export const GridProducts = () => {
               </button>
             </div>
           </div>
-        </section>
+        </section> */}
       </div>
     </main>
   );

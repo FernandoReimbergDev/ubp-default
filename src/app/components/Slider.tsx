@@ -29,8 +29,25 @@ export const Slider = () => {
   };
 
   function produtosBannerInsert() {
-    const productsWithBanner = produtos.filter((item) => item.bannerImg);
-    setProduto(productsWithBanner);
+    const productsWithBanner = (produtos as any[]).filter((item) => item.bannerImg);
+    const adapted: ProdutosGrid[] = productsWithBanner.map((item, index) => ({
+      id: item.id ?? index,
+      codePro: item.codePro,
+      product: item.product,
+      description: item.description,
+      price: item.price,
+      srcFrontImage: item.srcFrontImage,
+      srcBackImage: item.srcBackImage,
+      images: item.images ?? [],
+      alt: item.alt ?? "",
+      colors: item.colors ?? [],
+      sizes: (item.sizes ?? []) as string[],
+      chavePro: "",
+      bannerImg: item.bannerImg,
+      quantidadeEstoquePro: "",
+      estControl: "0",
+    }));
+    setProduto(adapted);
   }
 
   useEffect(() => {
@@ -151,9 +168,8 @@ export const Slider = () => {
               <div
                 key={index}
                 onClick={() => handleSelectSlide(index)}
-                className={`rounded-full h-4 w-4 cursor-pointer transition-all duration-300 ${
-                  index === currentIndex ? "scale-125 bg-green-500" : "bg-white scale-100"
-                }`}
+                className={`rounded-full h-4 w-4 cursor-pointer transition-all duration-300 ${index === currentIndex ? "scale-125 bg-green-500" : "bg-white scale-100"
+                  }`}
               />
             ))}
           </div>
