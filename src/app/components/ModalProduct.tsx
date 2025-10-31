@@ -1,10 +1,10 @@
 "use client";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus, Plus, ShoppingCart, Tag, X } from "lucide-react";
 import Image from "next/image";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
 import { useToast } from "../Context/ToastProvider";
-import { ModalProps, ProdutoCart, ProdutoEstoqueItem, ProdutoEstoqueResponse } from "../types/responseTypes";
+import { ModalProps, ProdutoCart, stock } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { ZoomProduct } from "./ZoomProduct";
@@ -20,7 +20,37 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const [descriFull, setDescriFull] = useState(false);
   const toast = useToast();
   const [loading, setLoading] = useState<boolean>(false);
-  const [product, setProduct] = useState<ProdutoEstoqueItem>();
+  const [product, setProduct] = useState<stock>();
+  const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
+
+  const scheduleFetch = (color?: string, size?: string, delayMs = 400) => {
+    if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+    fetchDebounceRef.current = setTimeout(() => {
+      // Abort any in-flight request
+      if (fetchAbortRef.current) {
+        fetchAbortRef.current.abort();
+      }
+      // Mark new request id and set loading true for this cycle
+      const reqId = ++requestIdRef.current;
+      setLoading(true);
+      const controller = new AbortController();
+      fetchAbortRef.current = controller;
+      fetchProductsStock(color, size, controller.signal, reqId);
+    }, delayMs);
+  };
+
+  const toNumberBR = (val: string | number | undefined) => {
+    if (val === undefined || val === null) return undefined;
+    const s = String(val).trim();
+    if (s === "") return undefined;
+    if (s.includes(".") && s.includes(",")) {
+      return Number(s.replace(/\./g, "").replace(",", "."));
+    }
+    if (s.includes(",")) return Number(s.replace(",", "."));
+    return Number(s);
+  };
 
   const hasKnownStock = typeof ProductData.quantidadeEstoquePro === "string" && ProductData.quantidadeEstoquePro.trim() !== "";
   const parsedStock = hasKnownStock
@@ -29,34 +59,36 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
   const isOutOfStock = ProductData.estControl === "1" && hasKnownStock && (parsedStock ?? 0) <= 0;
 
-  const fetchProductsStock = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
+  const fetchProductsStock = async (
+    color?: string,
+    size?: string,
+    signal?: AbortSignal,
+    reqId?: number
+  ) => {
+    // loading is set in scheduler to avoid flicker and to bind to reqId
     try {
-      const res = await fetch("/api/send-request", {
+      const res = await fetch("/api/stock", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          reqMethod: "GET",
-          reqEndpoint: `/product-stock/${ProductData.chavePro}`,
-          reqHeaders: {
-            "X-Environment": "HOMOLOGACAO",
-            storeId: "32",
-            landingPagePro: "1",
-            disponivelProCor: "1",
-            descrProCor: selectedColor,
-            descrProTamanho: selectedSize
-          },
-        }),
+        body: (() => {
+          const payload: Record<string, unknown> = {
+            codPro: ProductData.codePro,
+            chavePro: ProductData.chavePro,
+          };
+          const c = color ?? selectedColor;
+          const s = size ?? selectedSize;
+          if (c && c.trim() !== "") payload.descrProCor = c;
+          if (s && s.trim() !== "") payload.descrProTamanho = s;
+          return JSON.stringify(payload);
+        })(),
         signal,
       });
 
-      console.log(ProductData.chavePro, selectedColor, selectedSize)
-
       const result: {
         success: boolean;
-        data?: ProdutoEstoqueResponse;
+        data?: { success: boolean; message: string; result: { produtos: stock[] } | stock[] };
         message?: string;
         details?: unknown;
       } = await res.json();
@@ -71,19 +103,34 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
         throw new Error(result.message || "Erro ao buscar produtos");
       }
-      if (result.data?.result?.[0]) {
-        setProduct(result.data.result[0]);
+      const rawResult = result.data?.result as unknown;
+      const produtos: stock[] = Array.isArray(rawResult)
+        ? (rawResult as stock[])
+        : ((rawResult as { produtos?: stock[] })?.produtos ?? []);
+      const first = produtos?.[0];
+      if (reqId === requestIdRef.current) {
+        if (first) {
+          setProduct(first as stock);
+        } else {
+          setProduct(undefined);
+        }
       }
 
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
+        // If the aborted request is the latest one, clear loading
+        if (reqId === requestIdRef.current) {
+          setLoading(false);
+        }
         return;
       }
       console.error("error ao requisitar produtos para api externa", error);
     } finally {
-      setLoading(false);
+      if (reqId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  };
 
   const handleDescriFull = () => {
     setDescriFull((prevState) => !prevState);
@@ -92,20 +139,27 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   useEffect(() => {
     setSelectedColor(ProductData.colors[0]);
     setSelectedSize(ProductData.sizes[0]);
+    return () => {
+      if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+      if (fetchAbortRef.current) {
+        fetchAbortRef.current.abort();
+        fetchAbortRef.current = null;
+      }
+    };
   }, [ProductData]);
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
-    fetchProductsStock()
+    scheduleFetch(color, selectedSize);
   };
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size);
-    fetchProductsStock()
+    scheduleFetch(selectedColor, size);
   };
 
   const handleQuantityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQtdMsg(false);
-    fetchProductsStock()
+    scheduleFetch(selectedColor, selectedSize);
     const value = event.target.value;
     // Permite apenas números positivos ou vazio
     if (/^\d*$/.test(value)) {
@@ -196,11 +250,12 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               width={300}
               height={300}
               quality={100}
+              priority
             />
           </div>
-          <div className="flex items-center justify-center relative h-fit lg:max-w-[400px] lg:w-[400px] w-[250px] ">
+          <div className="flex items-center justify-center relative h-fit lg:max-w-[400px] lg:w-[400px] w-[250px]">
             <ChevronLeft size={32} className="hidden md:visible absolute -left-2 top-1/1 cursor-pointer" />
-            <div className="w-[90%] lg:w-350px p-2 lg:mt-2 flex gap-2 lg:gap-4 justify-start relative overflow-x-auto">
+            <div className="w-[90%] lg:w-350px p-2 lg:mt-2 flex gap-2 lg:gap-4 justify-start relative overflow-x-auto scrollbar">
               {ProductData.images.map((image, index) => (
                 <Image
                   key={image}
@@ -311,7 +366,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                       setQuantity(String(newQty));
                       setSubtotal(newQty * ProductData.price);
                       setQtdMsg(false);
-                      fetchProductsStock()
+                      scheduleFetch(selectedColor, selectedSize);
                     }
                   }}
                   className="disabled:opacity-50 disabled:cursor-not-allowed w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton cursor-pointer text-xl"
@@ -340,7 +395,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                     setQuantity(String(newQty));
                     setSubtotal(newQty * ProductData.price);
                     setQtdMsg(false);
-                    fetchProductsStock();
+                    scheduleFetch(selectedColor, selectedSize);
                   }}
                   className="disabled:opacity-50 disabled:cursor-not-allowed w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton cursor-pointer text-xl"
                 >
@@ -348,13 +403,14 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 </button>
               </div>
 
-              {product?.quantidadeSaldo &&
-                parseInt(quantity || "0", 10) >
-                Math.trunc(Number(String(product.quantidadeSaldo).replace(",", "."))) && (
-                  <span className="mt-4 text-red-500">{`Quantidade disponivel: ${String(
-                    product.quantidadeSaldo
-                  ).split(".")[0]}`}</span>
-                )}
+              {(() => {
+                const requested = parseInt(quantity || "0", 10);
+                const available = toNumberBR(product?.quantidadeSaldo);
+                const availableInt = typeof available === "number" && isFinite(available) ? Math.trunc(available) : undefined;
+                return typeof availableInt === "number" && requested > availableInt ? (
+                  <span className="mt-4 text-red-500">{`Quantidade disponivel: ${availableInt}`}</span>
+                ) : null;
+              })()}
 
               <span className={`text-sm pointer-events-none select-none flex gap-6 items-center ${loading ? "opacity-100" : "opacity-0"}`}>
                 <span>Consultando Estoque</span>
@@ -410,9 +466,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 type="submit"
                 name="BtnComprar"
                 disabled={(() => {
-                  const stock = product?.quantidadeSaldo;
                   const requested = parseInt(quantity || "0", 10);
-                  const available = stock ? Math.trunc(Number(String(stock).replace(",", "."))) : undefined;
+                  const availableNum = toNumberBR(product?.quantidadeSaldo);
+                  const available = typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
                   const qtyInvalid = typeof available === "number" && requested > available;
                   return loading || qtyInvalid;
                 })()}

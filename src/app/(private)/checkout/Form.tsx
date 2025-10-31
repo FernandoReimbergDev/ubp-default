@@ -17,7 +17,6 @@ export function FormPagamento() {
     register,
     handleSubmit,
     setValue,
-    watch,
     trigger,
     setError,
     clearErrors,
@@ -146,9 +145,8 @@ export function FormPagamento() {
               <button
                 type="submit"
                 disabled={submitting}
-                className={`px-4 py-2 rounded-md cursor-pointer  ${
-                  submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
-                } text-white text-xs 2xl:text-sm`}
+                className={`px-4 py-2 rounded-md cursor-pointer  ${submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
+                  } text-white text-xs 2xl:text-sm`}
               >
                 {submitting ? `'ENVIANDO...'` : "FINALIZAR COMPRA"}
               </button>

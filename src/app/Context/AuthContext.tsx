@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { AuthContextType, UsuarioContext } from "../types/responseTypes";
 import Cookies from "js-cookie";
 
@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasRole = (role: string) => roles.includes(role.toLowerCase());
   const hasAnyRole = (requiredRoles: string[]) => requiredRoles.some((role) => hasRole(role));
 
-  const fetchUserData = async (retryCount = 0) => {
+  const fetchUserData = useCallback(async (retryCount = 0) => {
     try {
       const res = await fetch("/api/me", {
         method: "GET",
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       Cookies.remove("cliente");
       return false;
     }
-  };
+  }, []);
   useEffect(() => {
     const stored = Cookies.get("cliente");
     if (stored) {
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Se não há cliente armazenado, busca dados do servidor
       fetchUserData().finally(() => setLoading(false));
     }
-  }, []);
+  }, [fetchUserData]);
 
   const requestAccess = async (userName: string) => {
     try {

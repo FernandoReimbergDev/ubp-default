@@ -1,4 +1,4 @@
-import { removeHtmlTags, validateCPFOrCNPJ, isValidCardNumber } from "@/app/services/utils";
+import { removeHtmlTags, isValidCardNumber } from "@/app/services/utils";
 import * as yup from "yup";
 import type { Asserts } from "yup";
 

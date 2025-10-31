@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { UseFormSetValue, UseFormTrigger, UseFormSetError, UseFormClearErrors, FieldValues } from "react-hook-form";
 
 export interface PasswordRecoveryResponse {
@@ -24,6 +25,32 @@ export interface ProdutosResponse {
   result: Produto[];
 }
 
+export type stock = {
+  pedidoId: string;
+  compraId: string;
+  chavePlataforma: string;
+  chavePro: string;
+  codPro: string;
+  descrProcor: string;
+  descrProTamanho: string;
+  quantidadeAnterior: string;
+  valorUnitarioAnterior: string;
+  valorTotalAnterior: string;
+  quantidadeEntrada: string;
+  valorUnitarioEntrada: string;
+  valorTotalEntrada: string;
+  quantidadeSaida: string;
+  valorUnitarioSaida: string;
+  valorTotalSaida: string;
+  quantidadeSaldo: string;
+  valorUnitarioSaldo: string;
+  valorTotalSaldo: string;
+  tipoMovimento: string;
+  tipoOperacao: string;
+  dataAtualizado: string;
+  observacao: string;
+  dataCadastrado: string;
+};
 export type Produto = {
   quantidadeEstoquePro: string;
   chavePro: string;

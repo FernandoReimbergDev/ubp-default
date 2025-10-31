@@ -29,7 +29,7 @@ export const Slider = () => {
   };
 
   function produtosBannerInsert() {
-    const productsWithBanner = (produtos as any[]).filter((item) => item.bannerImg);
+    const productsWithBanner = (produtos as ProdutosGrid[]).filter((item) => item.bannerImg);
     const adapted: ProdutosGrid[] = productsWithBanner.map((item, index) => ({
       id: item.id ?? index,
       codePro: item.codePro,

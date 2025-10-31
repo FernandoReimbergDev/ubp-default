@@ -42,7 +42,8 @@ export function ResetPasswordForm() {
         return;
       }
       window.location.href = "/";
-    } catch (e) {
+    } catch (err: unknown) {
+      console.error(err)
       setError("password", {
         type: "manual",
         message: "Falha na comunicação com o servidor.",

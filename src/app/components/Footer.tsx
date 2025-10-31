@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <div className="relative w-screen  mt-2 bg-footer-bg text-footer-text">
+    <div className="relative w-screen  mt-2 bg-footer-bg text-footer-text print:hidden">
       <footer>
         <div className="py-1">
           <div className="bg-primaryVariant h-4 w-screen block absolute left-0 -top-4"></div>

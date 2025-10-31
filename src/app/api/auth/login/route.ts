@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT, JWT_REFRESH_SECRET, JWT_SECRET } from "../../../utils/env";
 import { getDecryptedToken } from "../../../services/getDecryptedToken";
@@ -35,8 +36,6 @@ export async function POST(req: NextRequest) {
 
     const result = data.result;
 
-    // Extrai roles como array de strings (nome) para o middleware
-    // Tenta extrair de result.role, result.roles, result.rules
     const rawRoles: unknown = (result as any)?.role ?? (result as any)?.roles ?? (result as any)?.rules ?? [];
     const rolesFromApi: string[] = Array.isArray(rawRoles)
       ? rawRoles
@@ -97,7 +96,7 @@ export async function POST(req: NextRequest) {
     });
 
     return res;
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Erro ao fazer login:", err);
     return NextResponse.json({ success: false, message: "Erro interno ao fazer login" }, { status: 500 });
   }

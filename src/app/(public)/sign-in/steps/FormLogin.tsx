@@ -7,12 +7,11 @@ import { InputField, InputIcon, InputRoot } from "../../../components/Input";
 import { useAuth } from "../../../Context/AuthContext";
 import type { LoginForm } from "./schemas";
 import { loginSchema } from "./schemas";
-import { AuthButtons } from "@/app/components/AuthButtons";
+// import { AuthButtons } from "@/app/components/AuthButtons";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, requestCodePassword, userName, setStep } = useAuth();
-  const sso_enabled = false;
 
   const {
     register,
@@ -79,7 +78,7 @@ export function LoginForm() {
         <Button disabled={isSubmitting} type="submit">
           Continuar <ArrowRight />
         </Button>
-        {sso_enabled && <AuthButtons />}
+        {/* {sso_enabled && <AuthButtons />} */}
 
         <div className="h-6 ">{isSubmitting || isLoading && <span className="loader"></span>}</div>
       </form>

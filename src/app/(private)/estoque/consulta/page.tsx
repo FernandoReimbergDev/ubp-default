@@ -3,12 +3,8 @@ import { TitleSection } from "@/app/components/TitleSection";
 import { exportExcelFile } from "@/app/services/gerarPlanilha";
 import { formatPrice } from "@/app/utils/formatter";
 import { Eye, Package, Search, TableProperties } from "lucide-react";
-import { useForm } from "react-hook-form";
 
 export default function EstoqueConsulta() {
-  // const { register, watch } = useForm();
-  // const categoria = watch("categoria");
-  // const data = watch("data");
 
   return (
     <div className="min-h-[calc(100dvh-114px)] w-full max-w-[96vw] mx-auto flex flex-col lg:flex-row bg-white pt-14 p-4 mt-10">

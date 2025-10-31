@@ -41,7 +41,7 @@ export function MethodsPayments({ onPaymentMethodChange, limiteParcelamento, jur
       const tempParcela: number[] = [];
       const tempTotal: number[] = [];
       for (let i = 1; i <= limiteParcelamento; i++) {
-        let parcela = Juros_composto(totalComFrete, i, juros);
+        const parcela = Juros_composto(totalComFrete, i, juros);
         tempParcela.push(parcela.valor_parcela);
         tempTotal.push(parcela.total);
       }
@@ -144,9 +144,8 @@ export function MethodsPayments({ onPaymentMethodChange, limiteParcelamento, jur
             <button
               type="submit"
               disabled={submitting}
-              className={`px-4 py-2 rounded-md cursor-pointer  ${
-                submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
-              } text-white text-xs 2xl:text-sm`}
+              className={`px-4 py-2 rounded-md cursor-pointer  ${submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
+                } text-white text-xs 2xl:text-sm`}
             >
               {submitting ? `'ENVIANDO...'` : "CONTINUAR"}
             </button>

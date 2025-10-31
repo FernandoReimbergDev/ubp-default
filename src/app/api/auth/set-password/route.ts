@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT, JWT_SECRET, JWT_REFRESH_SECRET } from '../../../utils/env';
@@ -9,8 +10,6 @@ export async function POST(req: NextRequest) {
     try {
         const storeId = STORE_ID;
         const { userName, accessCode, password, confirmPassword } = await req.json();
-
-        console.log(userName, accessCode, password, confirmPassword)
 
         if (!storeId) {
             console.error('ID da plataforma não encontrado:', storeId);

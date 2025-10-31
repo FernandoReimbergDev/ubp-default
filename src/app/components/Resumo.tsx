@@ -110,7 +110,7 @@ export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedIn
                 </div>
 
                 <div className="flex flex-col gap-1 px-2">
-                  <p className="text-xs 2xl:text-sm font-Roboto text-blackReference truncate overflow-hidden text-ellipsis max-w-48">
+                  <p className="text-xs 2xl:text-sm font-Roboto text-blackReference line-clamp-2 overflow-hidden w-full">
                     {product.productName}
                   </p>
 

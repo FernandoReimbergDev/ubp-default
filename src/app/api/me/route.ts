@@ -1,4 +1,5 @@
-// src/app/api/me/route.ts
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { JWT_SECRET } from "../../utils/env";
@@ -25,7 +26,8 @@ export async function GET(req: NextRequest) {
       },
       roles: roles,
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    console.error("Erro ao verificar token:", error);
     return NextResponse.json({ success: false, message: "Token inválido" }, { status: 401 });
   }
 }

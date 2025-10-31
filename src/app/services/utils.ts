@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { HandleMaskParams } from "../types/responseTypes";
 
 // Função para validar se um CPF é válido

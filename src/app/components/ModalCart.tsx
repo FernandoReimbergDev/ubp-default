@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useCart } from "../Context/CartContext";
-import { ProdutoCart, ProdutoEstoqueItem, ProdutoEstoqueResponse } from "../types/responseTypes";
+import { ProdutoCart, ProdutoEstoqueItem } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { TitleSection } from "./TitleSection";
@@ -19,6 +19,17 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   const [quantities, setQuantities] = useState<{ [id: string]: string }>({});
   const [stockByItem, setStockByItem] = useState<{ [id: string]: ProdutoEstoqueItem | undefined }>({});
   const [loadingByItem, setLoadingByItem] = useState<{ [id: string]: boolean }>({});
+
+  const toNumberBR = (val: string | number | undefined) => {
+    if (val === undefined || val === null) return undefined;
+    const s = String(val).trim();
+    if (s === "") return undefined;
+    if (s.includes(".") && s.includes(",")) {
+      return Number(s.replace(/\./g, "").replace(",", "."));
+    }
+    if (s.includes(",")) return Number(s.replace(",", "."));
+    return Number(s);
+  };
 
   // Inicializa os valores com o conteúdo do carrinho
   useEffect(() => {
@@ -59,7 +70,8 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     const requested = parseInt(quantities[item.id] || "0", 10);
     if (!requested || requested <= 0) return true;
     const stock = stockByItem[item.id]?.quantidadeSaldo;
-    const available = stock ? Math.trunc(Number(String(stock).replace(",", "."))) : undefined;
+    const availableNum = toNumberBR(stock);
+    const available = typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
     return typeof available === "number" && requested > available;
   });
 
@@ -70,32 +82,45 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     }
     setLoadingByItem((prev) => ({ ...prev, [item.id]: true }));
     try {
-      const res = await fetch("/api/send-request", {
+      const res = await fetch("/api/stock", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          reqMethod: "GET",
-          reqEndpoint: `/product-stock/${item.chavePro}`,
-          reqHeaders: {
-            "X-Environment": "HOMOLOGACAO",
-            storeId: "32",
-            landingPagePro: "1",
-            disponivelProCor: "1",
-            descrProCor: item.color,
-            descrProTamanho: item.size || "",
-          },
-        }),
+        body: (() => {
+          const payload: Record<string, unknown> = {
+            codPro: item.codPro,
+            chavePro: item.chavePro,
+          };
+          if (item.color && item.color.trim() !== "") payload.descrProCor = item.color;
+          if (item.size && item.size.trim() !== "") payload.descrProTamanho = item.size;
+          return JSON.stringify(payload);
+        })(),
         signal,
       });
 
-      const result: { data: ProdutoEstoqueResponse } = await res.json();
+      const result: {
+        success: boolean;
+        data?: { success: boolean; message: string; result: { produtos: ProdutoEstoqueItem[] } | ProdutoEstoqueItem[] };
+        message?: string;
+        details?: unknown;
+      } = await res.json();
 
       if (!res.ok) {
-        throw new Error(result.data?.message || "Erro ao buscar produtos");
+        const detailsStr = typeof result.details === "string" ? result.details : undefined;
+        if (detailsStr === "Estoque não encontrado com os parâmetro(s) fornecido(s).") {
+          setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
+          return;
+        }
+        throw new Error(result.message || "Erro ao buscar produtos");
       }
-      setStockByItem((prev) => ({ ...prev, [item.id]: result.data.result?.[0] }));
+
+      const raw = result.data?.result as unknown;
+      const produtos: ProdutoEstoqueItem[] = Array.isArray(raw)
+        ? (raw as ProdutoEstoqueItem[])
+        : ((raw as { produtos?: ProdutoEstoqueItem[] })?.produtos ?? []);
+      const first = produtos?.[0];
+      setStockByItem((prev) => ({ ...prev, [item.id]: first }));
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
@@ -197,7 +222,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                       <div className="flex flex-col items-start gap-2 mt-2">
                         <div className="flex items-center gap-2">
                           <button
-                            className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
+                            className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!!loadingByItem[product.id]}
+                            aria-disabled={!!loadingByItem[product.id]}
                             onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", -1)}
                           >
                             <Minus size={16} />
@@ -207,17 +234,23 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                             inputMode="numeric"
                             pattern="[0-9]*"
                             value={quantities[product.id] ?? ""}
-                            className="w-12 md:w-16 px-1 text-center rounded-md"
+                            className="w-12 md:w-16 px-1 text-center rounded-md disabled:opacity-50"
+                            disabled={!!loadingByItem[product.id]}
                             onChange={(e) => handleInputChange(product.id, e.target.value)}
                           />
 
                           <button
-                            className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
+                            className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!!loadingByItem[product.id]}
+                            aria-disabled={!!loadingByItem[product.id]}
                             onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", 1)}
                           >
                             <Plus size={16} />
                           </button>
                         </div>
+                        {loadingByItem[product.id] && (
+                          <span className="text-xs opacity-70 select-none pointer-events-none">Consultando estoque...</span>
+                        )}
                       </div>
 
                       <div className="mt-2">
@@ -226,10 +259,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                       {(() => {
                         const stock = stockByItem[product.id]?.quantidadeSaldo;
                         const requested = parseInt(quantities[product.id] || "0", 10);
-                        const available = stock ? Math.trunc(Number(String(stock).replace(",", "."))) : undefined;
+                        const availableNum = toNumberBR(stock);
+                        const available = typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
                         if (typeof available === "number" && requested > available) {
                           return (
-                            <span className="text-red-500 text-xs">{`Quantidade disponível: ${String(stock).split(".")[0]}`}</span>
+                            <span className="text-red-500 text-xs">{`Quantidade disponível: ${available}`}</span>
                           );
                         }
                         return null;
@@ -276,7 +310,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                     e.stopPropagation();
                     return;
                   }
-                  handleClick?.(e as any);
+                  handleClick?.(e as React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>);
                 }}
               >
                 Finalizar Compra

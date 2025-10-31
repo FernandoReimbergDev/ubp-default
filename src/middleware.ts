@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { JWT_SECRET } from "./app/utils/env";

@@ -2,8 +2,8 @@
 import { TitleSection } from "@/app/components/TitleSection";
 import { exportExcelFile } from "@/app/services/gerarPlanilha";
 import { formatPrice } from "@/app/utils/formatter";
-import {  Search, SquareCheckBig, TableProperties } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Search, SquareCheckBig, TableProperties } from "lucide-react";
+// import { useForm } from "react-hook-form";
 
 export default function EstoqueConsulta() {
   // const { register, watch } = useForm();
@@ -59,7 +59,7 @@ export default function EstoqueConsulta() {
                     Total Pedido(s):
                   </label>
                   <input
-                  readOnly
+                    readOnly
                     type="text"
                     id="totalPedidos"
                     className="w-full mx-auto px-1 text-xs py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -92,7 +92,7 @@ export default function EstoqueConsulta() {
             </div>
           </form>
 
-         
+
         </div>
 
         {/* 📋 TABELA RESPONSIVA */}

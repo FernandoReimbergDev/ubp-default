@@ -1,8 +1,8 @@
 "use client";
 import { TitleSection } from "@/app/components/TitleSection";
 import { exportExcelFile } from "../../../services/gerarPlanilha";
-import { Eye, NotebookPen, Search, TableProperties } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { NotebookPen, Search, TableProperties } from "lucide-react";
+// import { useForm } from "react-hook-form";
 
 export default function ProdutoConsulta() {
   // const { register, watch } = useForm();
@@ -125,9 +125,8 @@ export default function ProdutoConsulta() {
                       (val, j) => (
                         <td
                           key={j}
-                          className={`px-3 py-2 border border-gray-300 text-center ${
-                            j === 12 ? "font-semibold text-gray-800" : j === 14 ? "text-green-600 font-semibold" : ""
-                          }`}
+                          className={`px-3 py-2 border border-gray-300 text-center ${j === 12 ? "font-semibold text-gray-800" : j === 14 ? "text-green-600 font-semibold" : ""
+                            }`}
                         >
                           {val}
                         </td>

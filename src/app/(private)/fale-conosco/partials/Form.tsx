@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchAddressFromCep, handleCEPMask, handleCnpjCpfMask, handlePhoneMask } from "@/app/services/utils";
+import { fetchAddressFromCep, handleCnpjCpfMask, handlePhoneMask } from "@/app/services/utils";
 import { useCallback, useEffect, useState } from "react";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -60,7 +60,7 @@ export function FormFaleConosco() {
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [fetchUserData]);
 
   useEffect(() => {
     if (!clientData) return;
@@ -88,7 +88,7 @@ export function FormFaleConosco() {
     }
   }, [cep, setValue, trigger, setError, clearErrors]);
 
-  const onSubmit: SubmitHandler<MeusDadosFormData> = async (data) => {
+  const onSubmit: SubmitHandler<MeusDadosFormData> = async () => {
     setSubmitting(true);
     try {
       //   const status = await putEntrega(chave_entrega, data);
@@ -124,8 +124,8 @@ export function FormFaleConosco() {
                 id="razao_social"
                 {...register("razao_social")}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.razao_social
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                   }`}
               />
               {errors.razao_social && <span className="text-red-500 text-xs">{errors.razao_social.message}</span>}
@@ -138,8 +138,8 @@ export function FormFaleConosco() {
                 id="nome_completo"
                 {...register("fullName")}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fullName
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                   }`}
               />
               {errors.fullName && <span className="text-red-500 text-xs">{errors.fullName.message}</span>}
@@ -152,8 +152,8 @@ export function FormFaleConosco() {
                 id="email"
                 {...register("email")}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                   }`}
               />
               {errors.email && <span className="text-red-500 text-xs">{errors.email.message}</span>}
@@ -168,8 +168,8 @@ export function FormFaleConosco() {
                     id="ddd"
                     {...register("ddd")}
                     className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ddd
-                        ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                        : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                      ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                      : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                       }`}
                   />
                 </div>
@@ -182,8 +182,8 @@ export function FormFaleConosco() {
                     placeholder="0000-0000"
                     onChange={(e) => handlePhoneMask(e.target.value, setValue, trigger, setError, clearErrors)}
                     className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.telefone
-                        ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                        : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                      ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                      : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                       }`}
                   />
                 </div>
@@ -218,8 +218,8 @@ export function FormFaleConosco() {
                 id="subject"
                 {...register("subject")}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.subject
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                   }`}
               />
               {errors.subject && <span className="text-red-500 text-xs">{errors.subject.message}</span>}
