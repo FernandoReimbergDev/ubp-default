@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
-import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT, JWT_REFRESH_SECRET, JWT_SECRET } from "../../../utils/env";
+import { STORE_ID, ENVIRONMENT, JWT_REFRESH_SECRET, JWT_SECRET } from "../../../utils/env";
 import { getDecryptedToken } from "../../../services/getDecryptedToken";
 import { encrypt } from "../../../services/cryptoCookie";
 import { SignJWT } from "jose";
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Credenciais ou StoreID ausentes" }, { status: 400 });
     }
 
-    const token = await getDecryptedToken(API_REQ_APPLICATION);
+    const token = await getDecryptedToken();
     if (!token) {
       return NextResponse.json({ success: false, message: "Token de autenticação não encontrado" }, { status: 500 });
     }
@@ -31,6 +31,13 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json();
     if (!response.ok) {
+      const msg = typeof (data as any)?.message === "string" ? ((data as any).message as string).toLowerCase() : "";
+      if ((response.status === 403 || response.status === 401) && (msg.includes("origin") || msg.includes("origem"))) {
+        return NextResponse.json(
+          { success: false, message: "Login recusado para esta origem. Acesse pelo endereço autorizado da loja." },
+          { status: 403 }
+        );
+      }
       return NextResponse.json({ success: false, details: data }, { status: response.status });
     }
 
@@ -54,10 +61,6 @@ export async function POST(req: NextRequest) {
       firstName: result.firstName || result.name || "Usuário",
       role: rolesFromApi,
     };
-    // if (process.env.NODE_ENV !== "production") {
-    //   console.log("[LOGIN] rolesFromApi:", rolesFromApi);
-    // }
-
     // Token leve para o middleware (não criptografado)
     const secret = new TextEncoder().encode(JWT_SECRET);
     const accessToken = await new SignJWT({ sub: user.id, iss: "unitybrindes", role: rolesFromApi })

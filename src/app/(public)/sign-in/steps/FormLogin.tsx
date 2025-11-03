@@ -7,7 +7,6 @@ import { InputField, InputIcon, InputRoot } from "../../../components/Input";
 import { useAuth } from "../../../Context/AuthContext";
 import type { LoginForm } from "./schemas";
 import { loginSchema } from "./schemas";
-// import { AuthButtons } from "@/app/components/AuthButtons";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);

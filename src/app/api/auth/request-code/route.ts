@@ -5,8 +5,7 @@ import colors from "../../../../../cores.json";
 import { getDecryptedToken } from "../../../services/getDecryptedToken";
 import { sendEmail } from "../../../services/sendEmail";
 import { PasswordRecoveryResult } from "../../../types/responseTypes";
-import { API_REQ_APPLICATION, ENVIRONMENT, STORE_ID, NOME_LOJA } from "../../../utils/env";
-
+import { ENVIRONMENT, STORE_ID, NOME_LOJA } from "../../../utils/env";
 
 export async function POST(req: NextRequest) {
 	try {
@@ -16,12 +15,10 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ success: false, message: "Dados inválidos." }, { status: 400 });
 		}
 
-		console.log(username, email)
-
-		const token = await getDecryptedToken(API_REQ_APPLICATION);
+		const token = await getDecryptedToken();
 
 		if (!token) {
-			return NextResponse.json({ success: false, message: "Erro ao obter token." }, { status: 500 });
+			return NextResponse.json({ success: false, message: "Erro ao obter token de autenticação." }, { status: 500 });
 		}
 
 		const postData = JSON.stringify({

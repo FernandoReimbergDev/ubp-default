@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { NextauthProvider } from "./providers/auth";
 import { Roboto, Poppins, Montserrat, Oxanium } from "next/font/google";
 import { AuthProvider } from "./Context/AuthContext";
 import "./globals.css";
@@ -38,12 +37,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="pt-BR" className="overflow-x-hidden w-screen scrollbar">
       <body className={`${roboto.className} ${poppins.className} ${oxanium.variable} ${montserrat.variable} w-full`}>
-        <NextauthProvider>
-          <AuthProvider>
-            <SessionRefresher />
-            {children}
-          </AuthProvider>
-        </NextauthProvider>
+        <AuthProvider>
+          <SessionRefresher />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

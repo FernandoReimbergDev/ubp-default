@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { sendEmail } from "../../../services/sendEmail";
-import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT, NOME_LOJA } from "../../../utils/env";
+import { STORE_ID, ENVIRONMENT, NOME_LOJA } from "../../../utils/env";
 import colors from "../../../../../cores.json";
 import { getDecryptedToken } from "../../../services/getDecryptedToken";
 
@@ -14,10 +14,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Username inválido." }, { status: 400 });
     }
 
-    const token = await getDecryptedToken(API_REQ_APPLICATION);
-
+    const token = await getDecryptedToken();
     if (!token) {
-      console.error("Token não encontrado para aplicação:", API_REQ_APPLICATION);
       return NextResponse.json({ success: false, message: "Erro ao obter token de autenticação." }, { status: 500 });
     }
 
@@ -38,7 +36,6 @@ export async function POST(req: NextRequest) {
 
     const response = await fetch(url, options);
     const data = await response.json();
-    console.log(data)
     if (!response.ok) {
       return new NextResponse(JSON.stringify(data), {
         status: response.status,

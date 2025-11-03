@@ -2,7 +2,7 @@
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
 import { ProdutoCart, ProdutoEstoqueItem } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
@@ -19,6 +19,12 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   const [quantities, setQuantities] = useState<{ [id: string]: string }>({});
   const [stockByItem, setStockByItem] = useState<{ [id: string]: ProdutoEstoqueItem | undefined }>({});
   const [loadingByItem, setLoadingByItem] = useState<{ [id: string]: boolean }>({});
+
+  // Controle por item: debounce, abort e requestId
+  const fetchDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+  const fetchAbortRef = useRef<Record<string, AbortController | null>>({});
+  const requestIdRef = useRef<Record<string, number>>({});
+  const fetchTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
 
   const toNumberBR = (val: string | number | undefined) => {
     if (val === undefined || val === null) return undefined;
@@ -51,6 +57,8 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
       setQuantities((prev) => ({ ...prev, [id]: value }));
       const parsed = parseInt(value, 10);
       updateQuantity(id, isNaN(parsed) ? 0 : parsed);
+      const item = cart.find((p) => p.id === id);
+      if (item) scheduleFetch(item);
     }
   };
 
@@ -59,6 +67,8 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     const newQty = Math.max(parsed + delta, 0);
     setQuantities((prev) => ({ ...prev, [id]: String(newQty) }));
     updateQuantity(id, newQty);
+    const item = cart.find((p) => p.id === id);
+    if (item) scheduleFetch(item);
   };
 
   const totalValue = cart.reduce((total, product) => {
@@ -75,29 +85,37 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     return typeof available === "number" && requested > available;
   });
 
-  const fetchItemStock = useCallback(async (item: ProdutoCart, signal?: AbortSignal) => {
+  const fetchItemStock = useCallback(async (item: ProdutoCart, signal?: AbortSignal, reqId?: number) => {
     if (!item.chavePro) {
       setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
       return;
     }
     setLoadingByItem((prev) => ({ ...prev, [item.id]: true }));
     try {
-      const res = await fetch("/api/stock", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: (() => {
-          const payload: Record<string, unknown> = {
-            codPro: item.codPro,
-            chavePro: item.chavePro,
-          };
-          if (item.color && item.color.trim() !== "") payload.descrProCor = item.color;
-          if (item.size && item.size.trim() !== "") payload.descrProTamanho = item.size;
-          return JSON.stringify(payload);
-        })(),
-        signal,
-      });
+      const doRequest = async () => {
+        const res = await fetch("/api/stock", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: (() => {
+            const payload: Record<string, unknown> = {
+              codPro: item.codPro,
+              chavePro: item.chavePro,
+            };
+            if (item.color && item.color.trim() !== "") payload.descrProCor = item.color;
+            if (item.size && item.size.trim() !== "") payload.descrProTamanho = item.size;
+            return JSON.stringify(payload);
+          })(),
+          signal,
+        });
+        return res;
+      };
+
+      let res = await doRequest();
+      if (!res.ok && (res.status === 429 || res.status >= 500)) {
+        res = await doRequest();
+      }
 
       const result: {
         success: boolean;
@@ -120,26 +138,85 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
         ? (raw as ProdutoEstoqueItem[])
         : ((raw as { produtos?: ProdutoEstoqueItem[] })?.produtos ?? []);
       const first = produtos?.[0];
-      setStockByItem((prev) => ({ ...prev, [item.id]: first }));
+      // Atualiza somente se ainda for a requisição vigente
+      if (reqId === requestIdRef.current[item.id]) {
+        setStockByItem((prev) => ({ ...prev, [item.id]: first }));
+      }
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
+        // limpar loading apenas se for a mais recente
+        if (reqId === requestIdRef.current[item.id]) {
+          setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
+        }
         return;
       }
       console.error("error ao requisitar produtos para api externa", error);
-      setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
+      if (reqId === requestIdRef.current[item.id]) {
+        setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
+      }
     } finally {
-      setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
+      if (reqId === requestIdRef.current[item.id]) {
+        if (fetchTimeoutRef.current[item.id]) {
+          clearTimeout(fetchTimeoutRef.current[item.id]!);
+          fetchTimeoutRef.current[item.id] = null;
+        }
+        setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
+      }
     }
   }, []);
 
+  // Agenda consulta com debounce e cancelamento por item
+  const scheduleFetch = useCallback((item: ProdutoCart, delayMs = 600) => {
+    const id = item.id;
+    const requested = parseInt(quantities[id] || "0", 10);
+    if (!(requested > 0)) return;
+    // debounce por item
+    if (fetchDebounceRef.current[id]) clearTimeout(fetchDebounceRef.current[id]!);
+    fetchDebounceRef.current[id] = setTimeout(() => {
+      // aborta a requisição anterior do item
+      if (fetchAbortRef.current[id]) {
+        fetchAbortRef.current[id]!.abort();
+      }
+      // registra novo request id
+      const current = requestIdRef.current[id] ?? 0;
+      const nextId = current + 1;
+      requestIdRef.current[id] = nextId;
+      // seta loading para o item
+      setLoadingByItem((prev) => ({ ...prev, [id]: true }));
+      const controller = new AbortController();
+      fetchAbortRef.current[id] = controller;
+      if (fetchTimeoutRef.current[id]) clearTimeout(fetchTimeoutRef.current[id]!);
+      fetchTimeoutRef.current[id] = setTimeout(() => {
+        try { controller.abort(); } catch { }
+      }, 8000);
+      fetchItemStock(item, controller.signal, nextId);
+    }, delayMs);
+  }, [fetchItemStock, quantities]);
+
+  // Inicial: carregar estoque para os itens ao abrir/alterar lista
   useEffect(() => {
-    const controller = new AbortController();
-    cart.forEach((item) => {
-      // Busca estoque quando quantidade, cor ou tamanho mudarem
-      fetchItemStock(item, controller.signal);
-    });
-    return () => controller.abort();
-  }, [cart, quantities, fetchItemStock]);
+    cart.forEach((item) => scheduleFetch(item, 0));
+  }, [cart, scheduleFetch]);
+
+  // Cleanup geral
+  // Cleanup geral
+  useEffect(() => {
+    // tire a "foto" das referências atuais
+    const debounces = fetchDebounceRef.current;
+    const aborts = fetchAbortRef.current;
+
+    return () => {
+      // use a foto no cleanup
+      for (const id in debounces) {
+        const t = debounces[id];
+        if (t) clearTimeout(t);
+      }
+      for (const id in aborts) {
+        const c = aborts[id];
+        if (c) c.abort();
+      }
+    };
+  }, []);
 
   return (
     <div className="ContainerModal h-full w-full">
@@ -185,7 +262,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                             name="cor"
                             id="cor"
                             value={product.color} // valor atual selecionado
-                            onChange={(e) => updateColorOrSize(product.id, e.target.value)}
+                            onChange={(e) => {
+                              const newColor = e.target.value;
+                              updateColorOrSize(product.id, newColor);
+                              scheduleFetch({ ...product, color: newColor });
+                            }}
                             className="border w-44 border-gray-400 uppercase rounded px-1 text-xs"
                           >
                             {product.cores.map((cor, i) => (
@@ -205,7 +286,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                               name="tamanho"
                               id="tamanho"
                               value={product.size}
-                              onChange={(e) => updateColorOrSize(product.id, undefined, e.target.value)}
+                              onChange={(e) => {
+                                const newSize = e.target.value;
+                                updateColorOrSize(product.id, undefined, newSize);
+                                scheduleFetch({ ...product, size: newSize });
+                              }}
                               className="border border-gray-400 uppercase rounded px-1 text-xs"
                             >
                               {product.tamanhos.map((tamanho, i) => (

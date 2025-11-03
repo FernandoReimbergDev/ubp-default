@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT, JWT_SECRET, JWT_REFRESH_SECRET } from '../../../utils/env';
+import { STORE_ID, ENVIRONMENT, JWT_SECRET, JWT_REFRESH_SECRET } from '../../../utils/env';
 import { getDecryptedToken } from '../../../services/getDecryptedToken'
 import { SignJWT } from 'jose';
 import { encrypt } from '../../../services/cryptoCookie';
@@ -40,10 +40,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const token = await getDecryptedToken(API_REQ_APPLICATION);
-
+        const token = await getDecryptedToken();
         if (!token) {
-            console.error('Token não encontrado para aplicação:', API_REQ_APPLICATION);
             return NextResponse.json(
                 { success: false, message: 'Erro ao obter token de autenticação.' },
                 { status: 500 }
@@ -77,8 +75,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, details: data }, { status: response.status });
         }
 
-
-        // Extrair roles e payload de usuário como no login
         const result = (data as any)?.result ?? {};
         const rawRoles: unknown = result?.role ?? result?.roles ?? result?.rules ?? [];
         const rolesFromApi: string[] = Array.isArray(rawRoles)
@@ -99,7 +95,6 @@ export async function POST(req: NextRequest) {
             role: rolesFromApi,
         };
 
-        // Gerar tokens idênticos ao login
         const accessSecret = new TextEncoder().encode(JWT_SECRET);
         const accessToken = await new SignJWT({ sub: user.id, iss: 'unitybrindes', role: rolesFromApi })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })

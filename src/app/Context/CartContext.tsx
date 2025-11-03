@@ -36,6 +36,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
                 disponivelProCor: "1",
                 descrProCor: item.color,
                 descrProTamanho: item.size || "",
+
               },
             }),
             signal: controller.signal,
@@ -141,6 +142,51 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+
+  const fetchProductFrete = async (purchaseAmount: string, stateCode: string, city: string, zipCode: string, weight: string, height: string, width: string, length: string, signal?: AbortSignal) => {
+    try {
+      const res = await fetch("/api/send-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reqMethod: "GET",
+          reqEndpoint: "/shipping-quote",
+          reqHeaders: {
+            "X-Environment": "HOMOLOGACAO",
+            storeId: "32",
+            purchaseAmount,
+            stateCode,
+            city,
+            zipCode,
+            weight,
+            height,
+            width,
+            length
+          },
+        }),
+        signal,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.message || "Erro ao buscar produtos");
+      }
+      console.log(result);
+      const amountFrete = result.data.result.amount
+      return amountFrete;
+      // setProducts(result.data.result);
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      console.error("error ao requisitar produtos para api externa", error);
+      // setError(error instanceof Error ? error.message : "Erro ao buscar produtos");
+    }
+  }
+
   const clearCart = () => {
     setCart([]);
     Cookies.remove(userKey);
@@ -168,6 +214,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         updateColorOrSize,
         openCart,
         setOpenCart,
+        fetchProductFrete
       }}
     >
       {children}

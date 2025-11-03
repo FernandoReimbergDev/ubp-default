@@ -13,17 +13,38 @@ interface ResumoProps {
 }
 
 export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedInstallments }: ResumoProps) {
-  const { cart } = useCart();
+  const { cart, fetchProductFrete } = useCart();
   const [quantities, setQuantities] = useState<{ [id: string]: string }>({});
-  const [valorFrete, setValorFrete] = useState(0);
+  const [valorFrete, setValorFrete] = useState<number | undefined>(undefined);
   useEffect(() => {
     const initial = cart.reduce((acc, item) => {
       acc[item.id] = String(item.quantity);
       return acc;
     }, {} as { [id: string]: string });
     setQuantities(initial);
-    setValorFrete(58.9);
-  }, [cart]);
+
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const amount = await fetchProductFrete(
+          "4929.25",
+          "SP",
+          "São Paulo",
+          "04470095",
+          "20",
+          "45",
+          "45",
+          "60",
+          controller.signal
+        );
+        setValorFrete(amount);
+      } catch (error: unknown) {
+        console.error("error ao requisitar produtos para api externa", error)
+      }
+    })();
+
+    return () => controller.abort();
+  }, [cart, fetchProductFrete]);
 
   const totalValue = cart.reduce((total, product) => {
     const quantity = parseInt(quantities[product.id] || "0", 10);
@@ -35,7 +56,7 @@ export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedIn
     if (selectedPaymentTotal && selectedPaymentMethod) {
       return selectedPaymentTotal;
     }
-    return totalValue + valorFrete;
+    return totalValue + Number(valorFrete);
   };
 
   const getTotalAPrazoText = () => {
@@ -48,7 +69,7 @@ export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedIn
     } else if (selectedPaymentMethod === "boleto") {
       return "(boleto à vista)";
     }
-    return `(em até 10x de ${formatPrice((totalValue + valorFrete) / 10)}) sem juros`;
+    return `(em até 10x de ${formatPrice((totalValue + Number(valorFrete)) / 10)}) sem juros`;
   };
 
   return (
@@ -65,7 +86,7 @@ export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedIn
 
       <div className="w-full flex justify-between items-center">
         <p>Valor do Frete:</p>
-        <span>{formatPrice(valorFrete)}</span>
+        <span>{formatPrice(Number(valorFrete))}</span>
       </div>
 
       <hr className="text-gray-300" />
@@ -83,7 +104,7 @@ export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedIn
       <div>
         <div className="bg-green-300 flex justify-between items-center px-2 py-4">
           <p className="text-sm">Valor à vista:</p>
-          <span>{formatPrice(totalValue + valorFrete)}</span>
+          <span>{formatPrice(totalValue + Number(valorFrete))}</span>
         </div>
       </div>
 

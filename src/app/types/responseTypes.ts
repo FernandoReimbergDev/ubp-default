@@ -196,6 +196,17 @@ export type CartContextType = {
   updateColorOrSize: (id: string, newColor?: string, newSize?: string) => void;
   openCart: boolean;
   setOpenCart: (openCart: boolean) => void;
+  fetchProductFrete: (
+    purchaseAmount: string,
+    stateCode: string,
+    city: string,
+    zipCode: string,
+    weight: string,
+    height: string,
+    width: string,
+    length: string,
+    signal?: AbortSignal
+  ) => Promise<number | undefined>;
 };
 
 export interface ProductDataProps {

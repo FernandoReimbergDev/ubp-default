@@ -56,13 +56,53 @@ export const GridProducts = () => {
 
   if (loading) {
     return (
-      <div className="mx-auto w-[320px] sm:w-full flex justify-center">
-        <div className="w-full containerProdutos flex flex-wrap justify-start sm:grid sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 justify-items-center items-center">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SkeletonCardProduto key={i} />
-          ))}
+      <main className="p-1 md:p-4 min-w-[320px] min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
+        <div className="mx-auto w-full max-w-7xl space-y-6">
+          <section className="grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]">
+            <aside className="rounded-lg bg-white shadow-sm p-4 animate-pulse space-y-4">
+              <div className="h-6 w-1/2 bg-gray-200 rounded" />
+              <div className="space-y-3">
+                <div className="h-4 w-20 bg-gray-200 rounded" />
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-1/2 bg-gray-200 rounded" />
+                  <div className="h-8 w-1/2 bg-gray-200 rounded" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 bg-gray-200 rounded" />
+                <div className="h-4 w-32 bg-gray-200 rounded" />
+                <div className="h-4 w-28 bg-gray-200 rounded" />
+                <div className="h-4 w-24 bg-gray-200 rounded" />
+              </div>
+              <div className="h-9 w-full bg-gray-200 rounded" />
+            </aside>
+
+            <div className="space-y-4">
+              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+                <div className="h-4 w-44 bg-gray-200 rounded animate-pulse" />
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-8 w-36 bg-gray-200 rounded animate-pulse" />
+                </div>
+              </div>
+
+              <div className="w-full containerProdutos justify-start grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 justify-items-center items-center">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <SkeletonCardProduto key={i} />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-center gap-2">
+                <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     );
   }
   if (error)

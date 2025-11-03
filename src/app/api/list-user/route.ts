@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
-import { API_REQ_APPLICATION, STORE_ID, ENVIRONMENT } from "../../utils/env";
+import { STORE_ID, ENVIRONMENT } from "../../utils/env";
 import { getDecryptedToken } from "../../services/getDecryptedToken";
 import { UsuarioResponse } from "../../types/responseTypes";
 
 export async function GET(req: NextRequest) {
   try {
-    console.log("req inciando tentativa de buscar userId");
     const storeId = Number(STORE_ID);
     const userIsActive = 1;
     const userIsDeleted = 0;
@@ -25,7 +24,6 @@ export async function GET(req: NextRequest) {
     const jsonPayload = Buffer.from(payload, "base64").toString("utf8");
     const { sub } = JSON.parse(jsonPayload);
     const userId = sub;
-    console.log(storeId, userId, userIsActive, userIsDeleted);
     if ([storeId, userId, userIsActive, userIsDeleted].some((v) => v === undefined || v === null)) {
       return NextResponse.json({ success: false, message: "Credenciais ou StoreID ausentes" }, { status: 400 });
     }
@@ -37,7 +35,10 @@ export async function GET(req: NextRequest) {
       userId: Number(userId),
     });
 
-    const token = await getDecryptedToken(API_REQ_APPLICATION);
+    const token = await getDecryptedToken();
+    if (!token) {
+      return NextResponse.json({ success: false, message: "Erro ao obter token de autenticação." }, { status: 500 });
+    }
 
     const responseData = await new Promise<UsuarioResponse>((resolve, reject) => {
       const options: https.RequestOptions = {
@@ -60,7 +61,6 @@ export async function GET(req: NextRequest) {
         });
         res.on("end", () => {
           const body = Buffer.concat(chunks).toString();
-          console.log("RESPOSTA DA API EXTERNA:", body);
           try {
             const parsed = JSON.parse(body);
             if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {

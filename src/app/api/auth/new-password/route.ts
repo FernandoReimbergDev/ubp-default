@@ -2,7 +2,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getDecryptedToken } from '../../../services/getDecryptedToken';
-import { API_REQ_APPLICATION, ENVIRONMENT, JWT_REFRESH_SECRET, JWT_SECRET, STORE_ID } from '../../../utils/env';
+import { ENVIRONMENT, JWT_REFRESH_SECRET, JWT_SECRET, STORE_ID } from '../../../utils/env';
 import { encrypt } from '../../../services/cryptoCookie';
 import { SignJWT } from 'jose';
 
@@ -40,10 +40,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = await getDecryptedToken(API_REQ_APPLICATION);
-    console.log(token)
+    const token = await getDecryptedToken();
     if (!token) {
-      console.error('Token não encontrado para aplicação:', API_REQ_APPLICATION);
       return NextResponse.json(
         { success: false, message: 'Erro ao obter token de autenticação.' },
         { status: 500 }
@@ -68,17 +66,13 @@ export async function POST(req: NextRequest) {
       })
     };
 
-    // Chamada correta com await:
     const response = await fetch(url, options);
     const data = await response.json();
-
-    console.log(response, data)
 
     if (!response.ok) {
       console.error('Erro na API externa:', data);
       return NextResponse.json({ success: false, details: data }, { status: response.status });
     }
-    // Preparar payload de usuário similar ao login
     const result = (data as any)?.result ?? {};
     const rawRoles: unknown = result?.role ?? result?.roles ?? result?.rules ?? [];
     const rolesFromApi: string[] = Array.isArray(rawRoles)
@@ -99,7 +93,6 @@ export async function POST(req: NextRequest) {
       role: rolesFromApi,
     };
 
-    // Gerar tokens como no login
     const accessSecret = new TextEncoder().encode(JWT_SECRET);
     const accessToken = await new SignJWT({ sub: user.id, iss: 'unitybrindes', role: rolesFromApi })
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
@@ -113,7 +106,6 @@ export async function POST(req: NextRequest) {
       .sign(refreshSecret);
     const encryptedRefreshToken = encrypt(refreshToken);
 
-    // Resposta e cookies alinhados ao login
     const res = new NextResponse(JSON.stringify({ success: true, user }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

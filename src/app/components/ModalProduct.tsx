@@ -24,8 +24,11 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scheduleFetch = (color?: string, size?: string, delayMs = 400) => {
+  const scheduleFetch = (color?: string, size?: string, delayMs = 600) => {
+    const requested = parseInt(quantity || "0", 10);
+    if (!(requested > 0)) return;
     if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
     fetchDebounceRef.current = setTimeout(() => {
       // Abort any in-flight request
@@ -37,6 +40,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       setLoading(true);
       const controller = new AbortController();
       fetchAbortRef.current = controller;
+      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+      fetchTimeoutRef.current = setTimeout(() => {
+        try { controller.abort(); } catch { }
+      }, 8000);
       fetchProductsStock(color, size, controller.signal, reqId);
     }, delayMs);
   };
@@ -67,24 +74,32 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   ) => {
     // loading is set in scheduler to avoid flicker and to bind to reqId
     try {
-      const res = await fetch("/api/stock", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: (() => {
-          const payload: Record<string, unknown> = {
-            codPro: ProductData.codePro,
-            chavePro: ProductData.chavePro,
-          };
-          const c = color ?? selectedColor;
-          const s = size ?? selectedSize;
-          if (c && c.trim() !== "") payload.descrProCor = c;
-          if (s && s.trim() !== "") payload.descrProTamanho = s;
-          return JSON.stringify(payload);
-        })(),
-        signal,
-      });
+      const doRequest = async () => {
+        const res = await fetch("/api/stock", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: (() => {
+            const payload: Record<string, unknown> = {
+              codPro: ProductData.codePro,
+              chavePro: ProductData.chavePro,
+            };
+            const c = color ?? selectedColor;
+            const s = size ?? selectedSize;
+            if (c && c.trim() !== "") payload.descrProCor = c;
+            if (s && s.trim() !== "") payload.descrProTamanho = s;
+            return JSON.stringify(payload);
+          })(),
+          signal,
+        });
+        return res;
+      };
+
+      let res = await doRequest();
+      if (!res.ok && (res.status === 429 || res.status >= 500)) {
+        res = await doRequest();
+      }
 
       const result: {
         success: boolean;
@@ -127,6 +142,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       console.error("error ao requisitar produtos para api externa", error);
     } finally {
       if (reqId === requestIdRef.current) {
+        if (fetchTimeoutRef.current) {
+          clearTimeout(fetchTimeoutRef.current);
+          fetchTimeoutRef.current = null;
+        }
         setLoading(false);
       }
     }
@@ -145,6 +164,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         fetchAbortRef.current.abort();
         fetchAbortRef.current = null;
       }
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
+      }
     };
   }, [ProductData]);
 
@@ -159,7 +182,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
   const handleQuantityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQtdMsg(false);
-    scheduleFetch(selectedColor, selectedSize);
     const value = event.target.value;
     // Permite apenas números positivos ou vazio
     if (/^\d*$/.test(value)) {
@@ -171,6 +193,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       } else {
         setSubtotal(0);
       }
+      scheduleFetch(selectedColor, selectedSize);
     }
   };
 

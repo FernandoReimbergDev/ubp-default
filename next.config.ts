@@ -42,6 +42,7 @@ const nextConfig = {
     "https://cx.unitycorp.com.br",
     "https://amil.unitycorp.com.br",
     "http://unity-n-14:3000",
+    "http://unity-n-13",
   ],
 };
 
