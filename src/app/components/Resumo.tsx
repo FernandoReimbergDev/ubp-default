@@ -135,6 +135,12 @@ export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedIn
                     {product.productName}
                   </p>
 
+                  {product.personalization && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">Personalizado</span>
+                    </div>
+                  )}
+
                   <div className="flex items-start gap-2 text-xs">
                     <p className="text-gray-500">Quantidade:</p>
                     <p>{product.quantity}</p>

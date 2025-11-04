@@ -231,8 +231,14 @@ export interface ModalProps {
   onClose: () => void;
 }
 
+export type PersonalizationMeta = {
+  fileName: string;
+  mimeType: string;
+  size: number;
+};
+
 export type ProdutoCart = {
-  id: string; // ID único do item no carrinho
+  id: string;
   codPro: string;
   chavePro: string;
   productName: string;
@@ -246,6 +252,7 @@ export type ProdutoCart = {
   alt: string;
   cores: string[];
   tamanhos: string[];
+  personalization?: PersonalizationMeta;
 };
 
 export type clienteDadosEntrega = {

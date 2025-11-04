@@ -61,13 +61,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [userKey]);
 
-  const generateCartItemId = (codPro: string, color: string, size?: string): string =>
-    `${codPro}_${color}_${size ?? "nosize"}`;
+  const generateCartItemId = (codPro: string, color: string, size?: string, personalizationKey?: string): string =>
+    `${codPro}_${color}_${size ?? "nosize"}_${personalizationKey ?? "std"}`;
 
   const addProduct = (product: ProdutoCart) => {
     const parsedQuantity = parseInt(product.quantity, 10);
     if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) return;
-    const id = generateCartItemId(product.codPro, product.color, product.size);
+    const personalizationKey = product.personalization?.fileName
+      ? `pers-${product.personalization.fileName.replace(/\s+/g, "-").slice(0, 50)}`
+      : "std";
+    const id = generateCartItemId(product.codPro, product.color, product.size, personalizationKey);
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === id);
       let updatedCart;
@@ -127,7 +130,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const index = prevCart.findIndex((item) => item.id === id);
       if (index === -1) return prevCart;
       const oldItem = prevCart[index];
-      const newId = generateCartItemId(oldItem.codPro, newColor ?? oldItem.color, newSize ?? oldItem.size);
+      const personalizationKey = oldItem.personalization?.fileName
+        ? `pers-${oldItem.personalization.fileName.replace(/\s+/g, "-").slice(0, 50)}`
+        : "std";
+      const newId = generateCartItemId(
+        oldItem.codPro,
+        newColor ?? oldItem.color,
+        newSize ?? oldItem.size,
+        personalizationKey
+      );
       if (prevCart.some((item) => item.id === newId)) return prevCart;
       const updatedItem = {
         ...oldItem,
