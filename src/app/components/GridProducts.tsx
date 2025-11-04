@@ -50,6 +50,10 @@ export const GridProducts = () => {
         sizes: [] as string[], // Se um dia vier tamanho, adapta aqui
         quantidadeEstoquePro: String(pro.quantidadeEstoquePro ?? ""),
         estControl: pro.estControl,
+        peso: pro.peso ?? "",
+        altura: pro.altura ?? "",
+        largura: pro.largura ?? "",
+        comprimento: pro.comprimento ?? "",
       };
     });
   }, [products]);

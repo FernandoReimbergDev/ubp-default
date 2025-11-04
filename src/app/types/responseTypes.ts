@@ -72,6 +72,9 @@ export type Produto = {
   ordemExibicao: string;
   pesoMultiplo: string;
   peso: string;
+  altura: string;
+  largura: string;
+  comprimento: string;
   dataCadastrado: string;
   dataAtualizado: string;
   cores: CorProduto[];
@@ -184,6 +187,10 @@ export type ProdutosGrid = {
   bannerImg?: string[];
   quantidadeEstoquePro: string;
   estControl: string;
+  peso: string;
+  altura: string;
+  largura: string;
+  comprimento: string;
 };
 
 export type CartContextType = {
@@ -224,6 +231,10 @@ export interface ProductDataProps {
   percent_discont?: number;
   estControl: string;
   quantidadeEstoquePro: string;
+  peso: string;
+  altura: string;
+  largura: string;
+  comprimento: string;
 }
 
 export interface ModalProps {
@@ -253,6 +264,10 @@ export type ProdutoCart = {
   cores: string[];
   tamanhos: string[];
   personalization?: PersonalizationMeta;
+  peso: string;
+  altura: string;
+  largura: string;
+  comprimento: string;
 };
 
 export type clienteDadosEntrega = {

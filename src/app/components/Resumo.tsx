@@ -4,52 +4,67 @@ import { useCart } from "@/app/Context/CartContext";
 import { formatPrice } from "@/app/utils/formatter";
 import { FileSearch2, ShoppingCart } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
+import { getPackageVolumeAndWeight } from "@/app/services/mountVolume";
 
 interface ResumoProps {
   selectedPaymentTotal?: number;
   selectedPaymentMethod?: string;
   selectedInstallments?: number;
+  delivery: {
+    stateCode: string;
+    city: string;
+    zipCode: string;
+  }
 }
 
-export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedInstallments }: ResumoProps) {
+export function Resumo({ selectedPaymentTotal, selectedPaymentMethod, selectedInstallments, delivery }: ResumoProps) {
   const { cart, fetchProductFrete } = useCart();
-  const [quantities, setQuantities] = useState<{ [id: string]: string }>({});
   const [valorFrete, setValorFrete] = useState<number | undefined>(undefined);
-  useEffect(() => {
-    const initial = cart.reduce((acc, item) => {
+
+  const quantities = useMemo(() => {
+    return cart.reduce((acc, item) => {
       acc[item.id] = String(item.quantity);
       return acc;
-    }, {} as { [id: string]: string });
-    setQuantities(initial);
+    }, {} as Record<string, string>);
+  }, [cart]);
 
+  const totalValue = useMemo(() => {
+    return cart.reduce((total, product) => {
+      const q = parseInt(quantities[product.id] || "0", 10);
+      return total + (isNaN(q) ? 0 : q * product.price);
+    }, 0);
+  }, [cart, quantities]);
+
+  const pkg = useMemo(() => getPackageVolumeAndWeight(cart, quantities), [cart, quantities]);
+
+
+  useEffect(() => {
+    console.log(pkg.volumeTotal, pkg.pesoTotal, pkg.altura, pkg.largura, pkg.comprimento);
+  }, [pkg]);
+
+  useEffect(() => {
     const controller = new AbortController();
     (async () => {
       try {
         const amount = await fetchProductFrete(
-          "4929.25",
-          "SP",
-          "São Paulo",
-          "04470095",
-          "20",
-          "45",
-          "45",
-          "60",
+          String(totalValue),
+          delivery.stateCode,
+          delivery.city,
+          delivery.zipCode,
+          String(pkg.pesoTotal),
+          String(pkg.altura),
+          String(pkg.largura),
+          String(pkg.comprimento),
           controller.signal
         );
         setValorFrete(amount);
-      } catch (error: unknown) {
-        console.error("error ao requisitar produtos para api externa", error)
+      } catch {
+        setValorFrete(undefined);
       }
     })();
-
     return () => controller.abort();
-  }, [cart, fetchProductFrete]);
-
-  const totalValue = cart.reduce((total, product) => {
-    const quantity = parseInt(quantities[product.id] || "0", 10);
-    return total + (isNaN(quantity) ? 0 : quantity * product.price);
-  }, 0);
+  }, [fetchProductFrete, totalValue, pkg]);
 
   // Determinar o valor total a prazo baseado na seleção
   const getTotalAPrazo = () => {

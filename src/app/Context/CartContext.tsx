@@ -36,6 +36,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
                 disponivelProCor: "1",
                 descrProCor: item.color,
                 descrProTamanho: item.size || "",
+                peso: item.peso ?? "",
+                altura: item.altura ?? "",
+                largura: item.largura ?? "",
+                comprimento: item.comprimento ?? "",
 
               },
             }),
@@ -79,6 +83,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           ...existingItem,
           quantity: String(parseInt(existingItem.quantity, 10) + parsedQuantity),
           subtotal: (parseInt(existingItem.quantity, 10) + parsedQuantity) * existingItem.price,
+          peso: product.peso,
+          altura: product.altura,
+          largura: product.largura,
+          comprimento: product.comprimento,
         };
         updatedCart = prevCart.map((item) => (item.id === id ? updatedItem : item));
       } else {
@@ -89,6 +97,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           subtotal: parsedQuantity * product.price,
           cores: product.cores,
           tamanhos: product.tamanhos,
+          peso: product.peso,
+          altura: product.altura,
+          largura: product.largura,
+          comprimento: product.comprimento,
         };
         updatedCart = [...prevCart, newItem];
       }
@@ -108,6 +120,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         ...prevCart[index],
         quantity: String(parsedQuantity),
         subtotal: parsedQuantity * prevCart[index].price,
+        cores: prevCart[index].cores,
+        tamanhos: prevCart[index].tamanhos,
+        peso: prevCart[index].peso,
+        altura: prevCart[index].altura,
+        largura: prevCart[index].largura,
+        comprimento: prevCart[index].comprimento,
       };
       const updatedCart = [...prevCart];
       updatedCart[index] = updatedItem;
@@ -154,13 +172,21 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
 
-  const fetchProductFrete = async (purchaseAmount: string, stateCode: string, city: string, zipCode: string, weight: string, height: string, width: string, length: string, signal?: AbortSignal) => {
+  const fetchProductFrete = async (
+    purchaseAmount: string,
+    stateCode: string,
+    city: string,
+    zipCode: string,
+    weight: string,
+    height: string,
+    width: string,
+    length: string,
+    signal?: AbortSignal
+  ) => {
     try {
       const res = await fetch("/api/send-request", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reqMethod: "GET",
           reqEndpoint: "/shipping-quote",
@@ -174,27 +200,42 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             weight,
             height,
             width,
-            length
+            length,
           },
         }),
         signal,
       });
 
-      const result = await res.json();
+      let result: any = null;
+      try {
+        result = await res.json();
+      } catch {
+        result = null;
+      }
 
       if (!res.ok) {
-        throw new Error(result.message || "Erro ao buscar produtos");
+        const msg = (result && (result.message || result?.data?.message)) || "Erro ao buscar produtos";
+        throw new Error(msg);
       }
-      console.log(result);
-      const amountFrete = result.data.result.amount
-      return amountFrete;
-      // setProducts(result.data.result);
+
+      // Tentar extrair amount em diferentes formatos
+      const amountFrete =
+        result?.data?.result?.amount ??
+        result?.data?.amount ??
+        result?.amount ??
+        null;
+
+      if (amountFrete == null) {
+        console.warn("/shipping-quote sem amount esperado:", result);
+        return undefined;
+      }
+      return amountFrete as number;
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        return;
+        return undefined;
       }
       console.error("error ao requisitar produtos para api externa", error);
-      // setError(error instanceof Error ? error.message : "Erro ao buscar produtos");
+      return undefined;
     }
   }
 
