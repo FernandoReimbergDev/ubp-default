@@ -35,6 +35,11 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const controller = new AbortController();
       const validations = await Promise.allSettled(
         localCart.map(async (item) => {
+          // Se o produto não tem estoque controlado, não consultar API de estoque
+          if (item?.estControl && item.estControl !== "1") {
+            return true;
+          }
+
           const res = await fetch("/api/send-request", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

@@ -32,7 +32,6 @@ function withTimeout<T>(p: Promise<T>, ms: number, name = "operation"): Promise<
 }
 
 export async function POST(req: NextRequest) {
-    const t0 = Date.now();
     try {
         const url = new URL(req.url);
         const raw = url.searchParams.get("raw") === "1";
@@ -44,9 +43,7 @@ export async function POST(req: NextRequest) {
 
         const { codPro, descrProCor, descrProTamanho, chavePro } = await req.json();
 
-        const tokenStart = Date.now();
         const token = await withTimeout(getDecryptedToken(), 2_000, "token");
-        const tokenMs = Date.now() - tokenStart;
 
         if (!token) {
             return NextResponse.json({ success: false, message: "Erro ao obter token." }, { status: 500 });
@@ -56,13 +53,12 @@ export async function POST(req: NextRequest) {
             storeId: Number(storeId), codPro: codPro, descrProCor: descrProCor, descrProTamanho: descrProTamanho
         });
 
-        const reqStart = Date.now();
         const responseData = await withTimeout<ProdutoResponse>(
             new Promise<ProdutoResponse>((resolve, reject) => {
                 const options: https.RequestOptions = {
                     method: "GET",
                     hostname: "unitybrindes.com.br",
-                    port: 443,
+                    port: null,
                     path: `/product-stock/${String(chavePro)}`,
                     agent,
                     headers: {
@@ -77,9 +73,7 @@ export async function POST(req: NextRequest) {
                 };
 
                 const externalReq = https.request(options, (res) => {
-                    const ttfbStart = Date.now();
                     let firstChunk = true;
-                    let ttfbMs = 0;
 
                     // Coleta como string (evita Buffer.concat)
                     res.setEncoding("utf8");
@@ -91,39 +85,12 @@ export async function POST(req: NextRequest) {
                     res.on("data", (chunk: string) => {
                         if (firstChunk) {
                             firstChunk = false;
-                            ttfbMs = Date.now() - ttfbStart;
                         }
                         body += chunk;
                     });
 
                     res.on("end", () => {
-                        const downloadMs = Date.now() - (reqStart + ttfbMs);
-                        // Parse
-                        try {
-                            const parseStart = Date.now();
-                            const parsed = JSON.parse(body);
-                            const parseMs = Date.now() - parseStart;
-
-                            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                                // Log condicional e compacto
-                                const totalMs = Date.now() - reqStart;
-                                if (totalMs > 500) {
-                                    console.log("[stock] ext timings(ms)", {
-                                        token_ms: tokenMs,
-                                        ttfb_ms: ttfbMs,
-                                        download_ms: downloadMs,
-                                        parse_ms: parseMs,
-                                        total_ms: totalMs,
-                                        bytes: body.length,
-                                    });
-                                }
-                                resolve(parsed);
-                            } else {
-                                reject(new Error((parsed as any)?.message || `Erro da API externa (${res.statusCode})`));
-                            }
-                        } catch (e: any) {
-                            reject(new Error(`Erro ao interpretar resposta da API externa: ${e?.message || e}`));
-                        }
+                        resolve(JSON.parse(body));
                     });
 
                     res.on("error", (err) => reject(err));
@@ -145,11 +112,6 @@ export async function POST(req: NextRequest) {
             6_000,
             "external"
         );
-
-        const totalMs = Date.now() - t0;
-        if (totalMs > 1000) {
-            console.log(`[stock] total took ${totalMs}ms (incl. token=${tokenMs}ms)`);
-        }
 
         if (raw) {
             // evita re-empacotar mais uma vez (mas mantém JSON)

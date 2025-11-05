@@ -34,7 +34,7 @@ export default function Search() {
                 key={categoria.id}
                 text={categoria.text}
                 icon={<IconComponent size={32} />}
-                href={categoria.url}
+              // href={categoria.url}
               />
             );
           })}

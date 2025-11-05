@@ -267,6 +267,7 @@ export type ProdutoCart = {
   altura: string;
   largura: string;
   comprimento: string;
+  estControl?: string;
 };
 
 export type clienteDadosEntrega = {

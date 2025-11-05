@@ -102,16 +102,16 @@ export async function POST(request: Request) {
         };
 
         // Debug: log outgoing request (redacted)
-        try {
-          const redactedHeaders = { ...(options.headers as Record<string, any>) };
-          if (redactedHeaders.Authorization) redactedHeaders.Authorization = "[REDACTED]";
-          console.log("[send-request] Outgoing request", {
-            method: options.method,
-            url: `${u.protocol}//${hostname}${path}`,
-            headers: redactedHeaders,
-            postData: JSON.parse(postData),
-          });
-        } catch { }
+        // try {
+        //   const redactedHeaders = { ...(options.headers as Record<string, any>) };
+        //   if (redactedHeaders.Authorization) redactedHeaders.Authorization = "[REDACTED]";
+        //   console.log("[send-request] Outgoing request", {
+        //     method: options.method,
+        //     url: `${u.protocol}//${hostname}${path}`,
+        //     headers: redactedHeaders,
+        //     postData: JSON.parse(postData),
+        //   });
+        // } catch { }
 
         const externalReq = https.request(options, (res) => {
           let firstChunk = true;
@@ -129,8 +129,19 @@ export async function POST(request: Request) {
           });
 
           res.on("end", () => {
+            const ct = (res.headers["content-type"] || "").toString().toLowerCase();
+            const trimmed = respBody ? respBody.trim() : "";
+            const looksJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+
+            // Se não aparenta ser JSON ou content-type não indica JSON, rejeita com detalhes
+            if (!looksJson || (ct && !ct.includes("application/json"))) {
+              const snippet = trimmed.slice(0, 200);
+              const status = res.statusCode;
+              return reject(new Error(`Resposta não-JSON da API externa (status=${status}, content-type=${ct || "desconhecido"}): ${snippet}`));
+            }
+
             try {
-              const parsed = respBody.length ? JSON.parse(respBody) : {};
+              const parsed = trimmed ? JSON.parse(trimmed) : {};
               try {
                 console.log("[send-request] Upstream response", {
                   statusCode: res.statusCode,
@@ -140,7 +151,7 @@ export async function POST(request: Request) {
               } catch { }
               resolve(parsed);
             } catch (e: any) {
-              reject(new Error(`Erro ao interpretar resposta da API externa: ${e?.message || e}`));
+              return reject(new Error(`Erro ao interpretar resposta da API externa: ${e?.message || e}`));
             }
           });
 

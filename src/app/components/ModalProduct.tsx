@@ -299,6 +299,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         color: selectedColor,
         size: selectedSize,
         images: ProductData.images,
+        estControl: ProductData.estControl,
         personalization: file
           ? {
             fileName: file.name,

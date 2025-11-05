@@ -5,6 +5,7 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
 }
 
 const nextConfig = {
+
   images: {
     remotePatterns: [
       {
@@ -39,15 +40,7 @@ const nextConfig = {
     qualities: [75, 100], // 👈 adicione aqui as qualidades permitidas
 
   },
-  // Aqui libera IPs e origens específicas em dev
-  allowedDevOrigins: [
-    "http://localhost:3000",
-    "http://192.168.20.36",
-    "https://cx.unitycorp.com.br",
-    "https://amil.unitycorp.com.br",
-    "http://unity-n-14:3000",
-    "http://unity-n-13",
-  ],
+
 };
 
 export default nextConfig;
