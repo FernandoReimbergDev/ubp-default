@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -7,10 +8,6 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { SkeletonPedido } from "./partials/skeleton";
 import { Resumo } from "@/app/components/Resumo";
-
-type Produto = {
-  productName: string; color: string; size: string; price: number; images: string[];
-};
 
 type EnderecoEntrega = {
   contato_entrega: string; logradouro: string; numero: string; bairro: string;
@@ -26,30 +23,30 @@ type PedidoPayload = {
   // etc.
 } & Record<string, any>;
 
-// -------- Hook seguro para ler o cookie --------
-export function usePedidoPayload() {
-  const [pedidoPayload, setPedidoPayload] = useState<PedidoPayload | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = Cookies.get("pedidoPayload");
-      if (raw) setPedidoPayload(JSON.parse(raw));
-    } catch (e) {
-      console.error("Falha ao parsear cookie pedidoPayload:", e);
-    } finally {
-      setReady(true);
-    }
-  }, []);
-
-  return { pedidoPayload, ready };
-}
-
 export default function PedidoSucesso() {
   const router = useRouter();
   const [entrega, setEntrega] = useState<EnderecoEntrega | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState<string>("");
+
+  // -------- Hook seguro para ler o cookie --------
+  function usePedidoPayload() {
+    const [pedidoPayload, setPedidoPayload] = useState<PedidoPayload | null>(null);
+    const [ready, setReady] = useState(false);
+
+    useEffect(() => {
+      try {
+        const raw = Cookies.get("pedidoPayload");
+        if (raw) setPedidoPayload(JSON.parse(raw));
+      } catch (e) {
+        console.error("Falha ao parsear cookie pedidoPayload:", e);
+      } finally {
+        setReady(true);
+      }
+    }, []);
+
+    return { pedidoPayload, ready };
+  }
 
   const { pedidoPayload, ready: payloadReady } = usePedidoPayload();
 

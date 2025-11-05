@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useCart } from "@/app/Context/CartContext";
@@ -127,7 +128,7 @@ export function Resumo({ delivery }: ResumoProps) {
           controller.signal
         );
 
-      let amount = await call().catch(async (e: any) => {
+      const amount = await call().catch(async () => {
         // retry simples pós 500/429 (depende de como fetchProductFrete propaga)
         await new Promise(r => setTimeout(r, 400));
         return call();

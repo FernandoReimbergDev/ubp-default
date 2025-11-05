@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
 import { fetchAddressFromCep, handleCEPMask, handleCnpjCpfMask, handlePhoneMask } from "@/app/services/utils";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { DadosEntregaFormData, DadosEntregaSchema } from "./schema";
 import { useRouter } from "next/navigation";
 import { UsuarioResponse } from "@/app/types/responseTypes";
@@ -162,9 +162,10 @@ export function FormDadosEntrega() {
       if (!watch("cep") && cookieCEP) handleCEPMask(cookieCEP, setValue, trigger, setError, clearErrors);
       if (!watch("uf") && cookieUF) setValue("uf", cookieUF);
     } catch { /* ignore */ }
-  }, [setValue, trigger, setError, clearErrors]);
+  }, [setValue, trigger, setError, clearErrors, watch]);
 
   function onSubmit(form: any) {
+    setSubmitting(true);
     saveDeliveryCookie({
       id: form.userId, // se tiver
       entityTypeBilling: form.cnpj_cpf,
@@ -183,6 +184,7 @@ export function FormDadosEntrega() {
       addressCityBilling: form.municipio,
       addressStateCodeBilling: form.uf
     })
+    setSubmitting(false);
     router.push("/forma-de-pagamento")
   }
 

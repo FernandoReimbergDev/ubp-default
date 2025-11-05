@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus, Plus, ShoppingCart, Tag, X } from "lucide-react";
 import Image from "next/image";
@@ -337,30 +338,30 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     file,
   ]);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const file = e.target.files[0];
-      setFile(file);
-      setFileError(null);
-      setFilePreviewUrl(URL.createObjectURL(file));
-    }
-  }, []);
+  // const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files) {
+  //     const file = e.target.files[0];
+  //     setFile(file);
+  //     setFileError(null);
+  //     setFilePreviewUrl(URL.createObjectURL(file));
+  //   }
+  // }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
+  // const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  // }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.files) {
-      const file = e.dataTransfer.files[0];
-      setFile(file);
-      setFileError(null);
-      setFilePreviewUrl(URL.createObjectURL(file));
-    }
-  }, []);
+  // const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   if (e.dataTransfer.files) {
+  //     const file = e.dataTransfer.files[0];
+  //     setFile(file);
+  //     setFileError(null);
+  //     setFilePreviewUrl(URL.createObjectURL(file));
+  //   }
+  // }, []);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-40">
@@ -588,7 +589,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       {filePreviewUrl ? (
-                        <img src={filePreviewUrl} alt="Prévia" className="w-12 h-12 object-cover rounded" />
+                        <Image src={filePreviewUrl} alt="prévia" className="w-12 h-12 object-cover rounded" />
                       ) : (
                         <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-xs">{file.type.split("/")[1]?.toUpperCase() || "ARQ"}</div>
                       )}

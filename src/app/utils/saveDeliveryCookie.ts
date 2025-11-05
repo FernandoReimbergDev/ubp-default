@@ -1,4 +1,4 @@
-// utils/saveDeliveryCookie.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Cookies from "js-cookie";
 
 type BillingFields = {

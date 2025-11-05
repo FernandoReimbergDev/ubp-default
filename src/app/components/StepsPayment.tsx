@@ -1,4 +1,4 @@
-import { ShoppingCart, CircleCheckBig, CreditCard, Minus, Truck, Barcode } from "lucide-react";
+import { CircleCheckBig, CreditCard, Minus, Truck } from "lucide-react";
 
 interface StepsProps {
   step: string;

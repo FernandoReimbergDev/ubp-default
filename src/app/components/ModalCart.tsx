@@ -392,11 +392,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                             <Plus size={16} />
                           </button>
                         </div>
-                        {/* {loadingByItem[product.id] && (
-                          <span className="text-xs opacity-70 select-none pointer-events-none">
+                        {loadingByItem[product.id] && (
+                          <span className="text-xs opacity-70 select-none pointer-events-none hidden">
                             Consultando estoque...
                           </span>
-                        )} */}
+                        )}
                       </div>
 
                       <div className="mt-2">

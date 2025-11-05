@@ -49,7 +49,7 @@ export async function GET() {
             user: result.data.result,
         });
 
-    } catch (e) {
-        return NextResponse.json({ success: false, message: "Falha ao obter usuário" }, { status: 500 });
+    } catch (e: unknown) {
+        return NextResponse.json({ success: false, message: "Falha ao obter usuário", e }, { status: 500 });
     }
 }

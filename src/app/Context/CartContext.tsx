@@ -1,3 +1,5 @@
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import Cookies from "js-cookie";
@@ -15,11 +17,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [cart, setCart] = useState<ProdutoCart[]>([]);
   const [openCart, setOpenCart] = useState(false);
   const [cartReady, setCartReady] = useState(false);
-
-  // Merge util: compõe id caso ausente e acumula quantidades
-  // carts são isolados por usuário; não mesclar entre guest e user
-  const mergeCarts = undefined as unknown as never;
-
   const safeParseCart = (raw?: string): ProdutoCart[] => {
     if (!raw) return [];
     try { return JSON.parse(raw) as ProdutoCart[]; } catch { return []; }

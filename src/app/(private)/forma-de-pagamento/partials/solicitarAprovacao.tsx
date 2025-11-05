@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useAuth } from "@/app/Context/AuthContext";
@@ -32,7 +33,7 @@ type UserShape = {
 
 export function SolicitarAprovacao() {
     const { hasAnyRole, fetchOrderNumber } = useAuth();
-    const { cart } = useCart();
+    const { cart, clearCart } = useCart();
     const isAdmin = hasAnyRole(["Administrador"]);
     const router = useRouter();
 
@@ -109,7 +110,7 @@ export function SolicitarAprovacao() {
     }, [user]);
 
     // -------- Helpers de cookie --------
-    const getClienteCookie = (): any | null => {
+    const getClienteCookie = useCallback((): any | null => {
         try {
             const raw = Cookies.get("cliente");
             if (!raw) return null;
@@ -117,13 +118,13 @@ export function SolicitarAprovacao() {
         } catch {
             return null;
         }
-    };
+    }, []);
 
-    const getUserIdFromCookie = (): string => {
+    const getUserIdFromCookie = useCallback((): string => {
         const parsed = getClienteCookie();
         const id = (parsed?.id ?? parsed?.userId);
         return id ? String(id) : "";
-    };
+    }, [getClienteCookie]);
 
     // -------- Buscar usuário (HOOKS NO TOPO) --------
     const fetchUser = useCallback(async (signal?: AbortSignal) => {
@@ -155,7 +156,7 @@ export function SolicitarAprovacao() {
             if (err instanceof DOMException && err.name === "AbortError") return;
             console.error("Erro ao requisitar dados do usuário para API externa:", err);
         }
-    }, []);
+    }, [getUserIdFromCookie]);
 
     useEffect(() => {
         const ac = new AbortController();
@@ -391,6 +392,10 @@ export function SolicitarAprovacao() {
             router.push("/pedido");
         }
     };
+    const handleCancelConfirm = () => {
+        clearCart();
+        router.push("/");
+    };
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -408,7 +413,8 @@ export function SolicitarAprovacao() {
                                     </div>
 
                                     <h1 className="text-gray-800 text-center text-base md:text-lg max-w-[460px] px-6 leading-relaxed">
-                                        Seu pedido está quase concluído. Revise os detalhes abaixo e, se estiver tudo certo, finalize a compra.
+                                        Obrigado por sua compra!
+                                        Revise os detalhes do seu pedido e clique para finalizar sua solicitação.
                                     </h1>
                                 </div>
 
@@ -442,7 +448,7 @@ export function SolicitarAprovacao() {
                                             />
                                             <div className="mt-3 flex gap-2">
                                                 <button
-                                                    onClick={() => setStatus("cancelled")}
+                                                    onClick={handleCancelConfirm}
                                                     className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-500 text-sm"
                                                 >
                                                     Confirmar
