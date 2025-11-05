@@ -6,7 +6,7 @@ import { useState } from "react";
 export function SearchBar() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const previousSearchText = searchParams?.get("search") || "";
+  const previousSearchText = searchParams?.get("term") || "";
 
   const [inputValue, setInputValue] = useState(previousSearchText);
 
@@ -15,7 +15,7 @@ export function SearchBar() {
     if (inputValue.trim()) {
       urlSearchParams.set("term", inputValue.trim());
     } else {
-      urlSearchParams.delete("search");
+      urlSearchParams.delete("term");
     }
     router.replace(`/search?${urlSearchParams.toString()}`);
   }

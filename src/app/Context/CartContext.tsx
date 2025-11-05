@@ -56,7 +56,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
                 peso: item.peso ?? "",
                 altura: item.altura ?? "",
                 largura: item.largura ?? "",
-                comprimento: item.comprimento ?? "",
+                comprimento: item.comprimento ?? ""
               },
             }),
             signal: controller.signal,

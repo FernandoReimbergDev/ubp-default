@@ -3,8 +3,17 @@
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   throw new Error("Faltando variáveis de ambiente essenciais");
 }
-
 const nextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Permissions-Policy", value: "geolocation=(), microphone=(), camera=(), payment=()" },
+        ],
+      },
+    ];
+  },
 
   images: {
     remotePatterns: [

@@ -17,7 +17,7 @@ export default function Search() {
           text={`Resultado da busca: "${searchParams.get("term")}"`}
           icon={<ShoppingBag size={24} className="text-green-600" />}
         />
-        <GridProducts />
+        <GridProducts searchTerm={searchParams.get("term") || undefined} />
       </Container>
     </div>
   );

@@ -10,10 +10,22 @@ import { SkeletonCardProduto } from "./SkeletonCardProduto";
 import { ProdutosGrid } from "../types/responseTypes";
 import { AsideFilter } from "./AsideFilter";
 
-export const GridProducts = () => {
+export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
   const { products, loading, error } = useProducts();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProdutosGrid | null>(null);
+
+  const [filters, setFilters] = useState({
+    priceRange: null as [number, number] | null,
+    priceMin: null as number | null,
+    priceMax: null as number | null,
+    qtyRange: null as [number, number] | null,
+    qtyMin: null as number | null,
+    qtyMax: null as number | null,
+    categories: [] as string[],
+    types: { personalizaveis: false, preGravados: false },
+    inStock: false,
+  });
 
   const openModal = (produto: ProdutosGrid) => {
     setSelectedProduct(produto);
@@ -54,9 +66,62 @@ export const GridProducts = () => {
         altura: pro.altura ?? "",
         largura: pro.largura ?? "",
         comprimento: pro.comprimento ?? "",
+        qtdMinPro: pro.qtdMinPro ?? "",
+        vluGridPro: pro.vluGridPro ?? "",
       };
     });
   }, [products]);
+
+  const num = (v: unknown): number => {
+    if (v == null) return NaN;
+    const s = String(v).trim();
+    if (!s) return NaN;
+    if (s.includes(",") && !s.includes(".")) return Number(s.replace(/\./g, "").replace(",", "."));
+    return Number(s);
+  };
+
+  const filtered = useMemo(() => {
+    const term = (searchTerm ?? "").trim().toLowerCase();
+    return produtosAdaptados.filter((p) => {
+      // filtro por termo (quando houver)
+      if (term) {
+        const name = (p.product || "").toLowerCase();
+        const desc = (p.description || "").toLowerCase();
+        const code = (p.codePro || "").toLowerCase();
+        const matches = name.includes(term) || desc.includes(term) || code.includes(term);
+        if (!matches) return false;
+      }
+
+      // preço
+      const price = Number.isFinite(Number(p.vluGridPro)) ? Number(p.vluGridPro) : Number(p.price || 0);
+      if (filters.priceRange) {
+        const [a, b] = filters.priceRange;
+        if (!(price >= a && price <= b)) return false;
+      }
+      if (filters.priceMin != null && price < filters.priceMin) return false;
+      if (filters.priceMax != null && price > filters.priceMax) return false;
+
+      // quantidade
+      const minQty = num(p.qtdMinPro);
+      const qtyValue = Number.isFinite(minQty) ? minQty : undefined;
+      if (filters.qtyRange && qtyValue !== undefined) {
+        const [qa, qb] = filters.qtyRange;
+        if (!(qtyValue >= qa && qtyValue <= qb)) return false;
+      }
+      if (filters.qtyMin != null && qtyValue !== undefined && qtyValue < filters.qtyMin) return false;
+      if (filters.qtyMax != null && qtyValue !== undefined && qtyValue > filters.qtyMax) return false;
+
+      // disponibilidade
+      if (filters.inStock) {
+        const estCtrl = p.estControl === "1";
+        const saldo = num(p.quantidadeEstoquePro);
+        const available = estCtrl ? Number.isFinite(saldo) && saldo > 0 : true;
+        if (!available) return false;
+      }
+
+      return true;
+    });
+  }, [produtosAdaptados, filters, searchTerm]);
 
   if (loading) {
     return (
@@ -110,20 +175,35 @@ export const GridProducts = () => {
     );
   }
   if (error)
-    return <p>Desculpe, não foi possivel carregar os produtos, tente novamente atualizando a pagina. {error}</p>;
+    return <p>Ops! Desculpe, Não conseguimos carregar os produtos no momento. Por favor, atualize a página e tente novamente</p>;
+
 
   return (
-    <main className="p-1 md:p-4 min-w-[320px] min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
+    <main className="p-1 md:p-4 min-w-[320px] w-full min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
       <div className="mx-auto w-full max-w-7xl space-y-6">
 
         <section className="grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]">
 
-          <AsideFilter />
-
+          <AsideFilter
+            value={filters}
+            onChange={setFilters}
+            onClear={() => setFilters({
+              priceRange: null,
+              priceMin: null,
+              priceMax: null,
+              qtyRange: null,
+              qtyMin: null,
+              qtyMax: null,
+              categories: [],
+              types: { personalizaveis: false, preGravados: false },
+              inStock: false,
+            })}
+            onApply={() => void 0}
+          />
 
           <div className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-              <p className="text-sm text-gray-600">Mostrando 12 de 103 itens</p>
+              <p className="text-sm text-gray-600">Mostrando {filtered.length} de {produtosAdaptados.length} itens</p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Ordenar por</span>
                 <select className="rounded-md border border-gray-300 px-2 py-1 text-sm">
@@ -137,14 +217,14 @@ export const GridProducts = () => {
             </div>
 
             <div className="w-full containerProdutos justify-start grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 justify-items-center items-center">
-              {produtosAdaptados.map((produto, index) => (
+              {filtered.map((produto, index) => (
                 <div key={`${produto.codePro}-${index}`} className="produto-container">
                   <CardProduto
                     click={() => handleButtonBuy(produto)}
                     srcFront={produto.srcFrontImage}
                     alt={produto.alt}
                     nameProduct={produto.product}
-                    priceProduct={produto.price}
+                    priceProduct={Number(produto.vluGridPro)}
                     stock={produto.quantidadeEstoquePro}
                     estControl={produto.estControl}
                     promotion={false}

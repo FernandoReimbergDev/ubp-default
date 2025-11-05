@@ -52,6 +52,8 @@ export type stock = {
   dataCadastrado: string;
 };
 export type Produto = {
+  vluGridPro: string;
+  qtdMinPro: string;
   quantidadeEstoquePro: string;
   chavePro: string;
   codPro: string;
@@ -189,6 +191,8 @@ export type ProdutosGrid = {
   estControl: string;
   peso: string;
   altura: string; largura: string; comprimento: string;
+  qtdMinPro: string;
+  vluGridPro: string;
 };
 
 export type CartContextType = {
@@ -268,6 +272,8 @@ export type ProdutoCart = {
   largura: string;
   comprimento: string;
   estControl?: string;
+  qtdMinPro: string,
+  vluGridPro: string
 };
 
 export type clienteDadosEntrega = {
