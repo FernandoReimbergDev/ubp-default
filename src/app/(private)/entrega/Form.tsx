@@ -107,7 +107,7 @@ export function FormDadosEntrega() {
     const { result } = clientData;
     if (!Array.isArray(result) || result.length === 0) return;
 
-    const { email, cpf, cnpj, phones, addresses } = result[0];
+    const { entityType, fullName, legalName, email, cpf, cnpj, phones, addresses, ie } = result[0];
 
     if (Array.isArray(phones) && phones.length > 0) {
       phones.map((tel) => {
@@ -127,13 +127,15 @@ export function FormDadosEntrega() {
     // Endereço principal (addresses[0])
     if (Array.isArray(addresses) && addresses.length > 0) {
       const endereco = addresses[0] as any;
-
+      const nomeRazaoSocial = entityType === "PF" ? fullName : legalName;
       handleCEPMask(endereco?.zipcode ?? "", setValue, trigger, setError, clearErrors);
       setValue("logradouro", endereco?.street ?? "");
       setValue("numero", endereco?.number ?? "");
       setValue("complemento", endereco?.complement ?? "");
       setValue("bairro", endereco?.neighborhood ?? "");
       setValue("municipio", endereco?.city ?? "");
+      setValue("razao_social", nomeRazaoSocial);
+      setValue("inscricao_estadual", ie ?? "");
       const ufSigla = (endereco?.uf || endereco?.state || endereco?.stateCode || "").toString().trim().toUpperCase();
       setValue("uf", ufSigla);
     }

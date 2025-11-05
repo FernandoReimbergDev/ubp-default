@@ -192,6 +192,7 @@ export type ProdutosGrid = {
   peso: string;
   altura: string; largura: string; comprimento: string;
   qtdMinPro: string;
+  minQtdPro: string;
   vluGridPro: string;
 };
 
@@ -220,6 +221,7 @@ export type CartContextType = {
 };
 
 export interface ProductDataProps {
+  qtdMinPro: any;
   price: number;
   srcFrontImage: string;
   alt: string;
@@ -238,6 +240,8 @@ export interface ProductDataProps {
   altura: string;
   largura: string;
   comprimento: string;
+  vluGridPro: string;
+  minQtdPro: string;
 }
 
 export interface ModalProps {

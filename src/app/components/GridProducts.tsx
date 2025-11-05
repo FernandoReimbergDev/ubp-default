@@ -67,6 +67,7 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
         largura: pro.largura ?? "",
         comprimento: pro.comprimento ?? "",
         qtdMinPro: pro.qtdMinPro ?? "",
+        minQtdPro: pro.qtdMinPro ?? "",
         vluGridPro: pro.vluGridPro ?? "",
       };
     });

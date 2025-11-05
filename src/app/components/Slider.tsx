@@ -140,6 +140,9 @@ export const Slider = () => {
       altura: item.altura,
       largura: item.largura,
       comprimento: item.comprimento,
+      qtdMinPro: item.qtdMinPro ?? "",
+      minQtdPro: item.qtdMinPro ?? "10",
+      vluGridPro: item.vluGridPro ?? String(item.price ?? 0),
     }));
     setProduto(adapted);
   }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import https from "https";
 import { NextRequest, NextResponse } from "next/server";
 import { getDecryptedToken } from "../../services/getDecryptedToken";

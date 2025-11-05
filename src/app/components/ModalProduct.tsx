@@ -34,7 +34,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const fetchAbortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // ======= Utils =======
   const toNumberBR = useCallback((val: string | number | undefined) => {
     if (val === undefined || val === null) return undefined;
@@ -300,6 +299,8 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         size: selectedSize,
         images: ProductData.images,
         estControl: ProductData.estControl,
+        qtdMinPro: ProductData.qtdMinPro,
+        vluGridPro: ProductData.vluGridPro,
         personalization: file
           ? {
             fileName: file.name,
@@ -539,7 +540,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 <span className="loader" />
               </span>
               <span className="opacity-60 text-sm pointer-events-none select-none mt-2">
-                *Quantidade mínima {1} unidade.
+                *Quantidade mínima {Number(ProductData.minQtdPro).toFixed(0) ?? 10} unidades.
               </span>
             </div>
 
