@@ -29,7 +29,9 @@ export function LoginForm() {
   }, [userName, setValue]);
 
   async function handleLogin(data: LoginForm) {
+    setIsLoading(true);
     const success = await signIn({ userName: data.userName, password: data.password || "" });
+    setIsLoading(false);
 
     if (!success) {
       setError("password", {
@@ -79,7 +81,8 @@ export function LoginForm() {
         </Button>
         {/* {sso_enabled && <AuthButtons />} */}
 
-        <div className="h-6 ">{isSubmitting || isLoading && <span className="loader"></span>}</div>
+        <div className="h-6 ">{isSubmitting && <span className="loader"></span>}</div>
+
       </form>
       <button
         type="button"

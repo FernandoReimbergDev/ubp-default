@@ -43,6 +43,17 @@ export async function POST(request: Request) {
     const body: DynamicRequestBody = await request.json();
     const { reqMethod, reqEndpoint, reqHeaders } = body;
 
+    // Debug: log all incoming params (server-side)
+    try {
+      const incomingHeaders = Object.fromEntries(Array.from(request.headers.entries()));
+      console.log("[send-request] Incoming request", {
+        BASE_URL: baseUrl,
+        STORE_ID: storeId,
+        body,
+        headers: incomingHeaders,
+      });
+    } catch { }
+
     if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
       return NextResponse.json({ success: false, message: `Base URL inválida (${baseUrl})` }, { status: 400 });
     }
@@ -84,12 +95,23 @@ export async function POST(request: Request) {
             "Content-Type": "application/json",
             "Content-Length": Buffer.byteLength(postData),
             Connection: "keep-alive",
-            // Cabeçalhos dinâmicos do chamador (mantidos)
+            storeId: storeId,
             ...(reqHeaders || {}),
-            // Garantimos Authorization por último (prioridade)
             Authorization: `Bearer ${token}`,
           },
         };
+
+        // Debug: log outgoing request (redacted)
+        try {
+          const redactedHeaders = { ...(options.headers as Record<string, any>) };
+          if (redactedHeaders.Authorization) redactedHeaders.Authorization = "[REDACTED]";
+          console.log("[send-request] Outgoing request", {
+            method: options.method,
+            url: `${u.protocol}//${hostname}${path}`,
+            headers: redactedHeaders,
+            postData: JSON.parse(postData),
+          });
+        } catch { }
 
         const externalReq = https.request(options, (res) => {
           let firstChunk = true;
@@ -109,6 +131,13 @@ export async function POST(request: Request) {
           res.on("end", () => {
             try {
               const parsed = respBody.length ? JSON.parse(respBody) : {};
+              try {
+                console.log("[send-request] Upstream response", {
+                  statusCode: res.statusCode,
+                  headers: res.headers,
+                  body: parsed,
+                });
+              } catch { }
               resolve(parsed);
             } catch (e: any) {
               reject(new Error(`Erro ao interpretar resposta da API externa: ${e?.message || e}`));

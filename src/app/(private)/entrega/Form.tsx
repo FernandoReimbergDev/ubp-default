@@ -1,12 +1,15 @@
 "use client";
 
 import { fetchAddressFromCep, handleCEPMask, handleCnpjCpfMask, handlePhoneMask } from "@/app/services/utils";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { DadosEntregaFormData, DadosEntregaSchema } from "./schema";
 import { useRouter } from "next/navigation";
 import { UsuarioResponse } from "@/app/types/responseTypes";
+import { Resumo } from "@/app/components/Resumo";
+import { saveDeliveryCookie } from "@/app/utils/saveDeliveryCookie";
+import Cookies from "js-cookie";
 
 export function FormDadosEntrega() {
   const router = useRouter();
@@ -15,6 +18,32 @@ export function FormDadosEntrega() {
     message: "",
     result: [],
   });
+  const dataPedido = useMemo(() => {
+    // Função auxiliar para adicionar dias úteis
+    function adicionarDiasUteis(data: Date, diasUteis: number): Date {
+      const novaData = new Date(data);
+      let diasAdicionados = 0;
+
+      while (diasAdicionados < diasUteis) {
+        novaData.setDate(novaData.getDate() + 1);
+        const diaSemana = novaData.getDay(); // 0 = domingo, 6 = sábado
+
+        if (diaSemana !== 0 && diaSemana !== 6) {
+          diasAdicionados++;
+        }
+      }
+
+      return novaData;
+    }
+
+    // Data atual + 7 dias úteis
+    const dataEntrega = adicionarDiasUteis(new Date(), 7);
+
+    // Formata no padrão brasileiro
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "long",
+    }).format(dataEntrega);
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const {
     register,
@@ -30,6 +59,17 @@ export function FormDadosEntrega() {
     mode: "onChange",
   });
   const cep = watch("cep");
+  const uf = watch("uf");
+  const municipio = watch("municipio");
+
+  const delivery = useMemo(() => {
+    const zipDigits = (cep || "").replace(/\D/g, "");
+    return {
+      stateCode: (uf || "").toUpperCase(),
+      city: municipio || "",
+      zipCode: zipDigits,
+    };
+  }, [cep, uf, municipio]);
 
   const fetchUserData = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -86,15 +126,16 @@ export function FormDadosEntrega() {
 
     // Endereço principal (addresses[0])
     if (Array.isArray(addresses) && addresses.length > 0) {
-      const endereco = addresses[0];
+      const endereco = addresses[0] as any;
 
-      handleCEPMask(endereco.zipcode ?? "", setValue, trigger, setError, clearErrors);
-      setValue("logradouro", endereco.street ?? "");
-      setValue("numero", endereco.number ?? "");
-      setValue("complemento", endereco.complement ?? "");
-      setValue("bairro", endereco.neighborhood ?? "");
-      setValue("municipio", endereco.city ?? "");
-      setValue("uf", endereco.id ?? "");
+      handleCEPMask(endereco?.zipcode ?? "", setValue, trigger, setError, clearErrors);
+      setValue("logradouro", endereco?.street ?? "");
+      setValue("numero", endereco?.number ?? "");
+      setValue("complemento", endereco?.complement ?? "");
+      setValue("bairro", endereco?.neighborhood ?? "");
+      setValue("municipio", endereco?.city ?? "");
+      const ufSigla = (endereco?.uf || endereco?.state || endereco?.stateCode || "").toString().trim().toUpperCase();
+      setValue("uf", ufSigla);
     }
   }, [clientData, setValue, trigger, setError, clearErrors]);
 
@@ -104,26 +145,46 @@ export function FormDadosEntrega() {
     }
   }, [cep, setValue, trigger, setError, clearErrors]);
 
-  const onSubmit: SubmitHandler<DadosEntregaFormData> = async () => {
-    setSubmitting(true);
+  // Prefill from 'cliente' cookie if fields are empty
+  useEffect(() => {
     try {
-      //   const status = await putEntrega(chave_entrega, data);
-      const status = 200;
+      const raw = Cookies.get("cliente");
+      if (!raw) return;
+      const c = JSON.parse(raw);
 
-      if (status === 200) {
-        setSubmitting(true);
-        router.push("/forma-de-pagamento");
-      } else {
-        console.error(`Erro ao enviar o formulário: Status ${status}`);
-        alert(`Erro ao enviar o formulário. Status: ${status}`);
-      }
-    } catch (error) {
-      console.error("Erro na requisição:", error);
-      alert("Erro ao enviar o formulário. Verifique os dados e tente novamente.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      const cookieDDD = c?.areaCode || c?.ddd || c?.phone?.areaCode || c?.phones?.[0]?.areaCode || "";
+      const cookiePhone = c?.telefone || c?.phone || c?.phone?.number || c?.phones?.[0]?.number || "";
+      const cookieCEP = c?.zipCodeBilling || c?.addressZip || c?.zipcode || c?.cep || c?.address?.zipcode || c?.addresses?.[0]?.zipcode || "";
+      const cookieUF = (c?.uf || c?.addressState || c?.stateCode || c?.address?.stateCode || c?.addresses?.[0]?.stateCode || c?.address?.uf || "").toString().toUpperCase();
+
+      if (!watch("ddd") && cookieDDD) setValue("ddd", cookieDDD);
+      if (!watch("telefone") && cookiePhone) handlePhoneMask(cookiePhone, setValue, trigger, setError, clearErrors);
+      if (!watch("cep") && cookieCEP) handleCEPMask(cookieCEP, setValue, trigger, setError, clearErrors);
+      if (!watch("uf") && cookieUF) setValue("uf", cookieUF);
+    } catch { /* ignore */ }
+  }, [setValue, trigger, setError, clearErrors]);
+
+  function onSubmit(form: any) {
+    saveDeliveryCookie({
+      id: form.userId, // se tiver
+      entityTypeBilling: form.cnpj_cpf,
+      legalNameBilling: form.razao_social,
+      cpfCnpfBilling: form.cnpj_cpf,
+      ieBilling: form.inscricao_estadual || "",
+      emailBilling: form.email,
+      areaCodeBilling: form.ddd,
+      phoneBilling: form.telefone,
+      addressIbgeCodeBilling: form.ibge || "",
+      zipCodeBilling: form.cep,
+      streetNameBilling: form.logradouro,
+      streetNumberBilling: form.numero,
+      addressLine2Billing: "",
+      addressNeighborhoodBilling: form.bairro,
+      addressCityBilling: form.municipio,
+      addressStateCodeBilling: form.uf
+    })
+    router.push("/forma-de-pagamento")
+  }
 
   return (
     <div className="h-fit w-full px-2 relative z-40">
@@ -135,8 +196,8 @@ export function FormDadosEntrega() {
           <h2 className="text-sm 2xl:text-lg font-bold font-plutoRegular text-zinc-600 text-center"></h2>
         </div>
       </header>
-      <div>
-        <form method="POST" onSubmit={handleSubmit(onSubmit)}>
+      <div className="flex w-full h-full flex-col lg:flex-row">
+        <form method="POST" onSubmit={handleSubmit(onSubmit)} className="w-full">
           <section className="grid md:grid-cols-2 gap-2 md:gap-4 bg-white mb-2">
             <div className="px-2">
               <label className="block text-xs 2xl:text-sm font-medium text-gray-700">CEP*</label>
@@ -159,7 +220,7 @@ export function FormDadosEntrega() {
                 type="text"
                 id="previsao_entrega"
                 {...register("previsao_entrega")}
-                placeholder="30 de junho de 2025"
+                defaultValue={dataPedido}
                 readOnly
                 className="w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none"
               />
@@ -378,7 +439,12 @@ export function FormDadosEntrega() {
             </div>
           </section>
         </form>
+        <div className="w-full lg:w-80 lg:max-w-80 h-full border-t lg:border-t-0 lg:border-l border-gray-300 p-4">
+          <Resumo delivery={delivery} />
+        </div>
+
       </div>
+
     </div>
   );
 }

@@ -13,6 +13,10 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "www2.unitycorp.com.br",
+      },
+      {
+        protocol: "https",
         hostname: "unitycorp.com.br",
       },
       {

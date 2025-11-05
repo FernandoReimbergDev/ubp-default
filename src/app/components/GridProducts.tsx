@@ -137,31 +137,29 @@ export const GridProducts = () => {
             </div>
 
             <div className="w-full containerProdutos justify-start grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 justify-items-center items-center">
-              {Array.from({ length: 4 }).map((_, index) => (
-                produtosAdaptados.map((produto) => (
-                  <div key={`${produto.codePro}-${index}`} className="produto-container">
-                    <CardProduto
-                      click={() => handleButtonBuy(produto)}
-                      srcFront={produto.srcFrontImage}
-                      alt={produto.alt}
-                      nameProduct={produto.product}
-                      priceProduct={produto.price}
-                      stock={produto.quantidadeEstoquePro}
-                      estControl={produto.estControl}
-                      promotion={false}
-                      percent_discont={0}
-                      btn={
-                        <Button
-                          onClick={() => handleButtonBuy(produto)}
-                          className="flex items-center justify-center w-[50px] xl:w-[50px] min-h-8 md:min-h-[35px] cursor-pointer bg-Button-bg hover:bg-Slider-bgDegrade rounded-md text-white text-sm"
-                          name="buttonBuy"
-                        >
-                          <ShoppingCart size={18} />
-                        </Button>
-                      }
-                    />
-                  </div>
-                ))
+              {produtosAdaptados.map((produto, index) => (
+                <div key={`${produto.codePro}-${index}`} className="produto-container">
+                  <CardProduto
+                    click={() => handleButtonBuy(produto)}
+                    srcFront={produto.srcFrontImage}
+                    alt={produto.alt}
+                    nameProduct={produto.product}
+                    priceProduct={produto.price}
+                    stock={produto.quantidadeEstoquePro}
+                    estControl={produto.estControl}
+                    promotion={false}
+                    percent_discont={0}
+                    btn={
+                      <Button
+                        onClick={() => handleButtonBuy(produto)}
+                        className="flex items-center justify-center w-[50px] xl:w-[50px] min-h-8 md:min-h-[35px] cursor-pointer bg-Button-bg hover:bg-Slider-bgDegrade rounded-md text-white text-sm"
+                        name="buttonBuy"
+                      >
+                        <ShoppingCart size={18} />
+                      </Button>
+                    }
+                  />
+                </div>
               ))}
             </div>
 

@@ -62,9 +62,19 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     [availableInt, requestedQty]
   );
 
-  const hasKnownStock = typeof ProductData.quantidadeEstoquePro === "string" && ProductData.quantidadeEstoquePro.trim() !== "";
-  const parsedStock = hasKnownStock ? Math.trunc(Number(ProductData.quantidadeEstoquePro.replace(",", "."))) : undefined;
-  const isOutOfStock = ProductData.estControl === "1" && hasKnownStock && (parsedStock ?? 0) <= 0;
+
+  const isControlledStock = ProductData.estControl === "1";
+
+  const hasKnownStock =
+    isControlledStock &&
+    typeof ProductData.quantidadeEstoquePro === "string" &&
+    ProductData.quantidadeEstoquePro.trim() !== "";
+
+  const parsedStock = hasKnownStock
+    ? Math.trunc(Number(ProductData.quantidadeEstoquePro.replace(",", ".")))
+    : undefined;
+
+  const isOutOfStock = isControlledStock && hasKnownStock && (parsedStock ?? 0) <= 0;
 
   // ======= Efeito de inicialização/reset do produto =======
   useEffect(() => {
@@ -158,6 +168,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   // dispara consulta com debounce quando há quantidade válida
   const scheduleFetch = useCallback(
     (color?: string, size?: string, delayMs = 600) => {
+      // ❌ não consulta nada quando NÃO é controlado
+      if (!isControlledStock) return;
+
       if (!(requestedQty > 0)) return;
 
       if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
@@ -172,16 +185,17 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
         if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
         fetchTimeoutRef.current = setTimeout(() => {
-          try {
-            controller.abort();
-          } catch { }
+          try { controller.abort(); } catch { }
         }, 8000);
 
-        fetchProductsStock(color, size, controller.signal, reqId);
+        if (!isOutOfStock) {
+          fetchProductsStock(color, size, controller.signal, reqId);
+        }
       }, delayMs);
     },
-    [requestedQty, fetchProductsStock]
+    [requestedQty, fetchProductsStock, isControlledStock, isOutOfStock]
   );
+
 
   // ======= Handlers =======
   const handleDescriFull = useCallback(() => setDescriFull((v) => !v), []);
@@ -637,7 +651,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               <Button
                 type="submit"
                 name="BtnComprar"
-                disabled={loading || qtyInvalid}
+                disabled={loading || (!isOutOfStock && qtyInvalid)}
                 className="disabled:bg-gray-500 flex gap-2 items-center justify-center select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
               >
                 <ShoppingCart size={18} />

@@ -188,9 +188,7 @@ export type ProdutosGrid = {
   quantidadeEstoquePro: string;
   estControl: string;
   peso: string;
-  altura: string;
-  largura: string;
-  comprimento: string;
+  altura: string; largura: string; comprimento: string;
 };
 
 export type CartContextType = {
@@ -203,6 +201,7 @@ export type CartContextType = {
   updateColorOrSize: (id: string, newColor?: string, newSize?: string) => void;
   openCart: boolean;
   setOpenCart: (openCart: boolean) => void;
+  cartReady: boolean;
   fetchProductFrete: (
     purchaseAmount: string,
     stateCode: string,
@@ -359,8 +358,10 @@ export type AuthContextType = {
   userName: string;
   code: string;
   loading: boolean;
+  orderNumber: string | null;
   signIn: (credentials: { userName: string; password: string }) => Promise<boolean>;
   signOut: () => Promise<void>;
+  fetchOrderNumber: () => Promise<void>;
   requestAccess: (userName: string) => Promise<{
     success: boolean;
     status?: AccessStatus;

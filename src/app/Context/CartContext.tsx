@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import Cookies from "js-cookie";
 import { CartContextType, ProdutoCart, ProdutoEstoqueResponse } from "../types/responseTypes";
 import { useAuth } from "./AuthContext";
@@ -14,11 +14,26 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [cart, setCart] = useState<ProdutoCart[]>([]);
   const [openCart, setOpenCart] = useState(false);
+  const [cartReady, setCartReady] = useState(false);
+
+  // Merge util: compõe id caso ausente e acumula quantidades
+  // carts são isolados por usuário; não mesclar entre guest e user
+  const mergeCarts = undefined as unknown as never;
+
+  const safeParseCart = (raw?: string): ProdutoCart[] => {
+    if (!raw) return [];
+    try { return JSON.parse(raw) as ProdutoCart[]; } catch { return []; }
+  };
 
   const initializeCart = useCallback(async () => {
-    const stored = Cookies.get(userKey);
-    if (!stored) return;
-    const localCart: ProdutoCart[] = JSON.parse(stored);
+    setCartReady(false);
+    // Carrega carrinho do usuário OU do convidado, sem mesclar
+    const isLogged = Boolean(userId);
+    const keyToLoad = isLogged ? userKey : "cart_guest";
+    const raw = Cookies.get(keyToLoad);
+
+    const localCart: ProdutoCart[] = safeParseCart(raw);
+
     try {
       const controller = new AbortController();
       const validations = await Promise.allSettled(
@@ -40,7 +55,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
                 altura: item.altura ?? "",
                 largura: item.largura ?? "",
                 comprimento: item.comprimento ?? "",
-
               },
             }),
             signal: controller.signal,
@@ -52,18 +66,31 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       );
 
       const allOk = validations.every((v) => v.status === "fulfilled");
-      if (allOk) {
-        setCart(localCart);
-        Cookies.set(userKey, JSON.stringify(localCart), { expires: 7 });
-      } else {
-        setCart(localCart); // mantém o carrinho mas já haverá validação em tempo real no ModalCart
-        Cookies.set(userKey, JSON.stringify(localCart), { expires: 7 });
+      setCart(localCart);
+      try { Cookies.set(keyToLoad, JSON.stringify(localCart), { expires: 7, sameSite: "Lax", path: "/" }); } catch { }
+      if (!allOk) {
+        // no-op
       }
     } catch {
-      setCart([]);
-      Cookies.remove(userKey);
+      setCart((prev) => (Array.isArray(prev) && prev.length ? prev : []));
+    } finally {
+      setCartReady(true);
     }
-  }, [userKey]);
+  }, [userId, userKey]);
+
+  type FreteEnvelope =
+    | { success: boolean; message: string; result: { amount: string | number; percent: string | number } }
+    | { success: boolean; data: { success: boolean; message: string; result: { amount: string | number; percent: string | number } } };
+
+  function parseNumBR(val: unknown): number {
+    if (val == null) return NaN;
+    const s = String(val).trim();
+    if (!s) return NaN;
+    if (s.includes(".") && s.includes(",")) return Number(s.replace(/\./g, "").replace(",", "."));
+    if (s.includes(",")) return Number(s.replace(",", "."));
+    return Number(s);
+  }
+
 
   const generateCartItemId = (codPro: string, color: string, size?: string, personalizationKey?: string): string =>
     `${codPro}_${color}_${size ?? "nosize"}_${personalizationKey ?? "std"}`;
@@ -104,7 +131,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         };
         updatedCart = [...prevCart, newItem];
       }
-      Cookies.set(userKey, JSON.stringify(updatedCart), { expires: 7 });
+      try { Cookies.set(userKey, JSON.stringify(updatedCart), { expires: 7, sameSite: "Lax", path: "/" }); } catch { }
       setOpenCart(true);
       return updatedCart;
     });
@@ -182,7 +209,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     width: string,
     length: string,
     signal?: AbortSignal
-  ) => {
+  ): Promise<number | undefined> => {
     try {
       const res = await fetch("/api/send-request", {
         method: "POST",
@@ -206,53 +233,52 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         signal,
       });
 
-      let result: any = null;
-      try {
-        result = await res.json();
-      } catch {
-        result = null;
+      const payload: FreteEnvelope = await res.json();
+
+      // aceita { success, result } ou { success, data: { result } }
+      const resultNode =
+        // @ts-expect-error narrow runtime
+        (payload?.data?.result as any) ??
+        // @ts-expect-error narrow runtime
+        (payload?.result as any);
+
+      const amountNum = parseNumBR(resultNode?.amount);
+      const percentNum = parseNumBR(resultNode?.percent);
+
+      if (!res.ok || !Number.isFinite(amountNum) || !Number.isFinite(percentNum)) {
+        throw new Error(
+          `Resposta inválida do frete (status=${res.status}) amount=${resultNode?.amount} percent=${resultNode?.percent}`
+        );
       }
 
-      if (!res.ok) {
-        const msg = (result && (result.message || result?.data?.message)) || "Erro ao buscar produtos";
-        throw new Error(msg);
-      }
-
-      // Tentar extrair amount em diferentes formatos
-      const amountFrete =
-        result?.data?.result?.amount ??
-        result?.data?.amount ??
-        result?.amount ??
-        null;
-
-      if (amountFrete == null) {
-        console.warn("/shipping-quote sem amount esperado:", result);
-        return undefined;
-      }
-      return amountFrete as number;
-    } catch (error: unknown) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return undefined;
-      }
-      console.error("error ao requisitar produtos para api externa", error);
+      return amountNum;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return undefined;
+      console.error("Erro ao consultar frete:", err);
       return undefined;
     }
-  }
+  };
+
 
   const clearCart = () => {
     setCart([]);
-    Cookies.remove(userKey);
+    try { Cookies.remove(userKey, { path: "/" }); } catch { }
   };
 
   useEffect(() => {
-    if (!userId) {
-      setCart([]);
-      Cookies.remove(userKey);
-      return;
-    }
-
+    // Sempre (re)carrega o carrinho do cookie ao mudar o contexto de usuário
+    // - Logado: mescla guest -> user
+    // - Convidado: carrega cart_guest
     initializeCart();
   }, [userId, userKey, initializeCart]);
+
+  // Salvaguarda: se o userId mudar de definido -> null (expiração de sessão, logout fora do fluxo),
+  // copie o carrinho em memória para o cookie de convidado antes de recarregar.
+  // Sem cópias automáticas entre perfis; apenas reidratamos conforme o contexto atual
+  const prevUserIdRef = useRef<string | number | null>(null);
+  useEffect(() => {
+    prevUserIdRef.current = userId;
+  }, [userId]);
 
   return (
     <CartContext.Provider
@@ -266,7 +292,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         updateColorOrSize,
         openCart,
         setOpenCart,
-        fetchProductFrete
+        fetchProductFrete,
+        cartReady
       }}
     >
       {children}

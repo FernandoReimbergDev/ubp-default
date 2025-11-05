@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const [roles, setRoles] = useState<string[]>([]);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
   const hasRole = (role: string) => roles.includes(role.toLowerCase());
   const hasAnyRole = (requiredRoles: string[]) => requiredRoles.some((role) => hasRole(role));
@@ -78,6 +79,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       fetchUserData().finally(() => setLoading(false));
     }
   }, [fetchUserData]);
+
+  // Hidrata o orderNumber do cookie ao montar
+  useEffect(() => {
+    try {
+      const storedOrder = Cookies.get("orderNumber");
+      if (storedOrder) {
+        setOrderNumber(storedOrder);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const requestAccess = async (userName: string) => {
     try {
@@ -224,6 +237,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } finally {
       Cookies.remove("cliente");
+      Cookies.remove("orderNumber");
+      setOrderNumber(null);
       setCliente(null);
       setRoles([]);
       setUserName("");
@@ -260,6 +275,79 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchOrderNumber = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    try {
+      // Sempre buscar o id do usuário a partir do cookie 'cliente'
+      let userIdFromCookie: string | undefined;
+      try {
+        const raw = Cookies.get("cliente");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          userIdFromCookie = (parsed?.id ?? parsed?.userId)?.toString();
+        }
+      } catch (e) {
+        console.warn("[AuthContext] Falha ao ler cookie 'cliente' para userId", e);
+      }
+
+      const res = await fetch("/api/send-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reqMethod: "POST",
+          reqEndpoint: "/order",
+          reqHeaders: {
+            "X-Environment": "HOMOLOGACAO",
+            storeId: "32",
+            userId: userIdFromCookie || "",
+          },
+        }),
+        signal,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.message || "Erro ao buscar produtos");
+      }
+      // Extrai o número do pedido como string para evitar salvar "[object Object]"
+      const orderPayload = result?.data?.result;
+      let orderNumberStr: string | null = null;
+      if (typeof orderPayload === "string" || typeof orderPayload === "number") {
+        orderNumberStr = String(orderPayload);
+      } else if (orderPayload && typeof orderPayload === "object") {
+        // Prioriza a chave 'orderId' e outras variantes comuns
+        orderNumberStr = orderPayload.orderId || orderPayload.orderNumber || orderPayload.numero || orderPayload.id || orderPayload.pedido || orderPayload.code || null;
+        if (typeof orderNumberStr !== "string") orderNumberStr = null;
+      }
+
+      if (!orderNumberStr) {
+        console.warn("[AuthContext] Não foi possível derivar um número de pedido legível do payload:", orderPayload);
+        // fallback: serializa como JSON, para não ficar [object Object]
+        try {
+          orderNumberStr = JSON.stringify(orderPayload);
+        } catch {
+          orderNumberStr = "";
+        }
+      }
+
+      setOrderNumber(orderNumberStr);
+      try {
+        Cookies.set("orderNumber", orderNumberStr, { expires: 7, sameSite: "Lax" });
+      } catch { }
+
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      console.error("error ao requisitar numero de pedido para api externa", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -273,6 +361,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         code,
         email,
         userName,
+        orderNumber,
         setCliente,
         loading,
         signIn,
@@ -282,6 +371,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setPassword,
         setNewPassword,
         requestCodePassword,
+        fetchOrderNumber,
       }}
     >
       {children}
