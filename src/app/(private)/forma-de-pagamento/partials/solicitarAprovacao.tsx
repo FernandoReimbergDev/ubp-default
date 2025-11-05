@@ -364,14 +364,8 @@ export function SolicitarAprovacao() {
         setStatus("approved");
         try {
             const payload = buildOrderPayload();
-            // Persistir o payload para sobreviver a reload/navegação
-            Cookies.set("pedidoPayload", JSON.stringify(payload), {
-                path: "/",
-                sameSite: "lax",
-                secure: process.env.NODE_ENV === "production",
-                // expira em 1 dia (ajuste conforme necessidade)
-                expires: 1,
-            });
+            try { localStorage.setItem("pedidoPayload", JSON.stringify(payload)); } catch { }
+            try { Cookies.remove("pedidoPayload", { path: "/" }); } catch { }
             await fetchOrderNumber();
         } finally {
             router.push("/pedido");
@@ -381,12 +375,8 @@ export function SolicitarAprovacao() {
         setStatus("requested");
         try {
             const payload = buildOrderPayload();
-            Cookies.set("pedidoPayload", JSON.stringify(payload), {
-                path: "/",
-                sameSite: "lax",
-                secure: process.env.NODE_ENV === "production",
-                expires: 1,
-            });
+            try { localStorage.setItem("pedidoPayload", JSON.stringify(payload)); } catch { }
+            try { Cookies.remove("pedidoPayload", { path: "/" }); } catch { }
             await fetchOrderNumber();
         } finally {
             router.push("/pedido");

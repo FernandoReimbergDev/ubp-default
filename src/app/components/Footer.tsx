@@ -11,7 +11,7 @@ export function Footer() {
         <ul className="flex justify-center items-center gap-4 py-1 flex-wrap">
           <li className="group">
             <Link
-              href="https://www.facebook.com/amil/?locale=pt_BR"
+              href="#"
               className="text-[var(--text-footer)] "
               target="new_blank"
             >
@@ -20,7 +20,7 @@ export function Footer() {
           </li>
           <li className="group">
             <Link
-              href="https://www.instagram.com/amilcuidadocerto/"
+              href="#"
               className="text-[var(--text-footer)] "
               target="new_blank"
             >
@@ -29,7 +29,7 @@ export function Footer() {
           </li>
           <li className="group">
             <Link
-              href="https://br.linkedin.com/company/amil"
+              href="#"
               className="text-[var(--text-footer)] "
               target="new_blank"
             >
@@ -38,7 +38,7 @@ export function Footer() {
           </li>
           <li className="group">
             <Link
-              href="https://www.youtube.com/@amilinstitucional"
+              href="#"
               className="text-[var(--text-footer)]"
               target="new_blank"
             >

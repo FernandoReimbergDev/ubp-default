@@ -24,4 +24,4 @@ export const LIMITE_PARCELAMENTO = parseInt(requireEnv("LIMITE_PARCELAMENTO"), 1
 export const TAXA_JUROS = parseFloat(requireEnv("TAXA_JUROS"));
 
 // Configurações de autenticação social
-export const SSO_ENABLED = requireEnv("SSO_ENABLED");
+// export const SSO_ENABLED = requireEnv("SSO_ENABLED");

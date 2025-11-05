@@ -335,7 +335,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setOrderNumber(orderNumberStr);
       try {
-        Cookies.set("orderNumber", orderNumberStr, { expires: 7, sameSite: "Lax" });
+        Cookies.set("orderNumber", orderNumberStr, {
+          expires: 7,
+          sameSite: "Lax",
+          path: "/",
+          secure: process.env.NODE_ENV === "production",
+        });
       } catch { }
 
     } catch (error: unknown) {

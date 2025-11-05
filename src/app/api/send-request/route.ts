@@ -102,16 +102,16 @@ export async function POST(request: Request) {
         };
 
         // Debug: log outgoing request (redacted)
-        // try {
-        //   const redactedHeaders = { ...(options.headers as Record<string, any>) };
-        //   if (redactedHeaders.Authorization) redactedHeaders.Authorization = "[REDACTED]";
-        //   console.log("[send-request] Outgoing request", {
-        //     method: options.method,
-        //     url: `${u.protocol}//${hostname}${path}`,
-        //     headers: redactedHeaders,
-        //     postData: JSON.parse(postData),
-        //   });
-        // } catch { }
+        try {
+          const redactedHeaders = { ...(options.headers as Record<string, any>) };
+          if (redactedHeaders.Authorization) redactedHeaders.Authorization = "[REDACTED]";
+          console.log("[send-request] Outgoing request", {
+            method: options.method,
+            url: `${u.protocol}//${hostname}${path}`,
+            headers: redactedHeaders,
+            postData: JSON.parse(postData),
+          });
+        } catch { }
 
         const externalReq = https.request(options, (res) => {
           let firstChunk = true;

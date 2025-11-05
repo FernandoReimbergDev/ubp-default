@@ -57,7 +57,7 @@ export function CardProduto({
         />
       </div>
 
-      <p className="line-clamp-2 h-[2.5rem] sm:h-[2.5rem] md:h-[3.1.5rem] sm:w-full font-Roboto font-semibold text-sm md:text-base my-1 leading-snug overflow-hidden text-blackReference">
+      <p className="line-clamp-2 h-[2.5rem] sm:h-[2.5rem] md:h-[3.1rem] md:max-h-[3.1rem] sm:w-full font-Roboto font-semibold text-sm md:text-base my-1 leading-snug overflow-hidden text-blackReference">
         {nameProduct}
       </p>
 

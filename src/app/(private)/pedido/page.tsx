@@ -8,6 +8,7 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { SkeletonPedido } from "./partials/skeleton";
 import { Resumo } from "@/app/components/Resumo";
+import { useCart } from "@/app/Context/CartContext";
 
 type EnderecoEntrega = {
   contato_entrega: string; logradouro: string; numero: string; bairro: string;
@@ -25,24 +26,41 @@ type PedidoPayload = {
 
 export default function PedidoSucesso() {
   const router = useRouter();
+  const { clearCart } = useCart();
   const [entrega, setEntrega] = useState<EnderecoEntrega | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState<string>("");
 
-  // -------- Hook seguro para ler o cookie --------
+  // -------- Hook seguro para restaurar o payload --------
   function usePedidoPayload() {
     const [pedidoPayload, setPedidoPayload] = useState<PedidoPayload | null>(null);
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
-      try {
-        const raw = Cookies.get("pedidoPayload");
-        if (raw) setPedidoPayload(JSON.parse(raw));
-      } catch (e) {
-        console.error("Falha ao parsear cookie pedidoPayload:", e);
-      } finally {
-        setReady(true);
-      }
+      (function restore() {
+        try {
+          // 1) Fonte da verdade: localStorage
+          const ls = typeof window !== "undefined" ? localStorage.getItem("pedidoPayload") : null;
+          if (ls) {
+            try { setPedidoPayload(JSON.parse(ls)); } catch { }
+            return;
+          }
+          // 2) Fallback: se existir cookie legado, migra para LS e remove cookie
+          const raw = Cookies.get("pedidoPayload");
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              setPedidoPayload(parsed);
+              try { localStorage.setItem("pedidoPayload", JSON.stringify(parsed)); } catch { }
+              try { Cookies.remove("pedidoPayload", { path: "/" }); } catch { }
+            } catch (e) {
+              console.error("Falha ao parsear cookie pedidoPayload:", e);
+            }
+          }
+        } finally {
+          setReady(true);
+        }
+      })();
     }, []);
 
     return { pedidoPayload, ready };
@@ -64,8 +82,6 @@ export default function PedidoSucesso() {
   // Logs só quando existir payload
   useEffect(() => {
     if (!pedidoPayload) return;
-    console.log("pedidoPayload (restore)", pedidoPayload);
-    // Exemplo: console.log("storeId", pedidoPayload.storeId);
   }, [pedidoPayload]);
 
   // Callback que só dispara quando tudo estiver pronto
@@ -106,18 +122,104 @@ export default function PedidoSucesso() {
     return () => ac.abort();
   }, [payloadReady, pedidoPayload, orderId, fetchCadastroPedido]);
 
-  // Carrega dados do localStorage
+  // Carrega dados de entrega com fallbacks
   useEffect(() => {
     try {
-      const entregaStorage = localStorage.getItem("dadosEntrega");
+      // 1) Fonte principal: localStorage
+      const entregaStorage = typeof window !== "undefined" ? localStorage.getItem("dadosEntrega") : null;
+      if (entregaStorage) {
+        setEntrega(JSON.parse(entregaStorage));
+        return;
+      }
 
-      if (entregaStorage) setEntrega(JSON.parse(entregaStorage));
+      // 2) Fallback: derivar do pedidoPayload (shipping > billing)
+      if (pedidoPayload) {
+        const pick = (...vals: any[]) => {
+          for (const v of vals) if (v != null && String(v).trim() !== "") return String(v);
+          return "";
+        };
+        const digits = (s: string) => s.replace(/\D+/g, "");
+        const upper = (s: string) => s.toUpperCase();
+
+        const entregaDerivada: EnderecoEntrega = {
+          contato_entrega: pick(
+            pedidoPayload.legalNameShipping,
+            pedidoPayload.contactNameShipping,
+            pedidoPayload.legalName,
+            pedidoPayload.legalNameBilling,
+          ),
+          logradouro: pick(
+            pedidoPayload.streetNameShipping,
+            pedidoPayload.streetNameBilling,
+          ),
+          numero: pick(
+            pedidoPayload.streetNumberShipping,
+            pedidoPayload.streetNumberBilling,
+          ),
+          bairro: pick(
+            pedidoPayload.addressNeighborhoodShipping,
+            pedidoPayload.addressNeighborhoodBilling,
+          ),
+          municipio: pick(
+            pedidoPayload.addressCityShipping,
+            pedidoPayload.addressCityBilling,
+          ),
+          uf: upper(pick(
+            pedidoPayload.addressStateCodeShipping,
+            pedidoPayload.addressStateCodeBilling,
+          )),
+          cep: digits(pick(
+            pedidoPayload.zipCodeShipping,
+            pedidoPayload.zipCodeBilling,
+          )),
+        };
+
+        const zipOk = entregaDerivada.cep?.length === 8;
+        const ufOk = Boolean(entregaDerivada.uf);
+        const cityOk = Boolean(entregaDerivada.municipio);
+        if (zipOk && ufOk && cityOk) {
+          setEntrega(entregaDerivada);
+          return;
+        }
+      }
+
+      // 3) Último fallback: cookie 'cliente'
+      try {
+        const raw = Cookies.get("cliente");
+        if (raw) {
+          const c = JSON.parse(raw);
+          const pick = (...vals: any[]) => {
+            for (const v of vals) if (v != null && String(v).trim() !== "") return String(v);
+            return "";
+          };
+          const digits = (s: string) => s.replace(/\D+/g, "");
+          const upper = (s: string) => s.toUpperCase();
+
+          const entregaCookie: EnderecoEntrega = {
+            contato_entrega: pick(c.legalName, c.contactName, c.legalNameBilling, c.fullName),
+            logradouro: pick(c.addressStreet, c.streetNameBilling, c.logradouro),
+            numero: pick(c.addressNumber, c.streetNumberBilling, c.numero),
+            bairro: pick(c.addressNeighborhood, c.addressNeighborhoodBilling, c.bairro),
+            municipio: pick(c.addressCity, c.addressCityBilling, c.municipio, c.city),
+            uf: upper(pick(c.addressState, c.addressStateCodeBilling, c.uf, c.stateCode)),
+            cep: digits(pick(c.addressZip, c.zipCodeBilling, c.cep, c.zipcode)),
+          };
+          const zipOk = entregaCookie.cep?.length === 8;
+          const ufOk = Boolean(entregaCookie.uf);
+          const cityOk = Boolean(entregaCookie.municipio);
+          if (zipOk && ufOk && cityOk) {
+            setEntrega(entregaCookie);
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+
     } catch (e) {
-      console.error("Falha ao ler localStorage:", e);
+      console.error("Falha ao preparar dados de entrega:", e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pedidoPayload]);
 
   const dataPedido = useMemo(() => {
     function adicionarDiasUteis(data: Date, diasUteis: number): Date {
@@ -134,32 +236,15 @@ export default function PedidoSucesso() {
     return new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(dt);
   }, []);
 
+  const handleNovaCompra = () => {
+    clearCart();
+    router.push("/");
+  };
+
+
   function handleImprimir() { window.print(); }
-  function handleNovaCompra() { router.push("/"); }
 
   if (loading) return <SkeletonPedido />;
-
-  // if (!entrega) {
-  //   return (
-  //     <div className="min-h-[calc(100dvh-114px)] w-full flex flex-col lg:flex-row bg-body-bg pt-18">
-  //       <Container>
-  //         <div className="mx-auto max-w-xl w-full bg-white rounded-2xl shadow-md p-10 text-center">
-  //           <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-yellow-100 flex items-center justify-center">
-  //             <span className="text-yellow-600 text-2xl">!</span>
-  //           </div>
-  //           <h1 className="text-xl font-semibold text-gray-800 mb-2">Não encontramos os dados da solicitação</h1>
-  //           <p className="text-gray-600">Parece que esta página foi acessada sem finalizar a seleção do produto ou os dados de entrega.</p>
-  //           <button
-  //             onClick={() => router.push("/produtos")}
-  //             className="mt-6 inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5"
-  //           >
-  //             Voltar para a loja
-  //           </button>
-  //         </div>
-  //       </Container>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="min-h-[calc(100dvh-114px)] w-full flex flex-col lg:flex-row bg-body-bg pt-14">
@@ -185,7 +270,7 @@ export default function PedidoSucesso() {
               <button onClick={handleImprimir} className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3 py-2 text-sm text-gray-700 cursor-pointer">
                 Imprimir
               </button>
-              <button onClick={() => router.push("/sign-in")} className="inline-flex items-center justify-center rounded-lg bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm cursor-pointer">
+              <button onClick={handleNovaCompra} className="inline-flex items-center justify-center rounded-lg bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm cursor-pointer">
                 Voltar à loja
               </button>
             </div>
