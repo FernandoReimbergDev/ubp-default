@@ -10,6 +10,80 @@ import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { ZoomProduct } from "./ZoomProduct";
 
+// ===== Tipos utilitários (ajuste os imports conforme seu projeto) =====
+export type PersonalizacaoPreco = {
+  chavePersonalPrc: string;
+  qtdiPersonalPrc: string; // números como string
+  qtdfPersonalPrc: string;
+  vluPersonalPrc: string; // preço unitário por peça na faixa
+};
+
+export type Personalizacao = {
+  codPersonal: any;
+  chavePersonal: string;
+  descrWebPersonal: string;
+  descrPersonal?: string;
+  precos?: PersonalizacaoPreco[];
+};
+
+
+// ===== Helpers puros =====
+function toInt(val: string | number | undefined | null): number | undefined {
+  if (val === undefined || val === null) return undefined;
+  const n = parseInt(String(val).trim(), 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+
+function toFloat(val: string | number | undefined | null): number | undefined {
+  if (val === undefined || val === null) return undefined;
+  const s = String(val).trim();
+  // Permite formatos "1.234,56" ou "1234.56"
+  const normalized = s.includes(',') && s.includes('.')
+    ? s.replace(/\./g, '').replace(',', '.')
+    : s.replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+
+/** Retorna o preço unitário da personalização, baseado na faixa de quantidade. */
+export function getPersonalizationUnitPrice(
+  personalization: Personalizacao,
+  quantity: number
+): number {
+  if (!personalization?.precos?.length || quantity <= 0) return 0;
+
+
+  const faixa = personalization.precos.find((p) => {
+    const min = toInt(p.qtdiPersonalPrc) ?? 0;
+    const max = toInt(p.qtdfPersonalPrc) ?? Number.MAX_SAFE_INTEGER;
+    return quantity >= min && quantity <= max;
+  });
+
+
+  return faixa ? (toFloat(faixa.vluPersonalPrc) ?? 0) : 0;
+}
+
+
+/** Soma o preço unitário de todas as personalizações selecionadas (1 por grupo). */
+export function sumSelectedPersonalizationsUnitPrice(
+  selected: Record<string, Personalizacao | null>,
+  quantity: number
+): number {
+  if (!selected || quantity <= 0) return 0;
+  return Object.values(selected).reduce((acc, p) => {
+    if (!p) return acc;
+    return acc + getPersonalizationUnitPrice(p, quantity);
+  }, 0);
+}
+
+
+/** Indica se há ao menos UMA personalização selecionada. */
+export function hasAnyPersonalization(selected: Record<string, Personalizacao | null>): boolean {
+  return Object.values(selected).some((p) => !!p);
+}
+
 export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const toast = useToast();
   const { addProduct } = useCart();
@@ -17,6 +91,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   // ======= Estados essenciais =======
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedPersonalizations, setSelectedPersonalizations] = useState<Record<string, Personalizacao | null>>({});
   const [zoomModal, setZoomModal] = useState(false);
   const [quantity, setQuantity] = useState<string>(""); // manter string p/ input controlado
   const [QtdMsg, setQtdMsg] = useState(false);
@@ -45,7 +120,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   }, []);
 
   // subtotal derivado (sem estado)
-  const subtotal = useMemo(() => {
+  const subtotal2 = useMemo(() => {
     const qty = parseInt(quantity || "0", 10);
     return !isNaN(qty) && qty > 0 ? qty * ProductData.price : 0;
   }, [quantity, ProductData.price]);
@@ -61,6 +136,29 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     () => typeof availableInt === "number" && requestedQty > availableInt,
     [availableInt, requestedQty]
   );
+
+  const hasQty = requestedQty > 0;
+  const hasGravacao = hasAnyPersonalization(selectedPersonalizations);
+
+
+  // Preço unitário SOMENTE com gravação + quantidade válidas
+  const personalizationUnit = React.useMemo(() => {
+    if (!hasQty || !hasGravacao) return 0;
+    return sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, requestedQty);
+  }, [hasQty, hasGravacao, selectedPersonalizations, requestedQty]);
+
+
+  const effectiveUnitPrice = React.useMemo(() => {
+    // Base do produto SEMPRE visível
+    // Personalização só soma quando há qty e gravação
+    return ProductData.price + personalizationUnit;
+  }, [ProductData.price, personalizationUnit]);
+
+
+  const total = React.useMemo(() => {
+    if (!hasQty) return 0;
+    return effectiveUnitPrice * requestedQty;
+  }, [effectiveUnitPrice, hasQty, requestedQty]);
 
 
   const isControlledStock = ProductData.estControl === "1";
@@ -196,7 +294,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     [requestedQty, fetchProductsStock, isControlledStock, isOutOfStock]
   );
 
-
   // ======= Handlers =======
   const handleDescriFull = useCallback(() => setDescriFull((v) => !v), []);
   const handleMouseEnter = useCallback((imgSrc: string) => setCurrentImage(imgSrc), []);
@@ -256,6 +353,13 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         return;
       }
 
+      const personalization = selectedPersonalizations[Object.keys(selectedPersonalizations)[0]];
+      const personalizationData = personalization ? {
+        fileName: personalization.codPersonal,
+        description: personalization.descrWebPersonal,
+        price: personalization.precos?.[0]?.vluPersonalPrc || '0'
+      } : undefined;
+
       // valida arquivo (opcional): se existir, checar novamente
       if (file) {
         const maxBytes = 15 * 1024 * 1024; // 15MB
@@ -293,15 +397,31 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         altura: ProductData.altura,
         largura: ProductData.largura,
         comprimento: ProductData.comprimento,
-        quantity: String(requestedQty),
-        subtotal,
         color: selectedColor,
         size: selectedSize,
         images: ProductData.images,
         estControl: ProductData.estControl,
         qtdMinPro: ProductData.qtdMinPro,
         vluGridPro: ProductData.vluGridPro,
-        personalization: file
+        gruposPersonalizacoes: ProductData.gruposPersonalizacoes,
+        personalization: personalizationData,
+        chavePersonal: ProductData.chavePersonal,
+        precosPersonal: ProductData.precosPersonal,
+        qtdiPersonalPrc: ProductData.qtdiPersonalPrc,
+        qtdfPersonalPrc: ProductData.qtdfPersonalPrc,
+        vluPersonalPrc: ProductData.vluPersonalPrc,
+        unitPriceBase: ProductData.price,
+        unitPricePersonalization: personalizationUnit,
+        unitPriceEffective: effectiveUnitPrice,
+        quantity: String(requestedQty),
+        subtotal: total,
+        personalizationBreakdown: Object.entries(selectedPersonalizations).map(([groupId, p]) => ({
+          groupId,
+          chavePersonal: p?.chavePersonal ?? null,
+          descr: p?.descrWebPersonal ?? p?.descrPersonal ?? null,
+          unitPrice: p ? getPersonalizationUnitPrice(p, requestedQty) : 0,
+        })),
+        personalizationFile: file
           ? {
             fileName: file.name,
             mimeType: file.type,
@@ -310,7 +430,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
           : undefined,
       } as any; // tipo será ampliado no model
 
-      addProduct(productToCart);
+      addProduct(productToCart,);
       onClose();
       toast.success("Produto adicionado ao carrinho!");
     } catch {
@@ -335,47 +455,96 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     requestedQty,
     selectedColor,
     selectedSize,
-    subtotal,
+    subtotal2,
     toast,
     file,
   ]);
 
-  // const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-  //   if (e.target.files) {
-  //     const file = e.target.files[0];
-  //     setFile(file);
-  //     setFileError(null);
-  //     setFilePreviewUrl(URL.createObjectURL(file));
-  //   }
-  // }, []);
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const file = e.target.files[0];
+      setFile(file);
+      setFileError(null);
+      setFilePreviewUrl(URL.createObjectURL(file));
+    }
+  }, []);
 
-  // const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
-  // }, []);
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
 
-  // const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
-  //   if (e.dataTransfer.files) {
-  //     const file = e.dataTransfer.files[0];
-  //     setFile(file);
-  //     setFileError(null);
-  //     setFilePreviewUrl(URL.createObjectURL(file));
-  //   }
-  // }, []);
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files) {
+      const file = e.dataTransfer.files[0];
+      setFile(file);
+      setFileError(null);
+      setFilePreviewUrl(URL.createObjectURL(file));
+    }
+  }, []);
+
+  const canBuy = hasQty && (!ProductData.qtdMinPro || requestedQty >= Number(ProductData.qtdMinPro)) && hasGravacao;
+
+  // Adicione esta função para calcular o preço da personalização
+  const calculatePersonalizationPrice = useCallback((
+    personalization: Personalizacao,
+    quantity: number
+  ): number => {
+    if (!personalization.precos || personalization.precos.length === 0) return 0;
+
+    // Encontra o preço que corresponde à faixa de quantidade
+    const priceRange = personalization.precos.find(preco => {
+      const minQty = parseInt(preco.qtdiPersonalPrc, 10) || 0;
+      const maxQty = parseInt(preco.qtdfPersonalPrc, 10) || Number.MAX_SAFE_INTEGER;
+      return quantity >= minQty && quantity <= maxQty;
+    });
+
+    return priceRange ? parseFloat(priceRange.vluPersonalPrc) || 0 : 0;
+  }, []);
+
+  // Atualize o cálculo do subtotal
+  const subtotal = useMemo(() => {
+    const qty = parseInt(quantity || "0", 10);
+    if (isNaN(qty) || qty <= 0) return 0;
+
+    // Preço base do produto
+    let total = ProductData.price * qty;
+
+    // Adiciona o preço das personalizações selecionadas
+    Object.values(selectedPersonalizations).forEach(personalization => {
+      if (personalization) {
+        const personalizationPrice = calculatePersonalizationPrice(personalization, qty);
+        total += personalizationPrice * qty; // Multiplica pela quantidade
+      }
+    });
+
+    return total;
+  }, [quantity, ProductData.price, selectedPersonalizations, calculatePersonalizationPrice]);
+
+  // Função para manipular a seleção de personalizações
+  const handlePersonalizationSelect = useCallback((groupId: string, personalization: Personalizacao | null) => {
+    setSelectedPersonalizations(prev => ({
+      ...prev,
+      [groupId]: personalization
+    }));
+  }, []);
+
+
+
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-40">
       <div className="h-full w-full bg-modalProduct-overlay/50 fixed left-0 top-0 z-50" onClick={onClose} />
-      <div className="scrollbar w-[94%] lg:w-screen h-[90dvh] lg:h-[80dvh] 2xl:h-[85dvh] 2xl:max-w-7xl lg:max-w-5xl py-4 mt-12 rounded-xl bg-modalProduct-bgModal z-50 fixed flex flex-col lg:flex-row overflow-y-auto">
+      <div className="scrollbar w-[94%] lg:w-screen h-[90dvh] lg:h-[80dvh] 2xl:h-[85dvh] 2xl:max-w-7xl lg:max-w-5xl py-4 md:py-8 mt-12 rounded-xl bg-modalProduct-bgModal z-50 fixed flex flex-col lg:flex-row overflow-y-auto">
         <button
           type="button"
           className="bg-modalProduct-bgModal w-8 h-8 absolute right-2 top-2 flex justify-center items-center rounded-full z-50"
           onClick={onClose}
           aria-label="Fechar modal"
         >
-          <X className="text-red-700 hover:text-red-800" aria-hidden size={28} />
+          <X className="text-red-700 hover:text-red-800 cursor-pointer" aria-hidden size={28} />
         </button>
 
         {ProductData.promotion && (
@@ -425,12 +594,12 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         </div>
 
         {/* Detalhes e ações */}
-        <div className="lg:w-[60%] w-[100%] h-full flex flex-col gap-1 2xl:gap-2 items-start px-4 xl:py-4 2xl:py-20 mx-auto">
-          <p className="text-blackReference text-md md:text-md 2xl:text-xl font-semibold max-w-[90%] text-primary">
+        <div className="lg:w-[60%] w-[100%] h-fit min-h-full flex flex-col gap-1 2xl:gap-2 items-start px-4 pt-2 mx-auto">
+          <p className="text-blackReference text-md md:text-md 2xl:text-lg font-semibold max-w-[90%] text-primary">
             {ProductData.product}
           </p>
 
-          <p className="text-blackReference scrollbar text-sm md:text-md 2xl:text-lg font-Roboto max-w-[90%] ">
+          <p className="text-blackReference scrollbar text-sm md:text-md 2xl:text-md font-Roboto max-w-[90%] ">
             {descriFull ? ProductData.description : (ProductData.description.length > 40 ? `${ProductData.description.substring(0, 40)}...` : ProductData.description)}
           </p>
 
@@ -439,7 +608,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
           </button>
 
           <form
-            className="flex flex-col items-start w-full gap-2 md:gap-2 2xl:gap-4 mt-4"
+            className="flex flex-col items-start w-full gap-2 py-2"
             onSubmit={(e) => {
               e.preventDefault();
               handleAddToCart();
@@ -492,6 +661,55 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 ))}
               </div>
             </div>
+            <div>
+              <div className="flex w-full flex-col flex-wrap gap-4 mt-1">
+                {ProductData.gruposPersonalizacoes?.map((grupo) => (
+                  <div key={grupo.chaveContPersonal}>
+                    <p className="font-bold font-Roboto text-sm">{grupo.descrWebContPersonal}</p>
+                    <select
+                      className="w-full p-2 border border-gray-300 rounded text-xs"
+                      value={selectedPersonalizations[grupo.chaveContPersonal]?.descrPersonal || ""}
+                      onChange={(e) => {
+                        const selectedPersonalization = grupo.personalizacoes.find((p) => p.chavePersonal === e.target.value);
+                        if (selectedPersonalization) {
+                          setSelectedPersonalizations(prev => ({
+                            ...prev,
+                            [grupo.chaveContPersonal]: selectedPersonalization
+                          }));
+                        }
+                      }}
+                    >
+                      <option value="">Selecione</option>
+                      {grupo.personalizacoes.map((personalizacao) => (
+                        <option key={personalizacao.chavePersonal} value={personalizacao.chavePersonal}>
+                          {personalizacao.descrWebPersonal}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {ProductData.gruposPersonalizacoes?.map(group => (
+              <div key={group.chaveContPersonal} className="mb-4">
+                <h4 className="font-semibold mb-2">{group.descrContPersonal}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {group.personalizacoes.map(personalization => (
+                    <button
+                      key={personalization.chavePersonal}
+                      onClick={() => handlePersonalizationSelect(group.chaveContPersonal, personalization)}
+                      className={`px-3 py-1 rounded-md border ${selectedPersonalizations[group.chaveContPersonal]?.chavePersonal === personalization.chavePersonal
+                        ? 'bg-blue-100 border-blue-500'
+                        : 'border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                      {personalization.descrPersonal}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
 
             <div className="flex flex-col">
               <label className="font-bold font-Roboto" htmlFor="quantity">Quantidade:</label>
@@ -540,13 +758,57 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 <span className="loader" />
               </span>
               <span className="opacity-60 text-sm pointer-events-none select-none mt-2">
-                *Quantidade mínima {Number(ProductData.minQtdPro).toFixed(0) ?? 10} unidades.
+                *Quantidade mínima {Number(ProductData.qtdMinPro).toFixed(0) ?? 10} unidades.
               </span>
             </div>
 
             <div className="flex gap-4 pointer-events-none select-none">
+
               <div>
                 <label className="font-bold select-none" htmlFor="price">Valor unitário:</label>
+                <input
+                  className="w-32 rounded-md p-1 select-none pointer-events-none"
+                  type="text"
+                  id="price"
+                  value={formatPrice(effectiveUnitPrice)}
+                  readOnly
+                />
+              </div>
+              <div>
+
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Total:</span>
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total:</span>
+                        <span className="text-xl font-bold">{formatPrice(total)}</span>
+                      </div>
+                    </div>
+
+
+
+                    {/* Se ainda desejar exibir o preço base e o adicional da personalização: */}
+                    <p className="text-xs opacity-70">
+                      Base: {formatPrice(ProductData.price)}
+                      {hasQty && hasGravacao && (
+                        <> + Personalização: {formatPrice(personalizationUnit)} (por unidade)</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <label className="font-bold select-none" htmlFor="price">Valor Gravação:</label>
+                {ProductData.gruposPersonalizacoes?.map((grupo) => (
+                  <div key={grupo.chaveContPersonal}>
+                    <p className="font-bold font-Roboto text-sm">{grupo.descrWebContPersonal}</p>
+                    <div
+                      className="w-full p-2 border border-gray-300 rounded text-xs"
+                    >
+                      <label className="font-bold select-none" htmlFor="price">Valor Gravação:</label>
+                    </div>
+                  </div>
+                ))}
+
                 <input className="w-32 rounded-md p-1 select-none pointer-events-none" type="text" id="price" value={formatPrice(ProductData.price)} readOnly />
               </div>
               <div>
@@ -645,20 +907,18 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             </div>
 
             {QtdMsg && <span className="text-red-500 text-sm">Digite uma quantidade válida para prosseguir</span>}
+            {Number(quantity) < Number(ProductData.qtdMinPro) && Number(quantity) !== 0 && <span className="text-red-500 text-sm">Esse produto é vendido na quantidade mínima de {Number(ProductData.qtdMinPro).toFixed(0)}</span>}
 
             {isOutOfStock ? (
               <Button type="button" name="BtnAvisar" className="flex gap-2 items-center justify-center select-none bg-orange-400 hover:bg-orange-500 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4">
                 Avise-me quando chegar!
               </Button>
             ) : (
-              <Button
-                type="submit"
-                name="BtnComprar"
-                disabled={loading || (!isOutOfStock && qtyInvalid)}
+              <Button type="submit" disabled={loading || (!isOutOfStock && qtyInvalid) || !canBuy}
                 className="disabled:bg-gray-500 flex gap-2 items-center justify-center select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
+
               >
-                <ShoppingCart size={18} />
-                Comprar
+                <ShoppingCart size={18} /> Comprar
               </Button>
             )}
           </form>

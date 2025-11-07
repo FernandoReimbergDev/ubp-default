@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { JSX } from "react";
 import { UseFormSetValue, UseFormTrigger, UseFormSetError, UseFormClearErrors, FieldValues } from "react-hook-form";
 
 export interface PasswordRecoveryResponse {
@@ -83,7 +84,28 @@ export type Produto = {
   precos: PrecoProduto[];
   imagens: ImagemProduto[];
   quantidade: number;
+  gruposPersonalizacoes: GrupoPersonalizacao[];
+  personalizacoes: Personalizacao[];
+  chavePersonal: string;
+  precosPersonal: precos[];
+  qtdiPersonalPrc: string;
+  qtdfPersonalPrc: string;
+  vluPersonalPrc: string;
 };
+
+export type precos = {
+  chavePro: string;
+  chavePersonal: string;
+  chavePlataforma: string;
+  chavePersonalPrc: string;
+  chaveGruPersonal: string;
+  qtdiPersonalPrc: string;
+  qtdfPersonalPrc: string;
+  vluPersonalPrc: string;
+  dataCadastradoPersonalPrc: string;
+  dataAtualizadoPersonalPrc: string;
+  cadastradoPersonalPrc: string;
+}
 
 export type CorProduto = {
   chaveProCor: string;
@@ -192,8 +214,14 @@ export type ProdutosGrid = {
   peso: string;
   altura: string; largura: string; comprimento: string;
   qtdMinPro: string;
-  minQtdPro: string;
   vluGridPro: string;
+  gruposPersonalizacoes?: GrupoPersonalizacao[];
+  personalizacoes?: Personalizacao[];
+  chavePersonal?: string;
+  precosPersonal?: PrecoPersonalizacao[];
+  qtdiPersonalPrc?: string;
+  qtdfPersonalPrc?: string;
+  vluPersonalPrc?: string;
 };
 
 export type CartContextType = {
@@ -221,7 +249,6 @@ export type CartContextType = {
 };
 
 export interface ProductDataProps {
-  qtdMinPro: any;
   price: number;
   srcFrontImage: string;
   alt: string;
@@ -241,7 +268,98 @@ export interface ProductDataProps {
   largura: string;
   comprimento: string;
   vluGridPro: string;
-  minQtdPro: string;
+  qtdMinPro: string;
+  gruposPersonalizacoes?: GrupoPersonalizacao[];
+  personalizacoes?: Personalizacao[];
+  chavePersonal?: string;
+  precosPersonal?: PrecoPersonalizacao[];
+  qtdiPersonalPrc?: string;
+  qtdfPersonalPrc?: string;
+  vluPersonalPrc?: string;
+}
+
+export interface personalizacoes {
+  chavePersonalPro: string,
+  chavePro: string,
+  chaveContPersonal: string,
+  chaveGruPersonal: string,
+  chavePersonal: string,
+  chavePlataforma: string,
+  chavePersonalPlataforma: string,
+  descrContPersonal: string,
+  descrWebContPersonal: string,
+  codPersonal: string,
+  descrPersonal: string,
+  descrWebPersonal: string,
+  qtdMaxPersonalPro: string,
+  padraoPersonalPro: string,
+  opcionalPersonal: string,
+  qtdPersonal: string,
+  baseQtdPersonal: string,
+  ordemPersonal: string,
+  cadastradoPersonalPlataforma: string,
+  cadastradoPersonalPro: string,
+  cadastradoPersonal: string,
+  precos: precos[],
+}
+
+
+export interface PrecoPersonalizacao {
+  qtdf: string;
+  vlwpersonal: string;
+  qtdi: string;
+  chavePro: string;
+  chavePersonal: string;
+  chavePlataforma: string;
+  chavePersonalPrc: string;
+  chaveGruPersonal: string;
+  qtdiPersonalPrc: string;
+  qtdfPersonalPrc: string;
+  vluPersonalPrc: string;
+  dataCadastradoPersonalPrc: string;
+  dataAtualizadoPersonalPrc: string;
+  cadastradoPersonalPrc: string;
+}
+
+export interface Personalizacao {
+  map(arg0: (precos: { chavePersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; qtdiPersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; qtdfPersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; vluPersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; }) => JSX.Element): unknown;
+  chavePersonalPro: string;
+  chavePro: string;
+  chaveContPersonal: string;
+  chaveGruPersonal: string;
+  chavePersonal: string;
+  chavePlataforma: string;
+  chavePersonalPlataforma: string;
+  descrContPersonal: string;
+  descrWebContPersonal: string;
+  codPersonal: string;
+  descrPersonal: string;
+  descrWebPersonal: string;
+  qtdMaxPersonalPro: string;
+  padraoPersonalPro: string;
+  opcionalPersonal: string;
+  qtdPersonal: string;
+  baseQtdPersonal: string;
+  ordemPersonal: string;
+  cadastradoPersonalPlataforma: string;
+  cadastradoPersonalPro: string;
+  cadastradoPersonal: string;
+  precos: PrecoPersonalizacao[];
+}
+
+export interface GrupoPersonalizacao {
+  chaveContPersonal: string;
+  chavePlataforma: string;
+  descrContPersonal: string;
+  descrWebContPersonal: string;
+  descrRemoveContPersonal: string;
+  qtdContPersonal: string;
+  ordemContPersonal: string;
+  requeridoContPersonal: string;
+  ativoContPersonal: string;
+  cadastradoContPersonal: string;
+  obrigatorioContPersonal: string;
+  personalizacoes: Personalizacao[];
 }
 
 export interface ModalProps {
@@ -277,7 +395,13 @@ export type ProdutoCart = {
   comprimento: string;
   estControl?: string;
   qtdMinPro: string,
-  vluGridPro: string
+  vluGridPro: string,
+  gruposPersonalizacoes: string[];
+  chavePersonal: string;
+  precosPersonal: PrecoPersonalizacao[];
+  qtdiPersonalPrc: string;
+  qtdfPersonalPrc: string;
+  vluPersonalPrc: string;
 };
 
 export type clienteDadosEntrega = {

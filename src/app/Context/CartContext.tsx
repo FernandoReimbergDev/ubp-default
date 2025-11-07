@@ -5,7 +5,6 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import Cookies from "js-cookie";
 import { CartContextType, ProdutoCart, ProdutoEstoqueResponse } from "../types/responseTypes";
 import { useAuth } from "./AuthContext";
-
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
@@ -98,6 +97,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     `${codPro}_${color}_${size ?? "nosize"}_${personalizationKey ?? "std"}`;
 
   const addProduct = (product: ProdutoCart) => {
+
+    // if (product.qtdMinPro > product.quantity) {
+    //   const msg = Number(product.quantity) < 1 ? "Quantidade invalida" : `Quantidade minima do produto: ${Number(product.qtdMinPro).toFixed()} und.`;
+    //   console.log(msg)
+    //   return;
+    // }
     const parsedQuantity = parseInt(product.quantity, 10);
     if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) return;
     const personalizationKey = product.personalization?.fileName
@@ -212,6 +217,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     length: string,
     signal?: AbortSignal
   ): Promise<number | undefined> => {
+
+    if (stateCode == "SP" && city == "SÃO PAULO" && Number(purchaseAmount) <= 50) {
+      return;
+    }
     try {
       const res = await fetch("/api/send-request", {
         method: "POST",

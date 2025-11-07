@@ -83,7 +83,7 @@ const produtosBanner = [
       "https://www2.unitycorp.com.br/teste/94058.png",
       "https://www2.unitycorp.com.br/teste/94058-2.png"
     ],
-    "sizes": [],
+    "sizes": ['17x24', '21x28', '15x21'],
     "promotion": false,
     "percent_discont": 0,
     "peso": "0.112",
@@ -91,7 +91,6 @@ const produtosBanner = [
     "largura": "9.0000",
     "comprimento": "9.0000",
   },
-
 ]
 
 export const Slider = () => {
@@ -140,8 +139,7 @@ export const Slider = () => {
       altura: item.altura,
       largura: item.largura,
       comprimento: item.comprimento,
-      qtdMinPro: item.qtdMinPro ?? "",
-      minQtdPro: item.qtdMinPro ?? "10",
+      qtdMinPro: item.qtdMinPro ?? "1",
       vluGridPro: item.vluGridPro ?? String(item.price ?? 0),
     }));
     setProduto(adapted);

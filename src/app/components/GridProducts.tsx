@@ -1,5 +1,4 @@
 "use client";
-
 import { Button } from "./Button";
 import { CardProduto } from "./CardProduct";
 import { ModalProduto } from "./ModalProduct";
@@ -7,7 +6,7 @@ import { useProducts } from "../Context/ProductsContext";
 import { useMemo, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import { SkeletonCardProduto } from "./SkeletonCardProduto";
-import { ProdutosGrid } from "../types/responseTypes";
+import { Produto, ProdutosGrid } from "../types/responseTypes";
 import { AsideFilter } from "./AsideFilter";
 
 export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
@@ -41,37 +40,99 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
     openModal(product);
   };
 
-  const produtosAdaptados: ProdutosGrid[] = useMemo(() => {
+  // 🔧 Normaliza número "1.234,56" -> 1234.56 e afins (reutilizando sua função se quiser)
+  const toNumber = (v: unknown): number => {
+    if (v == null) return NaN;
+    const s = String(v).trim();
+    if (!s) return NaN;
+    if (s.includes(",") && !s.includes(".")) return Number(s.replace(/\./g, "").replace(",", "."));
+    return Number(s);
+  };
+
+  // 🔎 Pega personalizações + faixas de preço
+  // Update the function signature to accept Produto instead of ProdutosGrid
+  const processPersonalizations = (product: Produto) => {
+    if (!product.gruposPersonalizacoes?.length) return [];
+
+    return product.gruposPersonalizacoes.flatMap((grupo) => {
+      if (!grupo.personalizacoes?.length) return [];
+
+      return grupo.personalizacoes.map((personalizacao) => {
+        const ranges = personalizacao.precos?.map((preco) => ({
+          qtdi: toNumber(preco.qtdiPersonalPrc),
+          qtdf: toNumber(preco.qtdfPersonalPrc),
+          vlwpersonal: toNumber(preco.vluPersonalPrc),
+        })) ?? [];
+
+        return {
+          groupId: grupo.chaveContPersonal,
+          groupName: grupo.descrWebContPersonal ?? grupo.descrContPersonal,
+          chavePersonal: personalizacao.chavePersonal,
+          code: personalizacao.codPersonal,
+          name: personalizacao.descrWebPersonal || personalizacao.descrPersonal,
+          description: personalizacao.descrPersonal,
+          isDefault: personalizacao.padraoPersonalPro === "1",
+          isOptional: personalizacao.opcionalPersonal === "1",
+          maxQuantity: personalizacao.qtdMaxPersonalPro ? Number(personalizacao.qtdMaxPersonalPro) : null,
+          prices: ranges,
+        };
+      });
+    });
+  };
+
+  const produtosAdaptados = useMemo(() => {
     return products.map((pro, index) => {
-      const imagensValidas = pro.imagens
-        ?.map((img) => img.urlProImgSuper || img.urlProImg || "")
-        .filter((url) => url !== "");
+      const imagensValidas =
+        pro.imagens
+          ?.map((img) => img.urlProImgSuper || img.urlProImg || "")
+          .filter((url) => url !== "") || [];
+
+      // 🔥 Extrai personalizações com seus preços
+      const personalizacoes = processPersonalizations(pro);
+
+      // 🔥 Cria a lista achatada só com os 4 campos pedidos
+      const personalPricesFlat = personalizacoes.flatMap((p) =>
+        p.prices.map((r) => ({
+          chavePersonal: p.chavePersonal,
+          qtdi: r.qtdi,
+          qtdf: r.qtdf,
+          vlwpersonal: r.vlwpersonal,
+        }))
+      );
 
       return {
         id: index,
         codePro: pro.codPro,
         chavePro: pro.chavePro,
         product: pro.descr,
-        description: pro.descr2,
-        price: Number(pro.precos?.[0]?.vluProPrc || 0),
-        srcFrontImage: imagensValidas?.[0] || "/placeholder.jpg",
-        srcBackImage: imagensValidas?.[1] || imagensValidas?.[0] || "/placeholder.jpg",
-        images: imagensValidas || [],
+        description:
+          pro.descr2 ||
+          pro.descrWeb ||
+          pro.descrWeb2 ||
+          pro.descrCompilada ||
+          "",
+        price: Number(pro.precos?.[0]?.vluProPrc || 0), // preço base do produto
+        srcFrontImage: imagensValidas[0] || "/placeholder.jpg",
+        srcBackImage: imagensValidas[1] || imagensValidas[0] || "/placeholder.jpg",
+        images: imagensValidas,
         alt: `imagem do produto ${pro.codPro}`,
         colors: pro.cores?.map((cor) => cor.descrProCor) || [],
-        sizes: [] as string[], // Se um dia vier tamanho, adapta aqui
-        quantidadeEstoquePro: String(pro.quantidadeEstoquePro ?? ""),
-        estControl: pro.estControl,
-        peso: pro.peso ?? "",
-        altura: pro.altura ?? "",
-        largura: pro.largura ?? "",
-        comprimento: pro.comprimento ?? "",
-        qtdMinPro: pro.qtdMinPro ?? "",
-        minQtdPro: pro.qtdMinPro ?? "",
-        vluGridPro: pro.vluGridPro ?? "",
+        sizes: [],
+        quantidadeEstoquePro: pro.quantidadeEstoquePro || "0",
+        estControl: pro.estControl || "0",
+        peso: pro.peso || "0",
+        altura: pro.altura || "0",
+        largura: pro.largura || "0",
+        comprimento: pro.comprimento || "0",
+        qtdMinPro: pro.qtdMinPro || "1",
+        vluGridPro: pro.vluGridPro || pro.precos?.[0]?.vluProPrc || "0",
+        gruposPersonalizacoes: pro.gruposPersonalizacoes || [],
       };
     });
   }, [products]);
+
+
+
 
   const num = (v: unknown): number => {
     if (v == null) return NaN;
@@ -259,25 +320,7 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
           </div>
         </section>
         {isModalOpen && selectedProduct && <ModalProduto ProductData={selectedProduct} onClose={closeModal} />}
-        {/* <section className="rounded-lg bg-white p-6 shadow-sm">
-          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Fique por dentro das novidades</h3>
-              <p className="text-sm text-gray-600">Receba novidades e promoções diretamente no seu e-mail</p>
-            </div>
-            <div className="flex w-full max-w-md items-center gap-2">
-              <input
-                type="email"
-                placeholder="Seu e-mail"
-                defaultValue={email}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
-              />
-              <button className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black">
-                Inscrever
-              </button>
-            </div>
-          </div>
-        </section> */}
+
       </div>
     </main>
   );

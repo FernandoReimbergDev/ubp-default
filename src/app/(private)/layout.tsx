@@ -16,14 +16,14 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ProductsProvider>
-      <CartProvider>
-        <ToastProvider>
+    <ToastProvider>
+      <ProductsProvider>
+        <CartProvider>
           <Header />
           {children}
           <Footer />
-        </ToastProvider>
-      </CartProvider>
-    </ProductsProvider>
+        </CartProvider>
+      </ProductsProvider>
+    </ToastProvider>
   );
 }

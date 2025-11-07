@@ -72,7 +72,7 @@ export function LoginForm() {
           <InputIcon>
             <KeyRound className={errors.password ? "text-red-500" : ""} />
           </InputIcon>
-          <InputField {...register("password")} type="password" placeholder="Senha" />
+          <InputField {...register("password")} type="password" placeholder="Senha" autoComplete="current-password" />
         </InputRoot>
         {errors.password && <p className="text-red-500 text-xs font-semibold">{errors.password.message}</p>}
 
