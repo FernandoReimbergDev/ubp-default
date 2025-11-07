@@ -661,55 +661,31 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 ))}
               </div>
             </div>
-            <div>
-              <div className="flex w-full flex-col flex-wrap gap-4 mt-1">
-                {ProductData.gruposPersonalizacoes?.map((grupo) => (
-                  <div key={grupo.chaveContPersonal}>
-                    <p className="font-bold font-Roboto text-sm">{grupo.descrWebContPersonal}</p>
-                    <select
-                      className="w-full p-2 border border-gray-300 rounded text-xs"
-                      value={selectedPersonalizations[grupo.chaveContPersonal]?.descrPersonal || ""}
-                      onChange={(e) => {
-                        const selectedPersonalization = grupo.personalizacoes.find((p) => p.chavePersonal === e.target.value);
-                        if (selectedPersonalization) {
-                          setSelectedPersonalizations(prev => ({
-                            ...prev,
-                            [grupo.chaveContPersonal]: selectedPersonalization
-                          }));
-                        }
-                      }}
-                    >
-                      <option value="">Selecione</option>
-                      {grupo.personalizacoes.map((personalizacao) => (
-                        <option key={personalizacao.chavePersonal} value={personalizacao.chavePersonal}>
-                          {personalizacao.descrWebPersonal}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {ProductData.gruposPersonalizacoes?.map(group => (
-              <div key={group.chaveContPersonal} className="mb-4">
-                <h4 className="font-semibold mb-2">{group.descrContPersonal}</h4>
-                <div className="flex flex-wrap gap-2">
-                  {group.personalizacoes.map(personalization => (
-                    <button
-                      key={personalization.chavePersonal}
-                      onClick={() => handlePersonalizationSelect(group.chaveContPersonal, personalization)}
-                      className={`px-3 py-1 rounded-md border ${selectedPersonalizations[group.chaveContPersonal]?.chavePersonal === personalization.chavePersonal
-                        ? 'bg-blue-100 border-blue-500'
-                        : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                    >
-                      {personalization.descrPersonal}
-                    </button>
-                  ))}
+            <div className="flex w-fit flex-col flex-wrap gap-4 mt-1">
+              {ProductData.gruposPersonalizacoes?.map((group) => (
+                <div key={group.chaveContPersonal}>
+                  <p className="font-bold font-Roboto text-sm">{group.descrContPersonal}</p>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded text-xs"
+                    value={selectedPersonalizations[group.chaveContPersonal]?.chavePersonal || ""}
+                    onChange={(e) => {
+                      const selectedKey = e.target.value;
+                      const selectedPersonalization = group.personalizacoes.find(
+                        p => p.chavePersonal === selectedKey
+                      ) || null;
+                      handlePersonalizationSelect(group.chaveContPersonal, selectedPersonalization);
+                    }}
+                  >
+                    <option value="">Selecione</option>
+                    {group.personalizacoes.map((personalization) => (
+                      <option key={personalization.chavePersonal} value={personalization.chavePersonal}>
+                        {personalization.descrPersonal}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-            ))}
-
+              ))}
+            </div>
 
             <div className="flex flex-col">
               <label className="font-bold font-Roboto" htmlFor="quantity">Quantidade:</label>
@@ -774,46 +750,17 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   readOnly
                 />
               </div>
-              <div>
 
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Total:</span>
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total:</span>
-                        <span className="text-xl font-bold">{formatPrice(total)}</span>
-                      </div>
-                    </div>
-
-
-
-                    {/* Se ainda desejar exibir o preço base e o adicional da personalização: */}
-                    <p className="text-xs opacity-70">
-                      Base: {formatPrice(ProductData.price)}
-                      {hasQty && hasGravacao && (
-                        <> + Personalização: {formatPrice(personalizationUnit)} (por unidade)</>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <label className="font-bold select-none" htmlFor="price">Valor Gravação:</label>
-                {ProductData.gruposPersonalizacoes?.map((grupo) => (
-                  <div key={grupo.chaveContPersonal}>
-                    <p className="font-bold font-Roboto text-sm">{grupo.descrWebContPersonal}</p>
-                    <div
-                      className="w-full p-2 border border-gray-300 rounded text-xs"
-                    >
-                      <label className="font-bold select-none" htmlFor="price">Valor Gravação:</label>
-                    </div>
-                  </div>
-                ))}
-
-                <input className="w-32 rounded-md p-1 select-none pointer-events-none" type="text" id="price" value={formatPrice(ProductData.price)} readOnly />
-              </div>
               <div>
                 <label className="font-bold select-none" htmlFor="subtotal">Subtotal:</label>
-                <input className="w-32 p-1 rounded-md select-none" type="text" id="subtotal" value={formatPrice(subtotal)} readOnly />
+                <input className="w-32 p-1 rounded-md select-none" type="text" id="subtotal" value={formatPrice(total)} readOnly />
+                {/* Se ainda desejar exibir o preço base e o adicional da personalização: */}
+                <p className="text-xs opacity-70">
+                  Base: {formatPrice(ProductData.price)}
+                  {hasQty && hasGravacao && (
+                    <> + Personalização: {formatPrice(personalizationUnit)} (por unidade)</>
+                  )}
+                </p>
               </div>
             </div>
 
