@@ -241,7 +241,6 @@ export default function PedidoSucesso() {
     router.push("/");
   };
 
-
   function handleImprimir() { window.print(); }
 
   if (loading) return <SkeletonPedido />;
