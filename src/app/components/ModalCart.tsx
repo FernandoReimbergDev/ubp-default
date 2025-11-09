@@ -2,7 +2,7 @@
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
 import { ProdutoCart, ProdutoEstoqueItem } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
@@ -70,7 +70,17 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   const calculateSubtotal = (product: ProdutoCart) => {
     const quantityStr = quantities[product.id] ?? "0";
     const quantity = parseInt(quantityStr, 10);
-    return formatPrice(!isNaN(quantity) && quantity > 0 ? quantity * product.price : 0);
+    if (isNaN(quantity) || quantity <= 0) return formatPrice(0);
+
+    // Base price
+    let subtotal = quantity * product.price;
+
+    // Add personalization cost if exists
+    if (product.personalization) {
+      subtotal += quantity * (product.personalizationUnitPrice || 0);
+    }
+
+    return formatPrice(subtotal);
   };
 
   const handleInputChange = (id: string, value: string) => {
@@ -94,7 +104,16 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
 
   const totalValue = cart.reduce((total, product) => {
     const quantity = parseInt(quantities[product.id] || "0", 10);
-    return total + (isNaN(quantity) ? 0 : quantity * product.price);
+    if (isNaN(quantity) || quantity <= 0) return total;
+
+    let itemTotal = quantity * product.price;
+
+    // Add personalization cost if exists
+    if (product.personalization) {
+      itemTotal += quantity * (product.personalizationUnitPrice || 0);
+    }
+
+    return total + itemTotal;
   }, 0);
 
   const hasInvalidQuantities = cart.some((item) => {
@@ -303,16 +322,25 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                     <p className="text-sm 2xl:text-lg font-Roboto text-blackReference">{product.productName}</p>
 
                     {product.personalization && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
-                          Personalizado
-                        </span>
-                        <span
-                          className="text-[11px] text-gray-600 truncate max-w-[200px]"
-                          title={product.personalization.fileName}
-                        >
-                          {product.personalization.fileName}
-                        </span>
+                      <div className="flex flex-col gap-1 mt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
+                            Personalização
+                          </span>
+                          <span className="text-xs text-gray-600">
+                            {product.personalization.descricao}
+                          </span>
+                        </div>
+                        {product.personalizationBreakdown?.map((item: { descricao: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; precoUnitario: number; }, idx: Key | null | undefined) => (
+                          <div key={idx} className="text-xs text-gray-500 ml-4">
+                            {item.descricao}: {formatPrice(item.precoUnitario)}/un
+                          </div>
+                        ))}
+                        {product.personalization && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Arquivo: {product.personalization.fileName}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -399,8 +427,28 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                         )}
                       </div>
 
-                      <div className="mt-2">
-                        <p className="text-sm">Subtotal: {calculateSubtotal(product)}</p>
+                      <div className="mt-2 text-sm">
+                        <div className="flex items-center gap-1">
+                          <span>Subtotal:</span>
+                          <span className="font-medium">
+                            {formatPrice((parseInt(quantities[product.id] || '0') || 0) * product.price)}
+                          </span>
+                        </div>
+                        {product.personalization && (
+                          <div className="flex items-center gap-1 text-gray-600 text-xs">
+                            <span>+ Gravação:</span>
+                            <span>
+                              {formatPrice((parseInt(quantities[product.id] || '0') || 0) * (product.personalizationUnitPrice || 0))}
+                              <span className="text-gray-400 ml-1">
+                                ({formatPrice(product.personalizationUnitPrice || 0)}/un)
+                              </span>
+                            </span>
+                          </div>
+                        )}
+                        <div className="mt-1 pt-1 border-t border-gray-100">
+                          <span className="font-semibold">Total: </span>
+                          <span className="font-bold">{calculateSubtotal(product)}</span>
+                        </div>
                       </div>
 
                       {(() => {

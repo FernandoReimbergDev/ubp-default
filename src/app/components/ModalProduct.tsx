@@ -353,11 +353,17 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         return;
       }
 
-      const personalization = selectedPersonalizations[Object.keys(selectedPersonalizations)[0]];
+      // Get the first selected personalization (if any)
+      const personalization = Object.values(selectedPersonalizations).find(p => p !== null);
+
+      // Prepare personalization data with all necessary information
       const personalizationData = personalization ? {
-        fileName: personalization.codPersonal,
-        description: personalization.descrWebPersonal,
-        price: personalization.precos?.[0]?.vluPersonalPrc || '0'
+        codPersonal: personalization.codPersonal,
+        chavePersonal: personalization.chavePersonal,
+        descricao: personalization.descrWebPersonal || personalization.descrPersonal || 'Personalização',
+        precoUnitario: personalizationUnit,
+        precoTotal: personalizationUnit * requestedQty,
+        precos: personalization.precos || []
       } : undefined;
 
       // valida arquivo (opcional): se existir, checar novamente
@@ -405,22 +411,24 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         vluGridPro: ProductData.vluGridPro,
         gruposPersonalizacoes: ProductData.gruposPersonalizacoes,
         personalization: personalizationData,
-        chavePersonal: ProductData.chavePersonal,
-        precosPersonal: ProductData.precosPersonal,
-        qtdiPersonalPrc: ProductData.qtdiPersonalPrc,
-        qtdfPersonalPrc: ProductData.qtdfPersonalPrc,
-        vluPersonalPrc: ProductData.vluPersonalPrc,
+        hasPersonalization: hasGravacao,
+        personalizationUnitPrice: personalizationUnit,
+        personalizationTotal: personalizationUnit * requestedQty,
         unitPriceBase: ProductData.price,
         unitPricePersonalization: personalizationUnit,
         unitPriceEffective: effectiveUnitPrice,
         quantity: String(requestedQty),
         subtotal: total,
-        personalizationBreakdown: Object.entries(selectedPersonalizations).map(([groupId, p]) => ({
-          groupId,
-          chavePersonal: p?.chavePersonal ?? null,
-          descr: p?.descrWebPersonal ?? p?.descrPersonal ?? null,
-          unitPrice: p ? getPersonalizationUnitPrice(p, requestedQty) : 0,
-        })),
+        personalizationBreakdown: Object.entries(selectedPersonalizations)
+          .filter(([_, p]) => p !== null)
+          .map(([groupId, p]) => ({
+            groupId,
+            chavePersonal: p!.chavePersonal,
+            descricao: p!.descrWebPersonal || p!.descrPersonal || 'Personalização',
+            precoUnitario: getPersonalizationUnitPrice(p!, requestedQty),
+            precoTotal: getPersonalizationUnitPrice(p!, requestedQty) * requestedQty,
+            precos: p!.precos || []
+          })),
         personalizationFile: file
           ? {
             fileName: file.name,
@@ -591,6 +599,94 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             </div>
             <ChevronRight size={32} className="hidden md:visible absolute -right-2 top-1/1" aria-hidden />
           </div>
+          {/* Personalização */}
+          <div className="w-full mt-4 p-3 rounded-lg bg-whiteReference border border-gray-200">
+            <p className="font-bold mb-2">Personalize seu produto</p>
+            <p className="text-xs text-gray-600 mb-3">Envie o arquivo de arte para gravação (PNG, JPG, PDF, AI, CDR, SVG). Máx. 15MB.</p>
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={(e) => {
+                e.preventDefault(); e.stopPropagation();
+                const f = e.dataTransfer.files?.[0];
+                if (!f) return;
+                const maxBytes = 15 * 1024 * 1024;
+                const allowed = ["image/png", "image/jpeg", "application/pdf", "image/svg+xml", "application/postscript", "application/vnd.corel-draw"];
+                if (!allowed.includes(f.type)) {
+                  setFile(null); setFilePreviewUrl(null);
+                  setFileError("Formato não suportado. Envie PNG, JPG, PDF, AI, CDR ou SVG.");
+                  return;
+                }
+                if (f.size > maxBytes) {
+                  setFile(null); setFilePreviewUrl(null);
+                  setFileError("Arquivo muito grande. Tamanho máximo: 15MB.");
+                  return;
+                }
+                setFileError(null);
+                setFile(f);
+                if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+                const isImage = f.type.startsWith("image/");
+                setFilePreviewUrl(isImage ? URL.createObjectURL(f) : null);
+              }}
+              className="w-full border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-gray-50"
+              onClick={() => document.getElementById("art-file-input")?.click()}
+            >
+              {file ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {filePreviewUrl ? (
+                      <Image src={filePreviewUrl} alt="prévia" className="w-12 h-12 object-cover rounded" />
+                    ) : (
+                      <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-xs">{file.type.split("/")[1]?.toUpperCase() || "ARQ"}</div>
+                    )}
+                    <div className="text-left">
+                      <p className="text-sm font-medium truncate max-w-[200px]" title={file.name}>{file.name}</p>
+                      <p className="text-xs text-gray-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-red-600 hover:text-red-700"
+                    onClick={(e) => { e.stopPropagation(); setFile(null); if (filePreviewUrl) { URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); } }}
+                  >
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-700">
+                  Arraste e solte o arquivo aqui, ou <span className="text-primary underline">clique para selecionar</span>
+                </div>
+              )}
+              <input
+                id="art-file-input"
+                type="file"
+                accept=".png,.jpg,.jpeg,.pdf,.ai,.cdr,.svg"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  const maxBytes = 15 * 1024 * 1024;
+                  const allowed = ["image/png", "image/jpeg", "application/pdf", "image/svg+xml", "application/postscript", "application/vnd.corel-draw"];
+                  if (!allowed.includes(f.type)) {
+                    setFile(null); setFilePreviewUrl(null);
+                    setFileError("Formato não suportado. Envie PNG, JPG, PDF, AI, CDR ou SVG.");
+                    return;
+                  }
+                  if (f.size > maxBytes) {
+                    setFile(null); setFilePreviewUrl(null);
+                    setFileError("Arquivo muito grande. Tamanho máximo: 15MB.");
+                    return;
+                  }
+                  setFileError(null);
+                  setFile(f);
+                  if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+                  const isImage = f.type.startsWith("image/");
+                  setFilePreviewUrl(isImage ? URL.createObjectURL(f) : null);
+                }}
+              />
+            </div>
+            {fileError && <p className="text-xs text-red-600 mt-2">{fileError}</p>}
+          </div>
         </div>
 
         {/* Detalhes e ações */}
@@ -661,7 +757,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 ))}
               </div>
             </div>
-            <div className="flex w-fit flex-col flex-wrap gap-4 mt-1">
+            <div className="flex w-fit flex-col lg:flex-row flex-wrap gap-4 mt-1">
               {ProductData.gruposPersonalizacoes?.map((group) => (
                 <div key={group.chaveContPersonal}>
                   <p className="font-bold font-Roboto text-sm">{group.descrContPersonal}</p>
@@ -764,95 +860,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               </div>
             </div>
 
-            {/* Personalização */}
-            <div className="w-full mt-4 p-3 rounded-lg bg-whiteReference border border-gray-200">
-              <p className="font-bold mb-2">Personalize seu produto</p>
-              <p className="text-xs text-gray-600 mb-3">Envie o arquivo de arte para gravação (PNG, JPG, PDF, AI, CDR, SVG). Máx. 15MB.</p>
-
-              <div
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                onDrop={(e) => {
-                  e.preventDefault(); e.stopPropagation();
-                  const f = e.dataTransfer.files?.[0];
-                  if (!f) return;
-                  const maxBytes = 15 * 1024 * 1024;
-                  const allowed = ["image/png", "image/jpeg", "application/pdf", "image/svg+xml", "application/postscript", "application/vnd.corel-draw"];
-                  if (!allowed.includes(f.type)) {
-                    setFile(null); setFilePreviewUrl(null);
-                    setFileError("Formato não suportado. Envie PNG, JPG, PDF, AI, CDR ou SVG.");
-                    return;
-                  }
-                  if (f.size > maxBytes) {
-                    setFile(null); setFilePreviewUrl(null);
-                    setFileError("Arquivo muito grande. Tamanho máximo: 15MB.");
-                    return;
-                  }
-                  setFileError(null);
-                  setFile(f);
-                  if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
-                  const isImage = f.type.startsWith("image/");
-                  setFilePreviewUrl(isImage ? URL.createObjectURL(f) : null);
-                }}
-                className="w-full border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-gray-50"
-                onClick={() => document.getElementById("art-file-input")?.click()}
-              >
-                {file ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      {filePreviewUrl ? (
-                        <Image src={filePreviewUrl} alt="prévia" className="w-12 h-12 object-cover rounded" />
-                      ) : (
-                        <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-xs">{file.type.split("/")[1]?.toUpperCase() || "ARQ"}</div>
-                      )}
-                      <div className="text-left">
-                        <p className="text-sm font-medium truncate max-w-[200px]" title={file.name}>{file.name}</p>
-                        <p className="text-xs text-gray-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:text-red-700"
-                      onClick={(e) => { e.stopPropagation(); setFile(null); if (filePreviewUrl) { URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); } }}
-                    >
-                      Remover
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-700">
-                    Arraste e solte o arquivo aqui, ou <span className="text-primary underline">clique para selecionar</span>
-                  </div>
-                )}
-                <input
-                  id="art-file-input"
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.pdf,.ai,.cdr,.svg"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    const maxBytes = 15 * 1024 * 1024;
-                    const allowed = ["image/png", "image/jpeg", "application/pdf", "image/svg+xml", "application/postscript", "application/vnd.corel-draw"];
-                    if (!allowed.includes(f.type)) {
-                      setFile(null); setFilePreviewUrl(null);
-                      setFileError("Formato não suportado. Envie PNG, JPG, PDF, AI, CDR ou SVG.");
-                      return;
-                    }
-                    if (f.size > maxBytes) {
-                      setFile(null); setFilePreviewUrl(null);
-                      setFileError("Arquivo muito grande. Tamanho máximo: 15MB.");
-                      return;
-                    }
-                    setFileError(null);
-                    setFile(f);
-                    if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
-                    const isImage = f.type.startsWith("image/");
-                    setFilePreviewUrl(isImage ? URL.createObjectURL(f) : null);
-                  }}
-                />
-              </div>
-              {fileError && <p className="text-xs text-red-600 mt-2">{fileError}</p>}
-            </div>
-
             {QtdMsg && <span className="text-red-500 text-sm">Digite uma quantidade válida para prosseguir</span>}
             {Number(quantity) < Number(ProductData.qtdMinPro) && Number(quantity) !== 0 && <span className="text-red-500 text-sm">Esse produto é vendido na quantidade mínima de {Number(ProductData.qtdMinPro).toFixed(0)}</span>}
 
@@ -862,13 +869,81 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               </Button>
             ) : (
               <Button type="submit" disabled={loading || (!isOutOfStock && qtyInvalid) || !canBuy}
-                className="disabled:bg-gray-500 flex gap-2 items-center justify-center select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
-
+                className="disabled:bg-gray-500 flex gap-2 items-center justify-center cursor-pointer select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
               >
                 <ShoppingCart size={18} /> Comprar
               </Button>
             )}
           </form>
+
+          <div className="mt-6">
+            <h3 className="font-bold text-lg mb-3">Tabela de Preços</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd Mín</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd Máx</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preço Unitário</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {(() => {
+                    // Get all price ranges from the first personalization that has them
+                    const firstPersonalizationWithPrices = Object.values(selectedPersonalizations).find(
+                      (p): p is Personalizacao & { precos: PersonalizacaoPreco[] } =>
+                        p !== null && Array.isArray(p.precos) && p.precos.length > 0
+                    );
+
+                    if (!firstPersonalizationWithPrices?.precos?.length) {
+                      return (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-4 text-center text-sm text-gray-500">
+                            Selecione uma personalizacão.
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return firstPersonalizationWithPrices.precos.map((priceRange, index) => {
+                      // Calculate total personalization cost for this quantity range
+                      let totalPersonalizacao = 0;
+
+                      Object.values(selectedPersonalizations).forEach(personalization => {
+                        if (personalization?.precos?.[index]) {
+                          totalPersonalizacao += parseFloat(personalization.precos[index].vluPersonalPrc) || 0;
+                        }
+                      });
+
+                      const precoTotal = ProductData.price + totalPersonalizacao;
+
+                      return (
+                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {parseInt(priceRange.qtdiPersonalPrc).toLocaleString('pt-BR')}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {priceRange.qtdfPersonalPrc === '999999999'
+                              ? '+'
+                              : parseInt(priceRange.qtdfPersonalPrc).toLocaleString('pt-BR')}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-green-700">
+                            {formatPrice(precoTotal)}
+                            <div className="text-xs font-normal text-gray-500">
+                              ({formatPrice(ProductData.price)} + {formatPrice(totalPersonalizacao)})
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              * Preço unitário = Preço base ({formatPrice(ProductData.price)}) + Personalizações
+            </p>
+          </div>
         </div>
       </div>
 

@@ -44,15 +44,15 @@ export async function POST(request: Request) {
     const { reqMethod, reqEndpoint, reqHeaders } = body;
 
     // Debug: log all incoming params (server-side)
-    try {
-      const incomingHeaders = Object.fromEntries(Array.from(request.headers.entries()));
-      console.log("[send-request] Incoming request", {
-        BASE_URL: baseUrl,
-        STORE_ID: storeId,
-        body,
-        headers: incomingHeaders,
-      });
-    } catch { }
+    // try {
+    //   const incomingHeaders = Object.fromEntries(Array.from(request.headers.entries()));
+    //   console.log("[send-request] Incoming request", {
+    //     BASE_URL: baseUrl,
+    //     STORE_ID: storeId,
+    //     body,
+    //     headers: incomingHeaders,
+    //   });
+    // } catch { }
 
     if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
       return NextResponse.json({ success: false, message: `Base URL inválida (${baseUrl})` }, { status: 400 });
@@ -138,20 +138,6 @@ export async function POST(request: Request) {
               const snippet = trimmed.slice(0, 200);
               const status = res.statusCode;
               return reject(new Error(`Resposta não-JSON da API externa (status=${status}, content-type=${ct || "desconhecido"}): ${snippet}`));
-            }
-
-            try {
-              const parsed = trimmed ? JSON.parse(trimmed) : {};
-              try {
-                console.log("[send-request] Upstream response", {
-                  statusCode: res.statusCode,
-                  headers: res.headers,
-                  body: parsed,
-                });
-              } catch { }
-              resolve(parsed);
-            } catch (e: any) {
-              return reject(new Error(`Erro ao interpretar resposta da API externa: ${e?.message || e}`));
             }
           });
 

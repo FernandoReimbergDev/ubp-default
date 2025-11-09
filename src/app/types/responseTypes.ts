@@ -368,12 +368,15 @@ export interface ModalProps {
 }
 
 export type PersonalizationMeta = {
+  descricao: string;
   fileName: string;
   mimeType: string;
   size: number;
 };
 
 export type ProdutoCart = {
+  personalizationBreakdown: any;
+  personalizationUnitPrice: number;
   id: string;
   codPro: string;
   chavePro: string;
