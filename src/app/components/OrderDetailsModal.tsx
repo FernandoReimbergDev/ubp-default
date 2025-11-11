@@ -11,7 +11,7 @@ type Props = {
 export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
   if (!isOpen) return null;
 
-  const { numero, status, solicitante, faturarPara, entrega, pagamento, produtos, totais, compra, previsaoEntrega } = order;
+  const { numero, status, solicitante, entrega, pagamento, produtos, compra, previsaoEntrega } = order;
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();

@@ -63,7 +63,7 @@ export function LoginForm() {
           <InputIcon>
             <UserRound className={errors.userName || errors.password ? "text-red-500" : ""} />
           </InputIcon>
-          <InputField {...register("userName")} type="text" placeholder="Digite seu nome de usuario" />
+          <InputField {...register("userName")} type="text" placeholder="Digite seu nome de usuario" autoComplete="current-username" />
         </InputRoot>
         {errors.userName && <p className="text-red-500 text-xs font-semibold">{errors.userName.message}</p>}
 
@@ -79,7 +79,6 @@ export function LoginForm() {
         <Button disabled={isSubmitting} type="submit">
           Continuar <ArrowRight />
         </Button>
-        {/* {sso_enabled && <AuthButtons />} */}
 
         <div className="h-6 ">{isSubmitting && <span className="loader"></span>}</div>
 

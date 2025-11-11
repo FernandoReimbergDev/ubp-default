@@ -8,11 +8,24 @@ import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 type Phone = { areaCode?: string; number?: string };
 type Address = {
-    ibge?: string; zipcode?: string; street?: string; number?: string;
-    complement?: string; neighborhood?: string; city?: string; stateCode?: string;
+    entityTypeShipping: string;
+    legalNameShipping: string;
+    contactNameShipping: string;
+    cpfCnpfShipping: string;
+    ieShipping: string;
+    emailShipping: string;
+    areaCodeShipping: string;
+    phoneShipping: string;
+    addressIbgeCodeShipping: string;
+    zipCodeShipping: string;
+    streetNameShipping: string;
+    streetNumberShipping: string;
+    addressLine2Shipping: string;
+    addressNeighborhoodShipping: string;
+    addressCityShipping: string;
+    addressStateCodeShipping: string;
 };
 
 type UserShape = {
@@ -27,20 +40,88 @@ type UserShape = {
     email?: string;
     phone?: Phone;
     phones?: Phone[];
-    address?: Address;
+    address?: OrderPayload;
     addresses?: Address[];
 };
+
+interface OrderPayload {
+    // Basic info
+    storeId: string;
+    userId: number;
+
+    // User info
+    entityType: string;
+    legalName: string;
+    fullName: string;
+    cpfCnpf: string;
+    ie: string;
+    email: string;
+    areaCode: string;
+    phone: string;
+
+    // Billing info
+    entityTypeBilling: string;
+    legalNameBilling: string;
+    contactNameBilling: string;
+    cpfCnpfBilling: string;
+    ieBilling: string;
+    emailBilling: string;
+    areaCodeBilling: string;
+    phoneBilling: string;
+    addressIbgeCodeBilling: string;
+    zipCodeBilling: string;
+    streetNameBilling: string;
+    streetNumberBilling: string;
+    addressLine2Billing: string;
+    addressNeighborhoodBilling: string;
+    addressCityBilling: string;
+    addressStateCodeBilling: string;
+
+    // Shipping info
+    entityTypeShipping: string;
+    legalNameShipping: string;
+    contactNameShipping: string;
+    cpfCnpfShipping: string;
+    ieShipping: string;
+    emailShipping: string;
+    areaCodeShipping: string;
+    phoneShipping: string;
+    addressIbgeCodeShipping: string;
+    zipCodeShipping: string;
+    streetNameShipping: string;
+    streetNumberShipping: string;
+    addressLine2Shipping: string;
+    addressNeighborhoodShipping: string;
+    addressCityShipping: string;
+    addressStateCodeShipping: string;
+
+    // Order info
+    paymentMethod: string;
+    numberOfInstallments: string;
+    totalProductsAmount: string;
+    totalDiscountAmount: string;
+    totalShippingAmount: string;
+    totalInterestAmount: string;
+    orderTotalAmount: string;
+    totalTaxAmount: string;
+    paymentStatus: string;
+    orderStatus: string;
+    expectedDeliveryDate: string;
+    deliveryDate: string;
+    paymentDate: string;
+}
 
 export function SolicitarAprovacao() {
     const { hasAnyRole, fetchOrderNumber } = useAuth();
     const { cart, clearCart } = useCart();
     const isAdmin = hasAnyRole(["Administrador"]);
     const router = useRouter();
-
+    const { fetchGetAddress } = useCart();
     const [status, setStatus] = useState<"idle" | "confirm" | "approved" | "rejected" | "requested" | "cancelled">("idle");
     const [cancelReason, setCancelReason] = useState("");
     const [user, setUser] = useState<UserShape | null>(null);
     const [freteValido, setFreteValido] = useState(false);
+    const [addressShipping, setAddressShipping] = useState<Address | null>(null);
 
     // Observa o cookie 'valorFrete' e mantém um flag local de validade
     useEffect(() => {
@@ -48,7 +129,7 @@ export function SolicitarAprovacao() {
             try {
                 const raw = Cookies.get("valorFrete");
                 const num = raw !== undefined ? Number(raw) : NaN;
-                setFreteValido(Number.isFinite(num)); // aceita 0 como válido
+                setFreteValido(true);
             } catch {
                 setFreteValido(false);
             }
@@ -56,58 +137,9 @@ export function SolicitarAprovacao() {
         return () => clearInterval(id);
     }, []);
 
-    const delivery = useMemo(() => {
-        // tenta ler cookie localmente como fallback
-        let c: any = null;
-        try {
-            const raw = Cookies.get("cliente");
-            c = raw ? JSON.parse(raw) : null;
-        } catch { /* ignore */ }
-
-        const cleanStr = (v: unknown) => (typeof v === "string" ? v.trim() : v);
-        const nonEmpty = (v: any) => v !== undefined && v !== null && String(v).trim() !== "";
-        const pick = (...vals: any[]) => {
-            for (const v of vals) {
-                const t = cleanStr(v);
-                if (nonEmpty(t)) return String(t);
-            }
-            return "";
-        };
-        const digits = (s: string) => s.replace(/\D+/g, "");
-        const upper = (s: string) => s.toUpperCase();
-
-        const uAddr = (user?.addresses && user.addresses[0]) || user?.address;
-
-        const stateCode = upper(pick(
-            uAddr?.stateCode,
-            c?.uf,
-            c?.addressState,
-            c?.stateCode,
-            c?.address?.stateCode,
-            c?.addresses?.[0]?.stateCode,
-        ));
-
-        const city = pick(
-            uAddr?.city,
-            c?.addressCity,
-            c?.city,
-            c?.municipio,
-            c?.address?.city,
-            c?.addresses?.[0]?.city,
-        );
-
-        const zipCode = digits(pick(
-            uAddr?.zipcode,
-            c?.zipCodeBilling,
-            c?.addressZip,
-            c?.zipcode,
-            c?.cep,
-            c?.address?.zipcode,
-            c?.addresses?.[0]?.zipcode,
-        ));
-
-        return { stateCode, city, zipCode };
-    }, [user]);
+    useEffect(() => {
+        fetchGetAddress(2);
+    }, [fetchGetAddress]);
 
     // -------- Helpers de cookie --------
     const getClienteCookie = useCallback((): any | null => {
@@ -126,7 +158,6 @@ export function SolicitarAprovacao() {
         return id ? String(id) : "";
     }, [getClienteCookie]);
 
-    // -------- Buscar usuário (HOOKS NO TOPO) --------
     const fetchUser = useCallback(async (signal?: AbortSignal) => {
         const userIdFromCookie = getUserIdFromCookie();
         if (!userIdFromCookie) return;
@@ -158,12 +189,40 @@ export function SolicitarAprovacao() {
         }
     }, [getUserIdFromCookie]);
 
+    const fetchShippingTemp = useCallback(async (signal?: AbortSignal) => {
+        const userIdFromCookie = getUserIdFromCookie();
+        if (!userIdFromCookie) return;
+        try {
+            const res = await fetch("/api/send-request", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    reqMethod: "GET",
+                    reqEndpoint: "/temp-address-shipping",
+                    reqHeaders: {
+                        "X-Environment": "HOMOLOGACAO",
+                        userId: userIdFromCookie,
+                    },
+                }),
+                signal,
+            });
+
+            const result = await res.json();
+            if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados de entrega temp");
+            console.log(result.data.result)
+            setAddressShipping(result?.data?.result);
+        } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") return;
+            console.error("Erro ao requisitar dados de entrega temp para API externa:", err);
+        }
+    }, []);
+
     useEffect(() => {
         const ac = new AbortController();
         fetchUser(ac.signal);
+        fetchShippingTemp(ac.signal);
         return () => ac.abort();
-    }, [fetchUser]);
-
+    }, [fetchUser, fetchShippingTemp]);
     // -------- Totais do carrinho --------
     const totals = useMemo(() => {
         const totalProducts = cart.reduce((sum: number, it: any) => {
@@ -174,207 +233,91 @@ export function SolicitarAprovacao() {
         return { totalProducts };
     }, [cart]);
 
-    // -------- Payload puro (sem hooks) --------
-    const buildOrderPayload = () => {
-        const userIdFromCookie = getUserIdFromCookie();
-        const clienteCookie = getClienteCookie();
-
-        // helpers
-        const cleanStr = (v: unknown) => (typeof v === "string" ? v.trim() : v);
-        const nonEmpty = (v: any) => v !== undefined && v !== null && String(v).trim() !== "";
-        const pick = (...vals: any[]) => {
-            for (const v of vals) {
-                const c = cleanStr(v);
-                if (nonEmpty(c)) return String(c);
-            }
-            return "";
+    const delivery = useMemo(() => {
+        const zipDigits = (addressShipping?.zipCodeShipping || "").replace(/\D/g, "");
+        return {
+            stateCode: (addressShipping?.addressStateCodeShipping || "").toUpperCase(),
+            city: addressShipping?.addressCityShipping || "",
+            zipCode: zipDigits,
         };
-        const digits = (s: string) => s.replace(/\D+/g, "");
-        const upper = (s: string) => s.toUpperCase();
+    }, [addressShipping]);
 
-        // prefer list-users primary entries
-        const uPhone = (user?.phones && user.phones[0]) || user?.phone;
-        const uAddr = (user?.addresses && user.addresses[0]) || user?.address;
+    const frete = Number(Cookies.get("valorFrete") || "0") || 0;
+    const payload: any = {
+        storeId: "32",
+        userId: 2,
+        entityType: user?.entityType || "PF",
+        legalName: user?.legalName || user?.fullName || "",
+        cpfCnpf: user?.cpf || user?.cnpj || "",
+        ie: user?.ie || "",
+        email: user?.email || "",
+        areaCode: user?.phone?.areaCode || "",
+        phone: user?.phone?.number || "",
 
-        const areaCodeRaw = pick(
-            uPhone?.areaCode,
-            user?.phone?.areaCode,
-            clienteCookie?.areaCode,
-            clienteCookie?.ddd,
-            clienteCookie?.phone?.areaCode,
-            clienteCookie?.phones?.[0]?.areaCode,
-        );
-        const areaCode = digits(areaCodeRaw);
+        entityTypeBilling: "PJ",
+        legalNameBilling: "Caixa Vida e Previdencia S/A",
+        contactNameBilling: user?.fullName || "",
+        cpfCnpfBilling: "03.730.204/0001-76",
+        ieBilling: (user?.ie || "") || "",
+        emailBilling: (user?.email || "") || "",
+        areaCodeBilling: (user?.phone?.areaCode || "") || "",
+        phoneBilling: (user?.phone?.number || "") || "",
+        addressIbgeCodeBilling: "",
+        zipCodeBilling: "04583-110",
+        streetNameBilling: "Av. Doutor Chucri Zaidan",
+        streetNumberBilling: "246",
+        addressLine2Billing: "12º andar",
+        addressNeighborhoodBilling: "Vila Cordeiro",
+        addressCityBilling: "São Paulo",
+        addressStateCodeBilling: "SP",
 
-        const phoneRaw = pick(
-            uPhone?.number,
-            user?.phone?.number,
-            clienteCookie?.telefone,
-            clienteCookie?.phone,
-            clienteCookie?.phone?.number,
-            clienteCookie?.phones?.[0]?.number,
-        );
-        const phone = digits(phoneRaw);
+        entityTypeShipping: addressShipping?.entityTypeShipping || "PJ",
+        legalNameShipping: addressShipping?.legalNameShipping || "",
+        contactNameShipping: addressShipping?.contactNameShipping || user?.fullName || "",
+        cpfCnpfShipping: addressShipping?.cpfCnpfShipping || user?.cpf || user?.cnpj || "",
+        ieShipping: addressShipping?.ieShipping || user?.ie || "",
+        emailShipping: addressShipping?.emailShipping || user?.email || "",
+        areaCodeShipping: addressShipping?.areaCodeShipping || user?.phone?.areaCode || "",
+        phoneShipping: addressShipping?.phoneShipping || user?.phone?.number || "",
+        addressIbgeCodeShipping: addressShipping?.addressIbgeCodeShipping || "",
+        zipCodeShipping: addressShipping?.zipCodeShipping || "",
+        streetNameShipping: addressShipping?.streetNameShipping || "",
+        streetNumberShipping: addressShipping?.streetNumberShipping || "",
+        addressLine2Shipping: addressShipping?.addressLine2Shipping || "",
+        addressNeighborhoodShipping: addressShipping?.addressNeighborhoodShipping || "",
+        addressCityShipping: addressShipping?.addressCityShipping || "",
+        addressStateCodeShipping: addressShipping?.addressStateCodeShipping || "",
 
-        const addrIbge = pick(
-            uAddr?.ibge,
-            user?.address?.ibge,
-            clienteCookie?.addressIbge,
-            clienteCookie?.address?.ibge,
-            clienteCookie?.addresses?.[0]?.ibge,
-        );
-
-        const addrZip = digits(pick(
-            uAddr?.zipcode,
-            user?.address?.zipcode,
-            clienteCookie?.zipCodeBilling,
-            clienteCookie?.addressZip,
-            clienteCookie?.cep,
-            clienteCookie?.address?.zipcode,
-            clienteCookie?.addresses?.[0]?.zipcode,
-        ));
-
-        const addrStreet = pick(
-            uAddr?.street,
-            user?.address?.street,
-            clienteCookie?.addressStreet,
-            clienteCookie?.street,
-            clienteCookie?.logradouro,
-            clienteCookie?.address?.street,
-            clienteCookie?.addresses?.[0]?.street,
-        );
-
-        const addrNumber = pick(
-            uAddr?.number,
-            user?.address?.number,
-            clienteCookie?.addressNumber,
-            clienteCookie?.number,
-            clienteCookie?.numero,
-            clienteCookie?.address?.number,
-            clienteCookie?.addresses?.[0]?.number,
-        );
-
-        const addrComplement = pick(
-            uAddr?.complement,
-            user?.address?.complement,
-            clienteCookie?.addressComplement,
-            clienteCookie?.complement,
-            clienteCookie?.complemento,
-            clienteCookie?.address?.complement,
-            clienteCookie?.addresses?.[0]?.complement,
-        );
-
-        const addrNeighborhood = pick(
-            uAddr?.neighborhood,
-            user?.address?.neighborhood,
-            clienteCookie?.addressNeighborhood,
-            clienteCookie?.neighborhood,
-            clienteCookie?.bairro,
-            clienteCookie?.address?.neighborhood,
-            clienteCookie?.addresses?.[0]?.neighborhood,
-        );
-
-        const addrCity = pick(
-            uAddr?.city,
-            user?.address?.city,
-            clienteCookie?.addressCity,
-            clienteCookie?.city,
-            clienteCookie?.municipio,
-            clienteCookie?.address?.city,
-            clienteCookie?.addresses?.[0]?.city,
-        );
-
-        const addrState = upper(pick(
-            uAddr?.stateCode,
-            user?.address?.stateCode,
-            clienteCookie?.uf,
-            clienteCookie?.addressState,
-            clienteCookie?.stateCode,
-            clienteCookie?.address?.stateCode,
-            clienteCookie?.addresses?.[0]?.stateCode,
-        ));
-
-        const frete = Number(Cookies.get("valorFrete") || clienteCookie?.valorFrete || 0) || 0;
-
-        const payload = {
-            storeId: "32",
-            userId: userIdFromCookie,
-            entityType: user?.entityType || "PF",
-            legalName: user?.legalName || user?.fullName || "",
-            cpfCnpf: user?.cpf || user?.cnpj || "",
-            ie: user?.ie || "",
-            email: user?.email || "",
-            areaCode,
-            phone,
-
-            entityTypeBilling: user?.entityType || clienteCookie?.entityTypeBilling || "PF",
-            legalNameBilling: user?.legalName || user?.fullName || "",
-            contactNameBilling: user?.legalName || user?.fullName || "",
-            cpfCnpfBilling: (user?.cpf || user?.cnpj || "") || clienteCookie?.cpfCnpfBilling || "",
-            ieBilling: (user?.ie || "") || clienteCookie?.ieBilling || "",
-            emailBilling: (user?.email || "") || clienteCookie?.emailBilling || "",
-            areaCodeBilling: areaCode || clienteCookie?.areaCodeBilling || "",
-            phoneBilling: phone || clienteCookie?.phoneBilling || "",
-            addressIbgeCodeBilling: addrIbge || clienteCookie?.addressIbgeCodeBilling || "",
-            zipCodeBilling: addrZip || clienteCookie?.zipCodeBilling || "",
-            streetNameBilling: addrStreet || clienteCookie?.streetNameBilling || "",
-            streetNumberBilling: addrNumber || clienteCookie?.streetNumberBilling || "",
-            addressLine2Billing: addrComplement || clienteCookie?.addressLine2Billing || "",
-            addressNeighborhoodBilling: addrNeighborhood || clienteCookie?.addressNeighborhoodBilling || "",
-            addressCityBilling: addrCity || clienteCookie?.addressCityBilling || "",
-            addressStateCodeBilling: addrState || clienteCookie?.addressStateCodeBilling || "",
-
-            entityTypeShipping: user?.entityType || "PF",
-            legalNameShipping: user?.legalName || user?.fullName || "",
-            contactNameShipping: user?.legalName || user?.fullName || "",
-            cpfCnpfShipping: user?.cpf || user?.cnpj || "",
-            ieShipping: user?.ie || "",
-            emailShipping: user?.email || "",
-            areaCodeShipping: areaCode,
-            phoneShipping: phone,
-            addressIbgeCodeShipping: addrIbge || clienteCookie?.addressIbgeCodeBilling || "",
-            zipCodeShipping: addrZip || clienteCookie?.zipCodeBilling || "",
-            streetNameShipping: addrStreet || clienteCookie?.streetNameBilling || "",
-            streetNumberShipping: addrNumber || clienteCookie?.streetNumberBilling || "",
-            addressLine2Shipping: addrComplement || clienteCookie?.addressLine2Billing || "",
-            addressNeighborhoodShipping: addrNeighborhood || clienteCookie?.addressNeighborhoodBilling || "",
-            addressCityShipping: addrCity || clienteCookie?.addressCityBilling || "",
-            addressStateCodeShipping: addrState || clienteCookie?.addressStateCodeBilling || "",
-
-            paymentMethod: "Boleto",
-            numberOfInstallments: "1",
-            totalProductsAmount: totals.totalProducts.toFixed(2),
-            totalDiscountAmount: "0.00",
-            totalShippingAmount: frete.toFixed(2),
-            totalInterestAmount: "0.00",
-            orderTotalAmount: (totals.totalProducts + frete).toFixed(2),
-            totalTaxAmount: "0",
-            paymentStatus: "PENDENTE",
-            orderStatus: isAdmin ? "Aprovado" : "Aguardando aprovação",
-            expectedDeliveryDate: "",
-            deliveryDate: "",
-            paymentDate: "",
-        } as const;
-
-        return payload;
-    };
+        paymentMethod: "Boleto",
+        numberOfInstallments: "1",
+        totalProductsAmount: totals.totalProducts.toFixed(2),
+        totalDiscountAmount: "0.00",
+        totalShippingAmount: frete.toFixed(2),
+        totalInterestAmount: "0.00",
+        orderTotalAmount: (totals.totalProducts + frete).toFixed(2),
+        totalTaxAmount: "0",
+        paymentStatus: "PENDENTE",
+        orderStatus: isAdmin ? "Aprovado" : "Aguardando aprovação",
+        expectedDeliveryDate: "",
+        deliveryDate: "",
+        paymentDate: "",
+    }
 
     // -------- Ações --------
     const handleAproved = async () => {
         setStatus("approved");
         try {
-            const payload = buildOrderPayload();
             try { localStorage.setItem("pedidoPayload", JSON.stringify(payload)); } catch { }
             try { Cookies.remove("pedidoPayload", { path: "/" }); } catch { }
             await fetchOrderNumber();
         } finally {
+            console.log("finalizado")
             router.push("/pedido");
         }
     };
     const handleRequested = async () => {
         setStatus("requested");
         try {
-            const payload = buildOrderPayload();
             try { localStorage.setItem("pedidoPayload", JSON.stringify(payload)); } catch { }
             try { Cookies.remove("pedidoPayload", { path: "/" }); } catch { }
             await fetchOrderNumber();

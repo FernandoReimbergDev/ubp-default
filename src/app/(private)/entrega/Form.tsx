@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { fetchAddressFromCep, handleCEPMask, handleCnpjCpfMask, handlePhoneMask } from "@/app/services/utils";
+import { handleCEPMask, handleCnpjCpfMask, handlePhoneMask } from "@/app/services/utils";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
@@ -8,10 +8,60 @@ import { DadosEntregaFormData, DadosEntregaSchema } from "./schema";
 import { useRouter } from "next/navigation";
 import { UsuarioResponse } from "@/app/types/responseTypes";
 import { Resumo } from "@/app/components/Resumo";
-import { saveDeliveryCookie } from "@/app/utils/saveDeliveryCookie";
 import Cookies from "js-cookie";
+import { useCart } from "@/app/Context/CartContext";
 
 export function FormDadosEntrega() {
+  const { fetchSendAddress } = useCart()
+  const [adressShipping, setAdressShipping] = useState({
+    cep: "04583-110",
+    logradouro: "Av. Doutor Chucri Zaidan",
+    numero: "246",
+    complemento: "12ºandar",
+    bairro: "Vila Cordeiro",
+    municipio: "São Paulo",
+    uf: "SP",
+    razao_social: "Caixa Vida e Previdencia S/A",
+    cnpj: "03.730.204/0001-76",
+  });
+  const enderecos = [
+    {
+      "LABEL": "Escritório Riverview (Morumbi)",
+      "RAZÃO_SOCIAL": "Caixa Vida e Previdencia S/A",
+      "CNPJ": "03.730.204/0001-76",
+      "CEP": "04583-110",
+      "LOGRADOURO": "Av. Doutor Chucri Zaidan",
+      "NUMERO": "246",
+      "COMPLEMENTO": "12ºandar",
+      "BAIRRO": "Vila Cordeiro",
+      "MUNICIPIO": "São Paulo",
+      "UF": "SP",
+    },
+    {
+      "LABEL": "Escritório CEA (Alphaville)",
+      "RAZÃO_SOCIAL": "Caixa Vida e Previdencia S/A",
+      "CNPJ": "03.730.204/0004-19",
+      "CEP": "06455-000",
+      "LOGRADOURO": "Alameda Araguaia",
+      "NUMERO": "2104",
+      "COMPLEMENTO": "Condomínio CEA - Andar 23",
+      "BAIRRO": "Sitio Tamboré",
+      "MUNICIPIO": "Barueri",
+      "UF": "SP",
+    },
+    {
+      "LABEL": "Transportadora Profile (Armazém)",
+      "RAZÃO_SOCIAL": "Profile Solucoes em Logistica LTDA",
+      "CNPJ": "05.935.141/0001-10",
+      "CEP": "06268-110",
+      "LOGRADOURO": "Av. Lourenço Beloli",
+      "NUMERO": "1415",
+      "COMPLEMENTO": "",
+      "BAIRRO": "Vila Menck",
+      "MUNICIPIO": "Osasco",
+      "UF": "SP",
+    }
+  ]
   const router = useRouter();
   const [clientData, setClientData] = useState<UsuarioResponse>({
     success: false,
@@ -35,7 +85,6 @@ export function FormDadosEntrega() {
 
       return novaData;
     }
-
     // Data atual + 7 dias úteis
     const dataEntrega = adicionarDiasUteis(new Date(), 7);
 
@@ -99,6 +148,7 @@ export function FormDadosEntrega() {
 
   useEffect(() => {
     fetchUserData();
+    handleAddressChange(enderecos[0]);
   }, [fetchUserData]);
 
   useEffect(() => {
@@ -107,7 +157,7 @@ export function FormDadosEntrega() {
     const { result } = clientData;
     if (!Array.isArray(result) || result.length === 0) return;
 
-    const { entityType, fullName, legalName, email, cpf, cnpj, phones, addresses, ie } = result[0];
+    const { email, cnpj, phones, addresses, ie } = result[0];
 
     if (Array.isArray(phones) && phones.length > 0) {
       phones.map((tel) => {
@@ -117,37 +167,50 @@ export function FormDadosEntrega() {
         return null;
       });
     }
-    //EMAIL
     if (email) setValue("email", email);
-
-    // CPF ou CNPJ
-    if (cpf) handleCnpjCpfMask(cpf, setValue, trigger, setError, clearErrors);
     if (cnpj) handleCnpjCpfMask(cnpj, setValue, trigger, setError, clearErrors);
-
-    // Endereço principal (addresses[0])
     if (Array.isArray(addresses) && addresses.length > 0) {
-      const endereco = addresses[0] as any;
-      const nomeRazaoSocial = entityType === "PF" ? fullName : legalName;
-      handleCEPMask(endereco?.zipcode ?? "", setValue, trigger, setError, clearErrors);
-      setValue("logradouro", endereco?.street ?? "");
-      setValue("numero", endereco?.number ?? "");
-      setValue("complemento", endereco?.complement ?? "");
-      setValue("bairro", endereco?.neighborhood ?? "");
-      setValue("municipio", endereco?.city ?? "");
-      setValue("razao_social", nomeRazaoSocial);
+      handleCEPMask(adressShipping.cep, setValue, trigger, setError, clearErrors);
+      setValue("cep", adressShipping.cep);
+      setValue("logradouro", adressShipping.logradouro);
+      setValue("numero", adressShipping.numero);
+      setValue("complemento", adressShipping.complemento);
+      setValue("bairro", adressShipping.bairro);
+      setValue("municipio", adressShipping.municipio);
+      setValue("uf", adressShipping.uf);
+      setValue("razao_social", adressShipping.razao_social);
+      setValue("cnpj_cpf", adressShipping.cnpj);
       setValue("inscricao_estadual", ie ?? "");
-      const ufSigla = (endereco?.uf || endereco?.state || endereco?.stateCode || "").toString().trim().toUpperCase();
-      setValue("uf", ufSigla);
+      setValue("ddd", phones[0].areaCode ?? "11");
+      setValue("contato_entrega", clientData.result[0].fullName);
     }
-  }, [clientData, setValue, trigger, setError, clearErrors]);
+  }, [clientData, setValue, trigger, setError, clearErrors, adressShipping.complemento, adressShipping.cep, adressShipping.logradouro, adressShipping.numero, adressShipping.bairro, adressShipping.municipio, adressShipping.uf, adressShipping.razao_social, adressShipping.cnpj]);
 
-  useEffect(() => {
-    if (cep?.length === 9) {
-      fetchAddressFromCep(cep, setValue, trigger, setError, clearErrors);
-    }
-  }, [cep, setValue, trigger, setError, clearErrors]);
+  const handleAddressChange = (endereco: typeof enderecos[number]) => {
+    setAdressShipping({
+      cep: endereco.CEP,
+      logradouro: endereco.LOGRADOURO,
+      numero: endereco.NUMERO,
+      complemento: endereco.COMPLEMENTO,
+      bairro: endereco.BAIRRO,
+      municipio: endereco.MUNICIPIO,
+      uf: endereco.UF,
+      razao_social: endereco.RAZÃO_SOCIAL,
+      cnpj: endereco.CNPJ,
+    });
 
-  // Prefill from 'cliente' cookie if fields are empty
+    // Update form fields
+    setValue("cep", endereco.CEP);
+    setValue("logradouro", endereco.LOGRADOURO);
+    setValue("numero", endereco.NUMERO);
+    setValue("complemento", endereco.COMPLEMENTO);
+    setValue("bairro", endereco.BAIRRO);
+    setValue("municipio", endereco.MUNICIPIO);
+    setValue("uf", endereco.UF);
+    setValue("razao_social", endereco.RAZÃO_SOCIAL);
+    setValue("cnpj_cpf", endereco.CNPJ);
+  };
+
   useEffect(() => {
     try {
       const raw = Cookies.get("cliente");
@@ -168,24 +231,30 @@ export function FormDadosEntrega() {
 
   function onSubmit(form: any) {
     setSubmitting(true);
-    saveDeliveryCookie({
-      id: form.userId, // se tiver
-      entityTypeBilling: form.cnpj_cpf,
-      legalNameBilling: form.razao_social,
-      cpfCnpfBilling: form.cnpj_cpf,
-      ieBilling: form.inscricao_estadual || "",
-      emailBilling: form.email,
-      areaCodeBilling: form.ddd,
-      phoneBilling: form.telefone,
-      addressIbgeCodeBilling: form.ibge || "",
-      zipCodeBilling: form.cep,
-      streetNameBilling: form.logradouro,
-      streetNumberBilling: form.numero,
-      addressLine2Billing: "",
-      addressNeighborhoodBilling: form.bairro,
-      addressCityBilling: form.municipio,
-      addressStateCodeBilling: form.uf
-    })
+    try {
+      fetchSendAddress(
+        Number(clientData?.result[0].id),
+        "PJ",
+        form.contato_entrega,
+        form.razao_social,
+        form.cnpj_cpf,
+        form.inscricao_estadual || "",
+        form.email,
+        form.ddd,
+        form.telefone.replace(/\D/g, ""),
+        form.ibge || "",
+        form.cep.replace(/\D/g, ""),
+        form.logradouro,
+        form.numero,
+        form.complemento,
+        form.bairro,
+        form.municipio,
+        form.uf
+      );
+
+    } catch (error) {
+      console.error("Erro ao enviar dados de entrega:", error);
+    }
     setSubmitting(false);
     router.push("/forma-de-pagamento")
   }
@@ -202,10 +271,35 @@ export function FormDadosEntrega() {
       </header>
       <div className="flex w-full h-full flex-col lg:flex-row">
         <form method="POST" onSubmit={handleSubmit(onSubmit)} className="w-full">
-          <section className="grid md:grid-cols-2 gap-2 md:gap-4 bg-white mb-2">
+          <h2 className="px-2 text-sm 2xl:text-lg font-bold font-plutoRegular text-zinc-600">Selecione o local de entrega:</h2>
+          <section className="flex flex-col 2xl:flex-row 2xl:items-center gap-4 mt-2 mb-6">
+            {enderecos.map((endereco, index) => {
+              const isSelected = adressShipping.cep === endereco.CEP;
+              return (
+                <div className="flex items-center gap-2 px-2" key={index + 1}>
+                  <input
+                    type="radio"
+                    name="filial"
+                    id={`filial_${index + 1}`}
+                    checked={isSelected}
+                    onChange={() => handleAddressChange(endereco)}
+                    className="cursor-pointer"
+                  />
+                  <label
+                    htmlFor={`filial_${index + 1}`}
+                    className={`text-gray-800 cursor-pointer ${isSelected ? 'font-bold text-primary' : ''}`}
+                  >
+                    {endereco.LABEL}
+                  </label>
+                </div>
+              );
+            })}
+          </section>
+          <section className="grid md:grid-cols-2 gap-2 md:gap-4 bg-white">
             <div className="px-2">
               <label className="block text-xs 2xl:text-sm font-medium text-gray-700">CEP*</label>
               <input
+                readOnly
                 type="text"
                 id="cep"
                 {...register("cep")}
@@ -219,7 +313,7 @@ export function FormDadosEntrega() {
               {errors.cep && <span className="text-red-500 text-xs">{errors.cep.message}</span>}
             </div>
             <div className="px-2">
-              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Previsão de Entrega</label>
+              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Previsão de Entrega </label>
               <input
                 type="text"
                 id="previsao_entrega"
@@ -228,12 +322,14 @@ export function FormDadosEntrega() {
                 readOnly
                 className="w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none"
               />
+              <span className="text-xs text-gray-500 italic">* Após aprovação do pedido e aprovação do layout</span>
             </div>
             <div className="flex gap-1">
               <div className="px-2 grow">
                 <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Endereço*</label>
                 <input
                   type="text"
+                  readOnly
                   id="logradouro"
                   {...register("logradouro")}
                   className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.logradouro
@@ -249,9 +345,10 @@ export function FormDadosEntrega() {
                 <label className="block text-xs 2xl:text-sm font-medium text-gray-700">N°*</label>
                 <input
                   type="text"
+                  readOnly
                   id="numero"
                   {...register("numero")}
-                  className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.numero
+                  className={`w-[66px] flex-none px-1 py-1  md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.numero
                     ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                     : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                     }`}
@@ -262,6 +359,7 @@ export function FormDadosEntrega() {
               <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Complemento</label>
               <input
                 type="text"
+                readOnly
                 id="complemento"
                 {...register("complemento")}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.complemento
@@ -276,6 +374,7 @@ export function FormDadosEntrega() {
               <input
                 type="text"
                 id="bairro"
+                readOnly
                 {...register("bairro")}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.bairro
                   ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
@@ -289,6 +388,7 @@ export function FormDadosEntrega() {
                 <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Municipio</label>
                 <input
                   type="text"
+                  readOnly
                   id="municipio"
                   {...register("municipio")}
                   className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.municipio
@@ -303,6 +403,7 @@ export function FormDadosEntrega() {
                 <label className="block text-xs 2xl:text-sm font-medium text-gray-700">UF</label>
                 <input
                   type="text"
+                  readOnly
                   id="uf"
                   {...register("uf")}
                   className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.uf
@@ -312,36 +413,29 @@ export function FormDadosEntrega() {
                 />
               </div>
             </div>
+
             <div className="px-2">
-              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Contato para Entrega</label>
+              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">
+                Razão Social / Nome completo
+              </label>
               <input
                 type="text"
-                id="contato_entrega"
-                {...register("contato_entrega")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.contato_entrega
+                id="razao_social"
+                {...register("razao_social")}
+                readOnly
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.razao_social
                   ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                   : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
                   }`}
               />
-              {errors.contato_entrega && <span className="text-red-500 text-xs">{errors.contato_entrega.message}</span>}
+              {errors.razao_social && <span className="text-red-500 text-xs">{errors.razao_social.message}</span>}
             </div>
-            <div className="px-2">
-              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">E-mail</label>
-              <input
-                type="email"
-                id="email"
-                {...register("email")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
-              />
-              {errors.email && <span className="text-red-500 text-xs">{errors.email.message}</span>}
-            </div>
+
             <div className="px-2">
               <label className="block text-xs 2xl:text-sm font-medium text-gray-700">CNPJ / CPF</label>
               <input
                 type="text"
+                readOnly
                 id="cnpj_cpf"
                 {...register("cnpj_cpf")}
                 placeholder="00.000.000/0001-00"
@@ -355,27 +449,14 @@ export function FormDadosEntrega() {
               />
               {errors.cnpj_cpf && <span className="text-red-500 text-xs">{errors.cnpj_cpf.message}</span>}
             </div>
-            <div className="px-2">
-              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">
-                Razão Social / Nome completo
-              </label>
-              <input
-                type="text"
-                id="razao_social"
-                {...register("razao_social")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.razao_social
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
-              />
-              {errors.razao_social && <span className="text-red-500 text-xs">{errors.razao_social.message}</span>}
-            </div>
+
             <div className="px-2">
               <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Inscrição Estadual</label>
               <input
                 type="text"
                 id="inscricao_estadual"
                 {...register("inscricao_estadual")}
+                readOnly
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.inscricao_estadual
                   ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
                   : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
@@ -384,6 +465,20 @@ export function FormDadosEntrega() {
               {errors.inscricao_estadual && (
                 <span className="text-red-500 text-xs">{errors.inscricao_estadual.message}</span>
               )}
+            </div>
+
+            <div className="px-2">
+              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Nome do contato para entrega</label>
+              <input
+                type="text"
+                id="contato_entrega"
+                {...register("contato_entrega")}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.contato_entrega
+                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  }`}
+              />
+              {errors.contato_entrega && <span className="text-red-500 text-xs">{errors.contato_entrega.message}</span>}
             </div>
 
             <div className="flex flex-col mx-auto w-full">
@@ -421,17 +516,24 @@ export function FormDadosEntrega() {
                 {errors.telefone && <span className="text-red-500 text-xs">{errors.telefone.message}</span>}
               </div>
             </div>
-          </section>
-          <section className="grid md:grid-cols-1 gap-2 2xl:gap-8 py-2 bg-white ">
-            <div className="flex flex-col mx-auto w-full px-2">
-              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Informações Complementares</label>
-              <textarea
-                id="informacoes_complementares"
-                {...register("informacoes_complementares")}
-                className="w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+
             <div className="px-2">
+              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">E-mail</label>
+              <input
+                type="email"
+                id="email"
+                {...register("email")}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email
+                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  }`}
+              />
+              {errors.email && <span className="text-red-500 text-xs">{errors.email.message}</span>}
+            </div>
+          </section>
+          <section className="grid md:grid-cols-1 gap-2 2xl:gap-4 bg-white ">
+
+            <div className="p-2">
               <button
                 type="submit"
                 disabled={submitting}
@@ -443,7 +545,7 @@ export function FormDadosEntrega() {
             </div>
           </section>
         </form>
-        <div className="w-full lg:w-80 lg:max-w-80 h-full border-t lg:border-t-0 lg:border-l border-gray-300 p-4">
+        <div className="w-full lg:w-full lg:max-w-80 h-full border-t lg:border-t-0 lg:border-l border-gray-300 px-2 mt-4">
           <Resumo delivery={delivery} />
         </div>
 

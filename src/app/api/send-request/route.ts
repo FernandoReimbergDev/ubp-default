@@ -43,17 +43,6 @@ export async function POST(request: Request) {
     const body: DynamicRequestBody = await request.json();
     const { reqMethod, reqEndpoint, reqHeaders } = body;
 
-    // Debug: log all incoming params (server-side)
-    // try {
-    //   const incomingHeaders = Object.fromEntries(Array.from(request.headers.entries()));
-    //   console.log("[send-request] Incoming request", {
-    //     BASE_URL: baseUrl,
-    //     STORE_ID: storeId,
-    //     body,
-    //     headers: incomingHeaders,
-    //   });
-    // } catch { }
-
     if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
       return NextResponse.json({ success: false, message: `Base URL inválida (${baseUrl})` }, { status: 400 });
     }
@@ -101,18 +90,6 @@ export async function POST(request: Request) {
           },
         };
 
-        // Debug: log outgoing request (redacted)
-        // try {
-        //   const redactedHeaders = { ...(options.headers as Record<string, any>) };
-        //   if (redactedHeaders.Authorization) redactedHeaders.Authorization = "[REDACTED]";
-        //   console.log("[send-request] Outgoing request", {
-        //     method: options.method,
-        //     url: `${u.protocol}//${hostname}${path}`,
-        //     headers: redactedHeaders,
-        //     postData: JSON.parse(postData),
-        //   });
-        // } catch { }
-
         const externalReq = https.request(options, (res) => {
           let firstChunk = true;
 
@@ -139,6 +116,20 @@ export async function POST(request: Request) {
               const status = res.statusCode;
               return reject(new Error(`Resposta não-JSON da API externa (status=${status}, content-type=${ct || "desconhecido"}): ${snippet}`));
             }
+
+            try {
+              const parsed = trimmed ? JSON.parse(trimmed) : {};
+              // try {
+              //   console.log("[send-request] Upstream response", {
+              //     statusCode: res.statusCode,
+              //     headers: res.headers,
+              //     body: parsed,
+              //   });
+              // } catch { }
+              resolve(parsed);
+            } catch (e: any) {
+              return reject(new Error(`Erro ao interpretar resposta da API externa: ${e?.message || e}`));
+            }
           });
 
           res.on("error", (err) => reject(err));
@@ -159,7 +150,6 @@ export async function POST(request: Request) {
       6_000,
       "external"
     );
-
 
     return NextResponse.json({ success: true, data: responseData });
   } catch (err: unknown) {

@@ -132,6 +132,7 @@ export const Slider = () => {
       colors: item.colors ?? [],
       sizes: (item.sizes ?? []) as string[],
       chavePro: "",
+      precos: [],
       bannerImg: item.bannerImg,
       quantidadeEstoquePro: "",
       estControl: "0",

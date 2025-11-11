@@ -5,10 +5,12 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
 import { useToast } from "../Context/ToastProvider";
-import { ModalProps, ProdutoCart, stock } from "../types/responseTypes";
+import { ModalProps, stock } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { ZoomProduct } from "./ZoomProduct";
+import type { CartItemInput } from "../types/cart";
+
 
 // ===== Tipos utilitários (ajuste os imports conforme seu projeto) =====
 export type PersonalizacaoPreco = {
@@ -118,12 +120,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     if (s.includes(",")) return Number(s.replace(",", "."));
     return Number(s);
   }, []);
-
-  // subtotal derivado (sem estado)
-  const subtotal2 = useMemo(() => {
-    const qty = parseInt(quantity || "0", 10);
-    return !isNaN(qty) && qty > 0 ? qty * ProductData.price : 0;
-  }, [quantity, ProductData.price]);
 
   // estoque do card (cálculo derivado p/ validação)
   const availableInt = useMemo(() => {
@@ -353,20 +349,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         return;
       }
 
-      // Get the first selected personalization (if any)
-      const personalization = Object.values(selectedPersonalizations).find(p => p !== null);
+      // 1) Personalização (pega a primeira selecionada – ajuste se quiser exigir 1 por grupo)
+      const selectedFirst = Object.values(selectedPersonalizations).find(p => p !== null) || null;
 
-      // Prepare personalization data with all necessary information
-      const personalizationData = personalization ? {
-        codPersonal: personalization.codPersonal,
-        chavePersonal: personalization.chavePersonal,
-        descricao: personalization.descrWebPersonal || personalization.descrPersonal || 'Personalização',
-        precoUnitario: personalizationUnit,
-        precoTotal: personalizationUnit * requestedQty,
-        precos: personalization.precos || []
-      } : undefined;
-
-      // valida arquivo (opcional): se existir, checar novamente
+      // 2) Validação do arquivo (opcional)
       if (file) {
         const maxBytes = 15 * 1024 * 1024; // 15MB
         const allowed = [
@@ -374,7 +360,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
           "image/jpeg",
           "application/pdf",
           "image/svg+xml",
-          "application/postscript", // .ai pode vir como ps/eps
+          "application/postscript",
           "application/vnd.corel-draw",
         ];
         if (!allowed.includes(file.type)) {
@@ -387,58 +373,57 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         }
       }
 
-      const id = `${ProductData.codePro}_${selectedColor}_${selectedSize || "nosize"}`;
+      // 3) ID determinístico inclui cor, tamanho e chaves de personalização
+      const personalizationKeys = Object.values(selectedPersonalizations)
+        .filter((p): p is Personalizacao => p !== null)
+        .map(p => p.chavePersonal)
+        .sort()
+        .join("_");
 
-      const productToCart: ProdutoCart = {
+      const id = `${ProductData.codePro}_${selectedColor}_${selectedSize || "nosize"}_${personalizationKeys || "std"}`;
+
+      // 4) Monta o payload LEVE para o carrinho (100% tipado)
+      const item: CartItemInput = {
         id,
         codPro: ProductData.codePro,
         chavePro: ProductData.chavePro,
-        alt: ProductData.alt,
-        cores: ProductData.colors,
-        tamanhos: ProductData.sizes,
-        description: ProductData.description,
+
         productName: ProductData.product,
-        price: ProductData.price,
+        alt: ProductData.alt,
+
+        color: selectedColor,
+        size: selectedSize,
+
+        unitPriceBase: ProductData.price,
+        unitPricePersonalization: personalizationUnit,
+        unitPriceEffective: effectiveUnitPrice,
+
+        quantity: requestedQty,
+        subtotal: requestedQty * effectiveUnitPrice,
+
+        hasPersonalization: !!selectedFirst,
+        personalization: selectedFirst
+          ? {
+            chavePersonal: selectedFirst.chavePersonal,
+            descricao: selectedFirst.descrWebPersonal || selectedFirst.descrPersonal || "Personalização",
+            precoUnitario: personalizationUnit,
+            precoTotal: personalizationUnit * requestedQty,
+          }
+          : undefined,
+
+        // opcionais leves de logística (mantidos como number|string)
         peso: ProductData.peso,
         altura: ProductData.altura,
         largura: ProductData.largura,
         comprimento: ProductData.comprimento,
-        color: selectedColor,
-        size: selectedSize,
-        images: ProductData.images,
-        estControl: ProductData.estControl,
-        qtdMinPro: ProductData.qtdMinPro,
-        vluGridPro: ProductData.vluGridPro,
-        gruposPersonalizacoes: ProductData.gruposPersonalizacoes,
-        personalization: personalizationData,
-        hasPersonalization: hasGravacao,
-        personalizationUnitPrice: personalizationUnit,
-        personalizationTotal: personalizationUnit * requestedQty,
-        unitPriceBase: ProductData.price,
-        unitPricePersonalization: personalizationUnit,
-        unitPriceEffective: effectiveUnitPrice,
-        quantity: String(requestedQty),
-        subtotal: total,
-        personalizationBreakdown: Object.entries(selectedPersonalizations)
-          .filter(([_, p]) => p !== null)
-          .map(([groupId, p]) => ({
-            groupId,
-            chavePersonal: p!.chavePersonal,
-            descricao: p!.descrWebPersonal || p!.descrPersonal || 'Personalização',
-            precoUnitario: getPersonalizationUnitPrice(p!, requestedQty),
-            precoTotal: getPersonalizationUnitPrice(p!, requestedQty) * requestedQty,
-            precos: p!.precos || []
-          })),
-        personalizationFile: file
-          ? {
-            fileName: file.name,
-            mimeType: file.type,
-            size: file.size,
-          }
-          : undefined,
-      } as any; // tipo será ampliado no model
 
-      addProduct(productToCart,);
+        // thumb opcional para minicart
+        thumb: ProductData.images?.[0],
+      };
+
+      // 5) Adiciona ao carrinho (sem any, sem duplicar chamadas)
+      addProduct(item);
+
       onClose();
       toast.success("Produto adicionado ao carrinho!");
     } catch {
@@ -446,90 +431,72 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     }
   }, [
     ProductData.alt,
+    ProductData.altura,
     ProductData.chavePro,
     ProductData.codePro,
-    ProductData.description,
+    ProductData.comprimento,
     ProductData.images,
+    ProductData.largura,
+    ProductData.peso,
     ProductData.price,
     ProductData.product,
-    ProductData.colors,
-    ProductData.sizes,
-    ProductData.peso,
-    ProductData.altura,
-    ProductData.largura,
-    ProductData.comprimento,
     addProduct,
+    effectiveUnitPrice,
     onClose,
+    personalizationUnit,
     requestedQty,
     selectedColor,
+    selectedPersonalizations,
     selectedSize,
-    subtotal2,
     toast,
     file,
   ]);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const file = e.target.files[0];
-      setFile(file);
-      setFileError(null);
-      setFilePreviewUrl(URL.createObjectURL(file));
-    }
-  }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
+  // const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files) {
+  //     const file = e.target.files[0];
+  //     setFile(file);
+  //     setFileError(null);
+  //     setFilePreviewUrl(URL.createObjectURL(file));
+  //   }
+  // }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.files) {
-      const file = e.dataTransfer.files[0];
-      setFile(file);
-      setFileError(null);
-      setFilePreviewUrl(URL.createObjectURL(file));
-    }
-  }, []);
+  // const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  // }, []);
+
+  // const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   if (e.dataTransfer.files) {
+  //     const file = e.dataTransfer.files[0];
+  //     setFile(file);
+  //     setFileError(null);
+  //     setFilePreviewUrl(URL.createObjectURL(file));
+  //   }
+  // }, []);
 
   const canBuy = hasQty && (!ProductData.qtdMinPro || requestedQty >= Number(ProductData.qtdMinPro)) && hasGravacao;
 
   // Adicione esta função para calcular o preço da personalização
-  const calculatePersonalizationPrice = useCallback((
-    personalization: Personalizacao,
-    quantity: number
-  ): number => {
-    if (!personalization.precos || personalization.precos.length === 0) return 0;
+  // const calculatePersonalizationPrice = useCallback((
+  //   personalization: Personalizacao,
+  //   quantity: number
+  // ): number => {
+  //   if (!personalization.precos || personalization.precos.length === 0) return 0;
 
-    // Encontra o preço que corresponde à faixa de quantidade
-    const priceRange = personalization.precos.find(preco => {
-      const minQty = parseInt(preco.qtdiPersonalPrc, 10) || 0;
-      const maxQty = parseInt(preco.qtdfPersonalPrc, 10) || Number.MAX_SAFE_INTEGER;
-      return quantity >= minQty && quantity <= maxQty;
-    });
+  //   // Encontra o preço que corresponde à faixa de quantidade
+  //   const priceRange = personalization.precos.find(preco => {
+  //     const minQty = parseInt(preco.qtdiPersonalPrc, 10) || 0;
+  //     const maxQty = parseInt(preco.qtdfPersonalPrc, 10) || Number.MAX_SAFE_INTEGER;
+  //     return quantity >= minQty && quantity <= maxQty;
+  //   });
 
-    return priceRange ? parseFloat(priceRange.vluPersonalPrc) || 0 : 0;
-  }, []);
+  //   return priceRange ? parseFloat(priceRange.vluPersonalPrc) || 0 : 0;
+  // }, []);
 
-  // Atualize o cálculo do subtotal
-  const subtotal = useMemo(() => {
-    const qty = parseInt(quantity || "0", 10);
-    if (isNaN(qty) || qty <= 0) return 0;
-
-    // Preço base do produto
-    let total = ProductData.price * qty;
-
-    // Adiciona o preço das personalizações selecionadas
-    Object.values(selectedPersonalizations).forEach(personalization => {
-      if (personalization) {
-        const personalizationPrice = calculatePersonalizationPrice(personalization, qty);
-        total += personalizationPrice * qty; // Multiplica pela quantidade
-      }
-    });
-
-    return total;
-  }, [quantity, ProductData.price, selectedPersonalizations, calculatePersonalizationPrice]);
 
   // Função para manipular a seleção de personalizações
   const handlePersonalizationSelect = useCallback((groupId: string, personalization: Personalizacao | null) => {
@@ -538,6 +505,37 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       [groupId]: personalization
     }));
   }, []);
+
+  const findPriceForQuantity = (quantity: number) => {
+    if (!ProductData.precos || ProductData.precos.length === 0) {
+      //Retorna um objeto de preço padrão usando vluGrid quando não existem intervalos de preço.
+      return {
+        qtdiProPrc: '1',
+        qtdfProPrc: '0',
+        vluProPrc: ProductData.vluGridPro || '0'
+      };
+    }
+
+    // Se a quantidade for 0 ou não for fornecida, retorne a primeira faixa de preço.
+    if (!quantity || quantity === 0) {
+      return {
+        ...ProductData.precos[0],
+        vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc
+      };
+    }
+
+    // Se encontrar faixa de preço 
+    const foundPrice = ProductData.precos.find(price =>
+      quantity >= parseInt(price.qtdiProPrc) &&
+      (price.qtdfProPrc === '0' || quantity <= parseInt(price.qtdfProPrc))
+    );
+
+    //Se nenhum intervalo correspondente for encontrado, retorne o primeiro intervalo de preços com vluGridPro como alternativa.
+    return foundPrice || {
+      ...ProductData.precos[0],
+      vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc
+    };
+  };
 
 
 
@@ -600,7 +598,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             <ChevronRight size={32} className="hidden md:visible absolute -right-2 top-1/1" aria-hidden />
           </div>
           {/* Personalização */}
-          <div className="w-full mt-4 p-3 rounded-lg bg-whiteReference border border-gray-200">
+          <div className="w-full mt-4 p-3 rounded-lg bg-whiteReference border border-gray-200 pointer-events-none">
             <p className="font-bold mb-2">Personalize seu produto</p>
             <p className="text-xs text-gray-600 mb-3">Envie o arquivo de arte para gravação (PNG, JPG, PDF, AI, CDR, SVG). Máx. 15MB.</p>
 
@@ -760,7 +758,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             <div className="flex w-fit flex-col lg:flex-row flex-wrap gap-4 mt-1">
               {ProductData.gruposPersonalizacoes?.map((group) => (
                 <div key={group.chaveContPersonal}>
-                  <p className="font-bold font-Roboto text-sm">{group.descrContPersonal}</p>
+                  <p className="font-bold font-Roboto text-sm">{group.descrWebContPersonal}</p>
                   <select
                     className="w-full p-2 border border-gray-300 rounded text-xs"
                     value={selectedPersonalizations[group.chaveContPersonal]?.chavePersonal || ""}
@@ -836,27 +834,34 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
             <div className="flex gap-4 pointer-events-none select-none">
 
-              <div>
-                <label className="font-bold select-none" htmlFor="price">Valor unitário:</label>
-                <input
-                  className="w-32 rounded-md p-1 select-none pointer-events-none"
-                  type="text"
-                  id="price"
-                  value={formatPrice(effectiveUnitPrice)}
-                  readOnly
-                />
-              </div>
+              <div className="flex gap-4 pointer-events-none select-none">
+                <div className="flex items-center gap-2">
+                  <label className="font-bold select-none" htmlFor="price">Valor unitário:</label>
+                  <span className="w-32 p-1 select-none">
+                    {(() => {
+                      const currentPrice = findPriceForQuantity(Number(quantity) || 0);
+                      if (!currentPrice) return 'Selecione uma quantidade';
 
-              <div>
-                <label className="font-bold select-none" htmlFor="subtotal">Subtotal:</label>
-                <input className="w-32 p-1 rounded-md select-none" type="text" id="subtotal" value={formatPrice(total)} readOnly />
-                {/* Se ainda desejar exibir o preço base e o adicional da personalização: */}
-                <p className="text-xs opacity-70">
-                  Base: {formatPrice(ProductData.price)}
-                  {hasQty && hasGravacao && (
-                    <> + Personalização: {formatPrice(personalizationUnit)} (por unidade)</>
-                  )}
-                </p>
+                      const basePrice = parseFloat(currentPrice.vluProPrc);
+                      const personalizationCost = hasGravacao
+                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, Number(quantity) || 1)
+                        : 0;
+
+                      return formatPrice(basePrice + personalizationCost);
+                    })()}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="font-bold select-none" htmlFor="subtotal">Subtotal:</label>
+                  <input
+                    className="w-32 p-1 rounded-md select-none"
+                    type="text"
+                    id="subtotal"
+                    value={formatPrice(total)}
+                    readOnly
+                  />
+                </div>
               </div>
             </div>
 
@@ -888,61 +893,44 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {(() => {
-                    // Get all price ranges from the first personalization that has them
-                    const firstPersonalizationWithPrices = Object.values(selectedPersonalizations).find(
-                      (p): p is Personalizacao & { precos: PersonalizacaoPreco[] } =>
-                        p !== null && Array.isArray(p.precos) && p.precos.length > 0
-                    );
-
-                    if (!firstPersonalizationWithPrices?.precos?.length) {
-                      return (
-                        <tr>
-                          <td colSpan={3} className="px-4 py-4 text-center text-sm text-gray-500">
-                            Selecione uma personalizacão.
-                          </td>
-                        </tr>
-                      );
-                    }
-
-                    return firstPersonalizationWithPrices.precos.map((priceRange, index) => {
-                      // Calculate total personalization cost for this quantity range
-                      let totalPersonalizacao = 0;
-
-                      Object.values(selectedPersonalizations).forEach(personalization => {
-                        if (personalization?.precos?.[index]) {
-                          totalPersonalizacao += parseFloat(personalization.precos[index].vluPersonalPrc) || 0;
-                        }
-                      });
-
-                      const precoTotal = ProductData.price + totalPersonalizacao;
+                  {ProductData.precos && ProductData.precos.length > 0 ? (
+                    ProductData.precos.map((priceRange, index) => {
+                      const personalizationPrice = hasGravacao
+                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, parseInt(priceRange.qtdiProPrc))
+                        : 0;
 
                       return (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <tr key={`price-${index}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                           <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                            {parseInt(priceRange.qtdiPersonalPrc).toLocaleString('pt-BR')}
+                            {parseInt(priceRange.qtdiProPrc).toLocaleString('pt-BR')}
                           </td>
                           <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                            {priceRange.qtdfPersonalPrc === '999999999'
+                            {priceRange.qtdfProPrc === '999999999'
                               ? '+'
-                              : parseInt(priceRange.qtdfPersonalPrc).toLocaleString('pt-BR')}
+                              : parseInt(priceRange.qtdfProPrc).toLocaleString('pt-BR')}
                           </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-green-700">
-                            {formatPrice(precoTotal)}
-                            <div className="text-xs font-normal text-gray-500">
-                              ({formatPrice(ProductData.price)} + {formatPrice(totalPersonalizacao)})
-                            </div>
-                          </td>
+                          {hasGravacao ? (
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-green-700">
+                              {formatPrice(personalizationPrice + parseFloat(priceRange.vluProPrc))}
+                            </td>
+                          ) : (
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-green-700">
+                              {formatPrice(parseFloat(priceRange.vluProPrc))}
+                            </td>
+                          )}
                         </tr>
                       );
-                    });
-                  })()}
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={hasGravacao ? 4 : 3} className="px-4 py-4 text-center text-sm text-gray-500">
+                        Consulte os preços.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-xs text-gray-500">
-              * Preço unitário = Preço base ({formatPrice(ProductData.price)}) + Personalizações
-            </p>
           </div>
         </div>
       </div>

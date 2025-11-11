@@ -6,7 +6,7 @@ import { useProducts } from "../Context/ProductsContext";
 import { useMemo, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import { SkeletonCardProduto } from "./SkeletonCardProduto";
-import { Produto, ProdutosGrid } from "../types/responseTypes";
+import { ProdutosGrid } from "../types/responseTypes";
 import { AsideFilter } from "./AsideFilter";
 
 export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
@@ -40,45 +40,37 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
     openModal(product);
   };
 
-  // 🔧 Normaliza número "1.234,56" -> 1234.56 e afins (reutilizando sua função se quiser)
-  const toNumber = (v: unknown): number => {
-    if (v == null) return NaN;
-    const s = String(v).trim();
-    if (!s) return NaN;
-    if (s.includes(",") && !s.includes(".")) return Number(s.replace(/\./g, "").replace(",", "."));
-    return Number(s);
-  };
 
   // 🔎 Pega personalizações + faixas de preço
   // Update the function signature to accept Produto instead of ProdutosGrid
-  const processPersonalizations = (product: Produto) => {
-    if (!product.gruposPersonalizacoes?.length) return [];
+  // const processPersonalizations = (product: Produto) => {
+  //   if (!product.gruposPersonalizacoes?.length) return [];
 
-    return product.gruposPersonalizacoes.flatMap((grupo) => {
-      if (!grupo.personalizacoes?.length) return [];
+  //   return product.gruposPersonalizacoes.flatMap((grupo) => {
+  //     if (!grupo.personalizacoes?.length) return [];
 
-      return grupo.personalizacoes.map((personalizacao) => {
-        const ranges = personalizacao.precos?.map((preco) => ({
-          qtdi: toNumber(preco.qtdiPersonalPrc),
-          qtdf: toNumber(preco.qtdfPersonalPrc),
-          vlwpersonal: toNumber(preco.vluPersonalPrc),
-        })) ?? [];
+  //     return grupo.personalizacoes.map((personalizacao) => {
+  //       const ranges = personalizacao.precos?.map((preco) => ({
+  //         qtdi: toNumber(preco.qtdiPersonalPrc),
+  //         qtdf: toNumber(preco.qtdfPersonalPrc),
+  //         vlwpersonal: toNumber(preco.vluPersonalPrc),
+  //       })) ?? [];
 
-        return {
-          groupId: grupo.chaveContPersonal,
-          groupName: grupo.descrWebContPersonal ?? grupo.descrContPersonal,
-          chavePersonal: personalizacao.chavePersonal,
-          code: personalizacao.codPersonal,
-          name: personalizacao.descrWebPersonal || personalizacao.descrPersonal,
-          description: personalizacao.descrPersonal,
-          isDefault: personalizacao.padraoPersonalPro === "1",
-          isOptional: personalizacao.opcionalPersonal === "1",
-          maxQuantity: personalizacao.qtdMaxPersonalPro ? Number(personalizacao.qtdMaxPersonalPro) : null,
-          prices: ranges,
-        };
-      });
-    });
-  };
+  //       return {
+  //         groupId: grupo.chaveContPersonal,
+  //         groupName: grupo.descrWebContPersonal,
+  //         chavePersonal: personalizacao.chavePersonal,
+  //         code: personalizacao.codPersonal,
+  //         name: personalizacao.descrWebPersonal,
+  //         description: personalizacao.descrPersonal,
+  //         isDefault: personalizacao.padraoPersonalPro === "1",
+  //         isOptional: personalizacao.opcionalPersonal === "1",
+  //         maxQuantity: personalizacao.qtdMaxPersonalPro ? Number(personalizacao.qtdMaxPersonalPro) : null,
+  //         prices: ranges,
+  //       };
+  //     });
+  //   });
+  // };
 
   const produtosAdaptados = useMemo(() => {
     return products.map((pro, index) => {
@@ -86,25 +78,11 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
         pro.imagens
           ?.map((img) => img.urlProImgSuper || img.urlProImg || "")
           .filter((url) => url !== "") || [];
-
-      // 🔥 Extrai personalizações com seus preços
-      const personalizacoes = processPersonalizations(pro);
-
-      // 🔥 Cria a lista achatada só com os 4 campos pedidos
-      const personalPricesFlat = personalizacoes.flatMap((p) =>
-        p.prices.map((r) => ({
-          chavePersonal: p.chavePersonal,
-          qtdi: r.qtdi,
-          qtdf: r.qtdf,
-          vlwpersonal: r.vlwpersonal,
-        }))
-      );
-
       return {
         id: index,
         codePro: pro.codPro,
         chavePro: pro.chavePro,
-        product: pro.descr,
+        product: pro.descrWeb,
         description:
           pro.descr2 ||
           pro.descrWeb ||
@@ -127,6 +105,7 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
         qtdMinPro: pro.qtdMinPro || "1",
         vluGridPro: pro.vluGridPro || pro.precos?.[0]?.vluProPrc || "0",
         gruposPersonalizacoes: pro.gruposPersonalizacoes || [],
+        precos: pro.precos || [],
       };
     });
   }, [products]);
@@ -319,7 +298,15 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
             </div>
           </div>
         </section>
-        {isModalOpen && selectedProduct && <ModalProduto ProductData={selectedProduct} onClose={closeModal} />}
+        {isModalOpen && selectedProduct && (
+          <ModalProduto
+            ProductData={{
+              ...selectedProduct,
+              precos: selectedProduct.precos || [] // Add default empty array if precos is undefined
+            }}
+            onClose={closeModal}
+          />
+        )}
 
       </div>
     </main>

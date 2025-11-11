@@ -2,9 +2,10 @@
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
-import { ProdutoCart, ProdutoEstoqueItem } from "../types/responseTypes";
+import type { CartItemPersist } from "../types/cart";
+import type { ProdutoEstoqueItem } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { TitleSection } from "./TitleSection";
@@ -21,10 +22,10 @@ const DEBOUNCE_MS = 900;         // pausa de digitação antes de consultar
 const REQUEST_TIMEOUT_MS = 8000; // abort da request
 
 export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
-  const { cart, removeProduct, updateQuantity, updateColorOrSize } = useCart();
-  const [quantities, setQuantities] = useState<{ [id: string]: string }>({});
-  const [stockByItem, setStockByItem] = useState<{ [id: string]: ProdutoEstoqueItem | undefined }>({});
-  const [loadingByItem, setLoadingByItem] = useState<{ [id: string]: boolean }>({});
+  const { cart, removeProduct, updateQuantity } = useCart();
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const [stockByItem, setStockByItem] = useState<Record<string, ProdutoEstoqueItem | undefined>>({});
+  const [loadingByItem, setLoadingByItem] = useState<Record<string, boolean>>({});
 
   // Controle por item: debounce, abort e requestId
   const fetchDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
@@ -36,15 +37,13 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     if (val === undefined || val === null) return undefined;
     const s = String(val).trim();
     if (s === "") return undefined;
-    if (s.includes(".") && s.includes(",")) {
-      return Number(s.replace(/\./g, "").replace(",", "."));
-    }
+    if (s.includes(".") && s.includes(",")) return Number(s.replace(/\./g, "").replace(",", "."));
     if (s.includes(",")) return Number(s.replace(",", "."));
     return Number(s);
   };
 
   const getAggregatedRequestedForPool = useCallback(
-    (base: ProdutoCart) => {
+    (base: CartItemPersist) => {
       return cart.reduce((sum, it) => {
         const samePool =
           it.chavePro === base.chavePro &&
@@ -60,33 +59,25 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
 
   // Inicializa os valores com o conteúdo do carrinho
   useEffect(() => {
-    const initial = cart.reduce((acc, item) => {
+    const initial = cart.reduce<Record<string, string>>((acc, item) => {
       acc[item.id] = String(item.quantity);
       return acc;
-    }, {} as { [id: string]: string });
+    }, {});
     setQuantities(initial);
   }, [cart]);
 
-  const calculateSubtotal = (product: ProdutoCart) => {
+  const calculateSubtotal = (product: CartItemPersist) => {
     const quantityStr = quantities[product.id] ?? "0";
     const quantity = parseInt(quantityStr, 10);
     if (isNaN(quantity) || quantity <= 0) return formatPrice(0);
-
-    // Base price
-    let subtotal = quantity * product.price;
-
-    // Add personalization cost if exists
-    if (product.personalization) {
-      subtotal += quantity * (product.personalizationUnitPrice || 0);
-    }
-
-    return formatPrice(subtotal);
+    return formatPrice(quantity * product.unitPriceEffective);
   };
 
   const handleInputChange = (id: string, value: string) => {
     if (/^\d*$/.test(value)) {
       setQuantities((prev) => ({ ...prev, [id]: value }));
       const parsed = parseInt(value, 10);
+      // updateQuantity agora espera number
       updateQuantity(id, isNaN(parsed) ? 0 : parsed);
       const item = cart.find((p) => p.id === id);
       if (item) scheduleFetch(item); // só dispara após a pausa
@@ -99,21 +90,13 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     setQuantities((prev) => ({ ...prev, [id]: String(newQty) }));
     updateQuantity(id, newQty);
     const item = cart.find((p) => p.id === id);
-    if (item) scheduleFetch(item); // idem
+    if (item) scheduleFetch(item);
   };
 
   const totalValue = cart.reduce((total, product) => {
     const quantity = parseInt(quantities[product.id] || "0", 10);
     if (isNaN(quantity) || quantity <= 0) return total;
-
-    let itemTotal = quantity * product.price;
-
-    // Add personalization cost if exists
-    if (product.personalization) {
-      itemTotal += quantity * (product.personalizationUnitPrice || 0);
-    }
-
-    return total + itemTotal;
+    return total + quantity * product.unitPriceEffective;
   }, 0);
 
   const hasInvalidQuantities = cart.some((item) => {
@@ -126,7 +109,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   });
 
   const fetchItemStock = useCallback(
-    async (item: ProdutoCart, signal?: AbortSignal, reqId?: number) => {
+    async (item: CartItemPersist, signal?: AbortSignal, reqId?: number) => {
       if (!item.chavePro) {
         setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
         return;
@@ -136,18 +119,13 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
         const doRequest = async () => {
           const res = await fetch("/api/stock", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: (() => {
-              const payload: Record<string, unknown> = {
-                codPro: item.codPro,
-                chavePro: item.chavePro,
-              };
-              if (item.color && item.color.trim() !== "") payload.descrProCor = item.color;
-              if (item.size && item.size.trim() !== "") payload.descrProTamanho = item.size;
-              return JSON.stringify(payload);
-            })(),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              codPro: item.codPro,
+              chavePro: item.chavePro,
+              ...(item.color ? { descrProCor: item.color } : {}),
+              ...(item.size ? { descrProTamanho: item.size } : {}),
+            }),
             signal,
           });
           return res;
@@ -184,13 +162,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
           : ((raw as { produtos?: ProdutoEstoqueItem[] })?.produtos ?? []);
         const first = produtos?.[0];
 
-        // Atualiza somente se ainda for a requisição vigente
         if (reqId === requestIdRef.current[item.id]) {
           setStockByItem((prev) => ({ ...prev, [item.id]: first }));
         }
-      } catch (error: unknown) {
+      } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
-          // limpar loading apenas se for a mais recente
           if (reqId === requestIdRef.current[item.id]) {
             setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
           }
@@ -215,42 +191,31 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
 
   // Agenda consulta com debounce e cancelamento por item
   const scheduleFetch = useCallback(
-    (item: ProdutoCart, delayMs = DEBOUNCE_MS) => {
+    (item: CartItemPersist, delayMs = DEBOUNCE_MS) => {
       const id = item.id;
       const requested = parseInt(quantities[id] || "0", 10);
 
-      // não consulta se quantidade vazia/zero
       if (!(requested > 0)) return;
 
-      // limpa eventual debounce anterior do item
       if (fetchDebounceRef.current[id]) clearTimeout(fetchDebounceRef.current[id]!);
 
-      // agenda a execução após a pausa
       fetchDebounceRef.current[id] = setTimeout(() => {
-        // aborta a requisição anterior desse item
         if (fetchAbortRef.current[id]) {
-          try {
-            fetchAbortRef.current[id]!.abort();
-          } catch { }
+          try { fetchAbortRef.current[id]!.abort(); } catch { }
         }
 
-        // versiona a request do item
         const current = requestIdRef.current[id] ?? 0;
         const nextId = current + 1;
         requestIdRef.current[id] = nextId;
 
-        // cria controller e timeout de segurança
         const controller = new AbortController();
         fetchAbortRef.current[id] = controller;
 
         if (fetchTimeoutRef.current[id]) clearTimeout(fetchTimeoutRef.current[id]!);
         fetchTimeoutRef.current[id] = setTimeout(() => {
-          try {
-            controller.abort();
-          } catch { }
+          try { controller.abort(); } catch { }
         }, REQUEST_TIMEOUT_MS);
 
-        // marca loading apenas quando for iniciar a request mesmo
         setLoadingByItem((prev) => ({ ...prev, [id]: true }));
 
         fetchItemStock(item, controller.signal, nextId);
@@ -262,7 +227,6 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   // Inicial: carregar estoque para os itens ao abrir/alterar lista (com escalonamento leve)
   useEffect(() => {
     cart.forEach((item, i) => {
-      // espaça em 100ms só para suavizar o burst inicial
       scheduleFetch(item, Math.min(200 + i * 100, 800));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -288,13 +252,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   return (
     <div className="ContainerModal h-full w-full">
       <div
-        className={`h-[calc(h-screen-400px)] w-screen bg-black fixed inset-0 left-0 top-0 opacity-50 z-50 ${isOpen && cart.length > 0 ? "visible" : "hidden"
-          }`}
+        className={`h-[calc(h-screen-400px)] w-screen bg-black fixed inset-0 left-0 top-0 opacity-50 z-50 ${isOpen && cart.length > 0 ? "visible" : "hidden"}`}
         onClick={handleClick}
-      ></div>
+      />
       <div
-        className={`h-[100dvh] md:h-screen w-full md:w-[550px] 2xl:w-[576px] right-0 fixed bg-white z-50  p-1 flex flex-col items-start justify-start pt-2 transition-all duration-500  ${isOpen && cart.length > 0 ? "translate-x-0" : "translate-x-[100vw]"
-          } `}
+        className={`h-[100dvh] md:h-screen w-full md:w-[550px] 2xl:w-[576px] right-0 fixed bg-white z-50 p-1 flex flex-col pt-2 transition-all duration-500 ${isOpen && cart.length > 0 ? "translate-x-0" : "translate-x-[100vw]"}`}
       >
         <X
           onClick={handleClick}
@@ -304,189 +266,134 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
           text={`Meu Carrinho (${cart.length})`}
           icon={<ShoppingCart size={24} className="text-green-500" />}
         />
-        <div className="containerProdutos w-full h-[83%] pb-18 mx-auto flex flex-col items-start justify-start p-4 overflow-x-hidden overflow-y-auto gap-4 scrollbar">
-          {Array.isArray(cart) &&
-            cart.map((product, index) => (
-              <div key={product.codPro + index} className="w-full">
-                <div className="flex flex-col sm:flex-row bg-white py-3 px-1 rounded-xl w-full items-start justify-start gap-2 relative bg-whiteReference">
-                  <div className="w-20 h-20 overflow-hidden rounded-lg min-w-20 ml-4 shadow-lg">
+
+        <div className="containerProdutos w-full h-[83%] pb-18 mx-auto flex flex-col p-4 overflow-x-hidden overflow-y-auto gap-4 scrollbar">
+          {Array.isArray(cart) && cart.map((product) => (
+            <div key={product.id} className="w-full">
+              <div className="flex flex-col sm:flex-row bg-white py-3 px-1 rounded-xl w-full gap-2 relative bg-whiteReference">
+                <div className="w-20 h-20 overflow-hidden rounded-lg min-w-20 ml-4 shadow-lg flex items-center justify-center bg-white">
+                  {product.thumb ? (
                     <Image
-                      src={product.images[0]}
+                      src={product.thumb}
                       width={150}
                       height={150}
-                      alt={`Product image ${product.codPro}`}
-                      className="h-full hover:rotate-12 transition-all hover:scale-125 duration-300 object-cover"
+                      alt={product.alt || product.productName}
+                      className="h-full w-full object-cover hover:rotate-12 transition-all hover:scale-125 duration-300"
                     />
-                  </div>
-                  <div className="flex flex-col gap-2 px-4">
-                    <p className="text-sm 2xl:text-lg font-Roboto text-blackReference">{product.productName}</p>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-100 text-gray-500">
+                      sem imagem
+                    </div>
+                  )}
+                </div>
 
-                    {product.personalization && (
-                      <div className="flex flex-col gap-1 mt-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
-                            Personalização
-                          </span>
-                          <span className="text-xs text-gray-600">
-                            {product.personalization.descricao}
-                          </span>
-                        </div>
-                        {product.personalizationBreakdown?.map((item: { descricao: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; precoUnitario: number; }, idx: Key | null | undefined) => (
-                          <div key={idx} className="text-xs text-gray-500 ml-4">
-                            {item.descricao}: {formatPrice(item.precoUnitario)}/un
-                          </div>
-                        ))}
-                        {product.personalization && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Arquivo: {product.personalization.fileName}
-                          </div>
-                        )}
+                <div className="flex flex-col gap-2 px-4">
+                  <p className="text-sm 2xl:text-lg font-Roboto text-blackReference">{product.productName}</p>
+
+                  {product.hasPersonalization && product.personalization && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
+                        Personalização
+                      </span>
+
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm">
+                    <span className="text-gray-500">Cor:</span>
+                    <span className="font-medium uppercase">{product.color || "-"}</span>
+
+                    {product.size && (
+                      <>
+                        <span className="text-gray-500">Tamanho:</span>
+                        <span className="font-medium uppercase">{product.size}</span>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex items-end gap-4 flex-wrap">
+                    <div className="flex flex-col items-start gap-2 mt-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
+                          onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", -1)}
+                        >
+                          <Minus size={16} />
+                        </button>
+
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={quantities[product.id] ?? ""}
+                          className="w-12 md:w-16 px-1 text-center rounded-md"
+                          onChange={(e) => handleInputChange(product.id, e.target.value)}
+                        />
+
+                        <button
+                          className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
+                          onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", 1)}
+                        >
+                          <Plus size={16} />
+                        </button>
                       </div>
+                      {loadingByItem[product.id] && (
+                        <span className="text-xs opacity-70 select-none pointer-events-none">
+                          Consultando estoque...
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <span>Unidade:</span>
+                        <span className="font-medium">
+                          {formatPrice(product.unitPriceEffective)}
+                        </span>
+                      </div>
+
+                      <div className="border-l pl-3">
+                        <span className="font-semibold">Total: </span>
+                        <span className="font-bold">{calculateSubtotal(product)}</span>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const availableNum = toNumberBR(stockByItem[product.id]?.quantidadeSaldo);
+                      const available =
+                        typeof availableNum === "number" && isFinite(availableNum)
+                          ? Math.trunc(availableNum)
+                          : undefined;
+                      if (typeof available !== "number") return null;
+                      const aggregatedRequested = getAggregatedRequestedForPool(product);
+                      if (aggregatedRequested > available) {
+                        return (
+                          <span className="text-red-500 text-xs">
+                            Quantidade disponível (compartilhado): {available}. No carrinho: {aggregatedRequested}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {(!quantities[product.id] || parseInt(quantities[product.id]) <= 0) && (
+                      <span className="text-red-500 text-xs">Digite uma quantidade mínima para prosseguir</span>
                     )}
 
-                    <div className="flex flex-col sm:flex-row items-start md:items-center gap-4">
-                      <div className="flex items-center gap-2 text-sm md:text-base">
-                        <p className="text-gray-500">Cor:</p>
-                        {Array.isArray(product.cores) && (
-                          <select
-                            name="cor"
-                            id="cor"
-                            value={product.color}
-                            onChange={(e) => {
-                              const newColor = e.target.value;
-                              updateColorOrSize(product.id, newColor);
-                              scheduleFetch({ ...product, color: newColor });
-                            }}
-                            className="border w-44 border-gray-400 uppercase rounded px-1 text-xs"
-                          >
-                            {product.cores.map((cor, i) => (
-                              <option value={cor} key={i}>
-                                {cor}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-
-                      {product.size && (
-                        <div className="flex items-center gap-2 text-sm md:text-base">
-                          <p className="text-gray-500">Tamanho:</p>
-                          {Array.isArray(product.tamanhos) && (
-                            <select
-                              name="tamanho"
-                              id="tamanho"
-                              value={product.size}
-                              onChange={(e) => {
-                                const newSize = e.target.value;
-                                updateColorOrSize(product.id, undefined, newSize);
-                                scheduleFetch({ ...product, size: newSize });
-                              }}
-                              className="border border-gray-400 uppercase rounded px-1 text-xs"
-                            >
-                              {product.tamanhos.map((tamanho, i) => (
-                                <option value={tamanho} key={i}>
-                                  {tamanho}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-end gap-4 flex-wrap">
-                      <div className="flex flex-col items-start gap-2 mt-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
-                            onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", -1)}
-                          >
-                            <Minus size={16} />
-                          </button>
-
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={quantities[product.id] ?? ""}
-                            className="w-12 md:w-16 px-1 text-center rounded-md"
-                            onChange={(e) => handleInputChange(product.id, e.target.value)}
-                          />
-
-                          <button
-                            className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
-                            onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", 1)}
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                        {loadingByItem[product.id] && (
-                          <span className="text-xs opacity-70 select-none pointer-events-none hidden">
-                            Consultando estoque...
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-2 text-sm">
-                        <div className="flex items-center gap-1">
-                          <span>Subtotal:</span>
-                          <span className="font-medium">
-                            {formatPrice((parseInt(quantities[product.id] || '0') || 0) * product.price)}
-                          </span>
-                        </div>
-                        {product.personalization && (
-                          <div className="flex items-center gap-1 text-gray-600 text-xs">
-                            <span>+ Gravação:</span>
-                            <span>
-                              {formatPrice((parseInt(quantities[product.id] || '0') || 0) * (product.personalizationUnitPrice || 0))}
-                              <span className="text-gray-400 ml-1">
-                                ({formatPrice(product.personalizationUnitPrice || 0)}/un)
-                              </span>
-                            </span>
-                          </div>
-                        )}
-                        <div className="mt-1 pt-1 border-t border-gray-100">
-                          <span className="font-semibold">Total: </span>
-                          <span className="font-bold">{calculateSubtotal(product)}</span>
-                        </div>
-                      </div>
-
-                      {(() => {
-                        const availableNum = toNumberBR(stockByItem[product.id]?.quantidadeSaldo);
-                        const available =
-                          typeof availableNum === "number" && isFinite(availableNum)
-                            ? Math.trunc(availableNum)
-                            : undefined;
-                        if (typeof available !== "number") return null;
-                        const aggregatedRequested = getAggregatedRequestedForPool(product);
-                        if (aggregatedRequested > available) {
-                          return (
-                            <span className="text-red-500 text-xs">
-                              Quantidade disponível (compartilhado): {available}. No carrinho: {aggregatedRequested}
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-
-                      {(!quantities[product.id] || parseInt(quantities[product.id]) <= 0) && (
-                        <span className="text-red-500 text-xs">Digite uma quantidade mínima para prosseguir</span>
-                      )}
-
-                      <Trash2
-                        size={20}
-                        className="absolute right-1 md:right-2 bottom-4 cursor-pointer text-red-600 hover:text-red-800"
-                        onClick={() => removeProduct(product.id)}
-                      />
-                    </div>
+                    <Trash2
+                      size={20}
+                      className="absolute right-1 md:right-2 bottom-4 cursor-pointer text-red-600 hover:text-red-800"
+                      onClick={() => removeProduct(product.id)}
+                    />
                   </div>
                 </div>
-                <hr className="border w-full text-gray-300" />
               </div>
-            ))}
+              <hr className="border w-full text-gray-300" />
+            </div>
+          ))}
         </div>
 
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-fit w-[98%] border-t-1 border-gray-500 p-2 flex flex-col items-start justify-start bg-white">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-fit w-[98%] border-t border-gray-200 p-2 flex flex-col bg-white">
           <p className="font-medium text-sm md:text-base">Total de itens: {cart.length} produtos</p>
           <p className="font-medium text-sm md:text-base">
             Valor Total:

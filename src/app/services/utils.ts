@@ -1,6 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { HandleMaskParams } from "../types/responseTypes";
 
+/**
+ * Formata um CEP para o padrão brasileiro (XXXXX-XXX)
+ * @param cep - CEP a ser formatado (com ou sem formatação)
+ * @returns CEP formatado (XXXXX-XXX) ou string vazia se inválido
+ */
+export const formatCep = (cep: string | undefined | null): string => {
+  if (!cep) return '';
+
+  // Remove tudo que não for dígito
+  const digits = cep.replace(/\D/g, '');
+
+  // Retorna vazio se não tiver 8 dígitos
+  if (digits.length !== 8) return cep;
+
+  // Formata como XXXXX-XXX
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+};
+
 // Função para validar se um CPF é válido
 export const isValidCPF = (cpf: string): boolean => {
   cpf = cpf.replace(/[^\d]/g, ""); // Remove caracteres não numéricos

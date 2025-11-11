@@ -9,6 +9,8 @@ import Link from "next/link";
 import { SkeletonPedido } from "./partials/skeleton";
 import { Resumo } from "@/app/components/Resumo";
 import { useCart } from "@/app/Context/CartContext";
+import { formatCep } from "@/app/services/utils";
+import { useAuth } from "@/app/Context/AuthContext";
 
 type EnderecoEntrega = {
   contato_entrega: string; logradouro: string; numero: string; bairro: string;
@@ -25,6 +27,7 @@ type PedidoPayload = {
 } & Record<string, any>;
 
 export default function PedidoSucesso() {
+  const { hasAnyRole } = useAuth();
   const router = useRouter();
   const { clearCart } = useCart();
   const [entrega, setEntrega] = useState<EnderecoEntrega | null>(null);
@@ -258,8 +261,15 @@ export default function PedidoSucesso() {
             <div className="flex-1">
               <h1 className="text-2xl md:text-3xl font-bold text-green-700">Solicitação realizada com sucesso!</h1>
               <p className="text-gray-600 mt-1">Recebemos sua solicitação e em breve retornaremos.</p>
-              <p className="text-red-300 mt-1 text-xs">Essa página é uma demonstração.</p>
-              <div className="mt-3 text-sm text-gray-500 flex flex-col sm:flex-row gap-2 sm:gap-4">
+              <p className="text-red-300 mt-1 text-sm italic">Esse sistema é somente demonstrativo.</p>
+              {!hasAnyRole(["Administrador"]) && (
+                <>
+                  <p className="text-gray-500 mt-1 text-sm italic">O estoque será reservado por até 48 horas. Após esse período, caso o pedido ainda esteja aguardando aprovação, a reserva será automaticamente cancelada e o estoque será liberado.</p>
+                  <p className="text-gray-500 mt-1 text-sm italic">O prazo de entrega é estimado e poderá ser alterado conforme as aprovações do pedido e da amostra virtual, quando aplicável.</p>
+                </>
+
+              )}
+              <div className="mt-3 text-sm text-gray-500 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
                 <span><strong>Nº da Solicitação:</strong> {orderId}</span>
                 <span className="hidden sm:inline">•</span>
                 <span><strong>Previsão de entrega:</strong> {dataPedido}</span>
@@ -291,17 +301,14 @@ export default function PedidoSucesso() {
                   <div>
                     <strong className="text-gray-900">Contato para entrega: </strong>
                     <p className="capitalize text-gray-700">
-                      {pedidoPayload?.legalNameShipping
-                        || pedidoPayload?.contactNameShipping
-                        || pedidoPayload?.legalName
-                        || pedidoPayload?.legalNameBilling
+                      {pedidoPayload?.contactNameShipping
                         || entrega?.contato_entrega
                       }
                     </p>
                   </div>
                   <p className="text-gray-700"><strong className="text-gray-900">Endereço: </strong>{entrega?.logradouro}- {entrega?.numero} — {entrega?.bairro}</p>
                   <p><strong className="text-gray-900">Cidade/UF: </strong>{entrega?.municipio} — {entrega?.uf}</p>
-                  <p><strong className="text-gray-900">CEP: </strong>{entrega?.cep}</p>
+                  <p><strong className="text-gray-900">CEP: </strong>{formatCep(entrega?.cep)}</p>
                 </div>
                 <div className="mt-6 rounded-xl bg-green-50 border border-green-100 p-4">
                   <p className="text-sm text-green-800">Sua Solicitação está sendo preparada.</p>

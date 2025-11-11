@@ -222,6 +222,7 @@ export type ProdutosGrid = {
   qtdiPersonalPrc?: string;
   qtdfPersonalPrc?: string;
   vluPersonalPrc?: string;
+  precos: PrecoProduto[];
 };
 
 export type CartContextType = {
@@ -246,9 +247,11 @@ export type CartContextType = {
     length: string,
     signal?: AbortSignal
   ) => Promise<number | undefined>;
+  fetchGetAddress: (userId: number) => Promise<number | undefined>;
 };
 
 export interface ProductDataProps {
+  precos?: PrecoProduto[];
   price: number;
   srcFrontImage: string;
   alt: string;
@@ -375,6 +378,9 @@ export type PersonalizationMeta = {
 };
 
 export type ProdutoCart = {
+  unitPriceBase: any;
+  personalizationFile: any;
+  unitPriceEffective: number;
   personalizationBreakdown: any;
   personalizationUnitPrice: number;
   id: string;
@@ -567,6 +573,7 @@ export interface Usuario {
   isActive: string;
   createdAt: string;
   updatedAt: string;
+  areaCode: string;
   phones: Telefone[];
   addresses: Endereco[];
   rules: Regra[];
@@ -616,3 +623,4 @@ export interface ToastContextType {
 }
 
 export type ToastModel = "default" | "alert" | "danger" | "success";
+

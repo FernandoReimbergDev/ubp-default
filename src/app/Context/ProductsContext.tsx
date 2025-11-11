@@ -31,7 +31,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
           reqEndpoint: "/products",
           reqHeaders: {
             "X-Environment": "HOMOLOGACAO",
-            storeId: "32",
             landingPagePro: "1",
             disponivelProCor: "1",
           },
