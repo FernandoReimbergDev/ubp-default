@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import dynamic from 'next/dynamic';
 import { useAuth } from "@/app/Context/AuthContext";
 import { useCart } from "@/app/Context/CartContext";
-const Resumo = dynamic(() => import('../../../components/Resumo').then(m => m.Resumo), { ssr: false });
+import { Resumo } from "@/app/components/Resumo";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -110,7 +109,6 @@ interface OrderPayload {
     deliveryDate: string;
     paymentDate: string;
 }
-
 
 export function SolicitarAprovacao() {
     const { hasAnyRole, fetchOrderNumber } = useAuth();

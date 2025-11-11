@@ -15,16 +15,7 @@ interface ResumoProps {
 export function Resumo({ delivery }: ResumoProps) {
   const { cart, fetchProductFrete, cartReady } = useCart();
 
-  const [valorFrete, setValorFrete] = useState<number | string | undefined>(() => {
-    // Tenta carregar o valor inicial do cookie
-    try {
-      const savedFrete = Cookies.get('valorFrete');
-      return savedFrete ? Number(savedFrete) : undefined;
-    } catch {
-      return undefined;
-    }
-  });
-
+  const [valorFrete, setValorFrete] = useState<number | string | undefined>(undefined);
   const [loadingFrete, setLoadingFrete] = useState(false);
   const [freteErro, setFreteErro] = useState<string | null>(null);
 
@@ -38,6 +29,13 @@ export function Resumo({ delivery }: ResumoProps) {
       }
     }
   }, [valorFrete]);
+
+  useEffect(() => {
+    try {
+      const saved = Cookies.get('valorFrete');
+      if (saved != null) setValorFrete(Number(saved));
+    } catch { /* noop */ }
+  }, []);
 
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
