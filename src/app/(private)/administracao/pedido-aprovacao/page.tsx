@@ -38,7 +38,6 @@ export default function EstoqueConsulta() {
           <form method="POST">
             <div className="w-full flex flex-col md:flex-row flex-wrap md:flex-nowrap gap-2 md:gap-4 items-end">
               <div className="flex flex-row flex-wrap md:flex-nowrap gap-2 justify-start w-full md:w-full items-end">
-
                 {/* SITUAÇÃO */}
                 <div className="w-full md:w-52 text-xs md:text-sm lg:text-xs">
                   <label className="text-xs 2xl:text-sm font-medium text-gray-700 flex gap-2" htmlFor="situacao">
@@ -47,7 +46,8 @@ export default function EstoqueConsulta() {
                   <select
                     id="situacao"
                     name="situacao"
-                    className="w-full mx-auto h-8 md:h-9 px-1 md:px-4 text-xs py-1 md:py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full mx-auto h-8 md:h-9 px-1 md:px-4 text-xs py-1 md:py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
                     <option value="">Todas</option>
                     <option value="Aguardando Aprovação">Aguardando Aprovação</option>
                     <option value="Aprovados">Aprovados</option>
@@ -112,8 +112,6 @@ export default function EstoqueConsulta() {
               </div>
             </div>
           </form>
-
-
         </div>
 
         {/* 📋 TABELA RESPONSIVA */}
@@ -127,14 +125,54 @@ export default function EstoqueConsulta() {
                   <th className="sticky left-0 z-30 bg-gray-100 px-3 py-2 text-left border border-gray-300 whitespace-nowrap">
                     N. Pedido
                   </th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Nome do usuário que criou o pedido">Solicitante</th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Nome da empresa para quem o pedido será faturado">Faturamento</th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Valor total dos produtos no pedido">Total Produtos</th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Valor total do frete no pedido">Total Frete</th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Valor total dos juros no pedido">Total Juros</th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Valor total do pedido, incluindo produtos, frete e juros">Total Pedido</th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Data de compra do pedido">Compra</th>
-                  <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap" title="Data de entrega prevista do pedido">Entrega</th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Nome do usuário que criou o pedido"
+                  >
+                    Solicitante
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Nome da empresa para quem o pedido será faturado"
+                  >
+                    Faturamento
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Valor total dos produtos no pedido"
+                  >
+                    Total Produtos
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Valor total do frete no pedido"
+                  >
+                    Total Frete
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Valor total dos juros no pedido"
+                  >
+                    Total Juros
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Valor total do pedido, incluindo produtos, frete e juros"
+                  >
+                    Total Pedido
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Data de compra do pedido"
+                  >
+                    Compra
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                    title="Data de entrega prevista do pedido"
+                  >
+                    Entrega
+                  </th>
                   <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap">Detalhes</th>
                 </tr>
               </thead>
@@ -146,18 +184,14 @@ export default function EstoqueConsulta() {
                     className="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-300"
                   >
                     {/* 🔹 Coluna fixa */}
-                    <td className="sticky text-center bg-white z-[5] px-3 py-2 border border-gray-300 whitespace-nowrap">
+                    <td className="sticky text-center bg-white z-5 px-3 py-2 border border-gray-300 whitespace-nowrap">
                       001399
                     </td>
-                    <td className="px-3 py-2 border border-gray-300">
-                      Nome do comprador
-                    </td>
-                    <td className="px-3 py-2 border border-gray-300">
-                      Centro De Idiomas Gobbi Ltda - Me
-                    </td>
+                    <td className="px-3 py-2 border border-gray-300">Nome do comprador</td>
+                    <td className="px-3 py-2 border border-gray-300">Centro De Idiomas Gobbi Ltda - Me</td>
                     <td className="px-3 py-2 border border-gray-300 whitespace-nowrap">{formatPrice(507.85)}</td>
                     <td className="px-3 py-2 border border-gray-300 whitespace-nowrap">{formatPrice(36.13)}</td>
-                    <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(0.00)}</td>
+                    <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(0.0)}</td>
                     <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(543.98)}</td>
                     <td className="px-3 py-2 border border-gray-300 text-center">21-10-2025</td>
                     <td className="px-3 py-2 border border-gray-300 text-center">10-11-2025</td>

@@ -112,7 +112,7 @@ export default function ProdutoConsulta() {
                 {Array.from({ length: 20 }).map((_, i) => (
                   <tr key={i} className="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors">
                     {/* 🔹 Primeira coluna fixa */}
-                    <td className="sticky left-0 bg-white z-[5] px-3 py-2 border border-gray-300 whitespace-nowrap shadow-[4px_0_6px_-4px_rgba(0,0,0,0.1)]">
+                    <td className="sticky left-0 bg-white z-5 px-3 py-2 border border-gray-300 whitespace-nowrap shadow-[4px_0_6px_-4px_rgba(0,0,0,0.1)]">
                       2053-amil
                     </td>
 
@@ -125,8 +125,9 @@ export default function ProdutoConsulta() {
                       (val, j) => (
                         <td
                           key={j}
-                          className={`px-3 py-2 border border-gray-300 text-center ${j === 12 ? "font-semibold text-gray-800" : j === 14 ? "text-green-600 font-semibold" : ""
-                            }`}
+                          className={`px-3 py-2 border border-gray-300 text-center ${
+                            j === 12 ? "font-semibold text-gray-800" : j === 14 ? "text-green-600 font-semibold" : ""
+                          }`}
                         >
                           {val}
                         </td>

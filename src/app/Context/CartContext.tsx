@@ -22,6 +22,7 @@ function normalize(item: CartItemInput): CartItemPersist {
     unitPricePersonalization: unitPers,
     unitPriceEffective: unitEff,
     subtotal: quantity * unitEff,
+    isAmostra: item.isAmostra || false, // Garante que isAmostra seja sempre booleano
   };
 }
 
@@ -38,7 +39,7 @@ function parsePersist(raw: string | undefined): CartItemPersist[] {
       .map((x) => normalize({
         id: x.id,
         codPro: x.codPro,
-        chavePro: x.chavePro,
+        chavePro: x.chavePro ?? '',
         productName: x.productName ?? "Produto",
         alt: x.alt,
         color: x.color ?? "",
@@ -48,20 +49,25 @@ function parsePersist(raw: string | undefined): CartItemPersist[] {
         unitPriceEffective: x.unitPriceEffective ?? (x.unitPriceBase ?? 0) + (x.unitPricePersonalization ?? 0),
         quantity: Number.isFinite(x.quantity) ? (x.quantity as number) : 1,
         subtotal: x.subtotal ?? 0, // será recalculado em normalize
-        hasPersonalization: x.hasPersonalization,
+        hasPersonalization: x.hasPersonalization ?? false,
+        isAmostra: x.isAmostra ?? false, // Garante que isAmostra seja mantido
         personalization: x.personalization
           ? {
-            chavePersonal: x.personalization.chavePersonal,
-            descricao: x.personalization.descricao,
+            chavePersonal: x.personalization.chavePersonal ?? '',
+            descricao: x.personalization.descricao ?? 'Personalização',
             precoUnitario: Number(x.personalization.precoUnitario ?? 0),
             precoTotal: Number(x.personalization.precoTotal ?? 0),
           }
           : undefined,
-        peso: x.peso, altura: x.altura, largura: x.largura, comprimento: x.comprimento,
+        peso: x.peso,
+        altura: x.altura,
+        largura: x.largura,
+        comprimento: x.comprimento,
         thumb: x.thumb,
       }));
     return safe;
-  } catch {
+  } catch (error) {
+    console.error('Erro ao fazer parse do carrinho:', error);
     return [];
   }
 }
@@ -100,10 +106,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           unitPricePersonalization: incoming.unitPricePersonalization,
           unitPriceEffective: incoming.unitPriceEffective,
           hasPersonalization: incoming.hasPersonalization,
+          isAmostra: incoming.isAmostra, // Mantém a flag de amostra
           personalization: incoming.personalization,
-          peso: incoming.peso, altura: incoming.altura, largura: incoming.largura, comprimento: incoming.comprimento,
+          peso: incoming.peso,
+          altura: incoming.altura,
+          largura: incoming.largura,
+          comprimento: incoming.comprimento,
         });
-        next = prev.slice(); next[index] = updated;
+        next = prev.slice();
+        next[index] = updated;
       } else {
         next = prev.concat(incoming);
       }
@@ -199,7 +210,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     entityTypeShipping: string,
     contactNameShipping: string,
     legalNameShipping: string,
-    cpfCnpfShipping: string,
+    cpfCnpjShipping: string,
     ieShipping: string,
     emailShipping: string,
     areaCodeShipping: string,
@@ -226,7 +237,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             entityTypeShipping,
             contactNameShipping,
             legalNameShipping,
-            cpfCnpfShipping,
+            cpfCnpjShipping,
             ieShipping,
             emailShipping,
             areaCodeShipping,

@@ -106,6 +106,7 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
         vluGridPro: pro.vluGridPro || pro.precos?.[0]?.vluProPrc || "0",
         gruposPersonalizacoes: pro.gruposPersonalizacoes || [],
         precos: pro.precos || [],
+        valorAdicionalAmostraPro: pro.valorAdicionalAmostraPro || "70.00",
       };
     });
   }, [products]);

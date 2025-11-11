@@ -241,12 +241,13 @@ export function FormDadosEntrega() {
   function onSubmit(form: any) {
     setSubmitting(true);
     try {
+      const cpfCnpjShipping = form.cnpj_cpf.replace(/\D/g, "");
       fetchSendAddress(
         Number(clientData?.result[0].id),
         "PJ",
         form.contato_entrega,
         form.razao_social,
-        form.cnpj_cpf,
+        cpfCnpjShipping,
         form.inscricao_estadual || "",
         form.email,
         form.ddd,

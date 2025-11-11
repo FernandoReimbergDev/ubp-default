@@ -301,7 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           reqHeaders: {
             "X-Environment": "HOMOLOGACAO",
             storeId: "32",
-            userId: userIdFromCookie || "",
+            userId: userIdFromCookie,
           },
         }),
         signal,
@@ -319,7 +319,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         orderNumberStr = String(orderPayload);
       } else if (orderPayload && typeof orderPayload === "object") {
         // Prioriza a chave 'orderId' e outras variantes comuns
-        orderNumberStr = orderPayload.orderId || orderPayload.orderNumber || orderPayload.numero || orderPayload.id || orderPayload.pedido || orderPayload.code || null;
+        orderNumberStr =
+          orderPayload.orderId ||
+          orderPayload.orderNumber ||
+          orderPayload.numero ||
+          orderPayload.id ||
+          orderPayload.pedido ||
+          orderPayload.code ||
+          null;
         if (typeof orderNumberStr !== "string") orderNumberStr = null;
       }
 
@@ -341,8 +348,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           path: "/",
           secure: process.env.NODE_ENV === "production",
         });
-      } catch { }
-
+      } catch {}
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;

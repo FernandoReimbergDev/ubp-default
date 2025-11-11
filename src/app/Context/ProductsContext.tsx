@@ -39,7 +39,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const result = await res.json();
-
       if (!res.ok) {
         throw new Error(result.message || "Erro ao buscar produtos");
       }

@@ -34,35 +34,33 @@ export type PersonalizationLite = {
     precoTotal: number;
 };
 
-export type CartItemInput = {
+export interface CartItemInput {
     id: string;
     codPro: string;
-    chavePro?: string;
-
+    chavePro: string;
     productName: string;
     alt?: string;
-
     color: string;
     size?: string;
-
     unitPriceBase: number;
     unitPricePersonalization: number;
     unitPriceEffective: number;
-
-    quantity: number;   // número (não string)
+    quantity: number;
     subtotal: number;
-
-    hasPersonalization?: boolean;
-    personalization?: PersonalizationLite;
-
-    // opcionais leves
-    peso?: number | string;
-    altura?: number | string;
-    largura?: number | string;
-    comprimento?: number | string;
-
-    thumb?: string; // opcional para exibir no minicart
-};
+    hasPersonalization: boolean;
+    isAmostra?: boolean;
+    personalization?: {
+        chavePersonal: string;
+        descricao: string;
+        precoUnitario: number;
+        precoTotal: number;
+    };
+    peso?: string;
+    altura?: string;
+    largura?: string;
+    comprimento?: string;
+    thumb?: string;
+}
 
 export type CartItemPersist = CartItemInput; // mesmo shape
 
@@ -76,7 +74,7 @@ export type CartContextType = {
         entityTypeShipping: string,
         contactNameShipping: string,
         legalNameShipping: string,
-        cpfCnpfShipping: string,
+        cpfCnpjShipping: string,
         ieShipping: string,
         emailShipping: string,
         areaCodeShipping: string,

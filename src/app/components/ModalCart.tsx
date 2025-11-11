@@ -315,8 +315,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                     <div className="flex flex-col items-start gap-2 mt-2">
                       <div className="flex items-center gap-2">
                         <button
-                          className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
-                          onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", -1)}
+                          className={`w-6 h-6 flex justify-center items-center ${product.isAmostra ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 cursor-pointer'}`}
+                          onClick={() => !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", -1)}
+                          disabled={product.isAmostra}
                         >
                           <Minus size={16} />
                         </button>
@@ -326,13 +327,15 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                           inputMode="numeric"
                           pattern="[0-9]*"
                           value={quantities[product.id] ?? ""}
-                          className="w-12 md:w-16 px-1 text-center rounded-md"
-                          onChange={(e) => handleInputChange(product.id, e.target.value)}
+                          readOnly={product.isAmostra}
+                          className={`w-12 md:w-16 px-1 text-center rounded-md ${product.isAmostra ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                          onChange={(e) => !product.isAmostra && handleInputChange(product.id, e.target.value)}
                         />
 
                         <button
-                          className="w-6 h-6 flex justify-center items-center text-gray-600 cursor-pointer"
-                          onClick={() => changeQuantity(product.id, quantities[product.id] ?? "0", 1)}
+                          className={`w-6 h-6 flex justify-center items-center ${product.isAmostra ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 cursor-pointer'}`}
+                          onClick={() => !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", 1)}
+                          disabled={product.isAmostra}
                         >
                           <Plus size={16} />
                         </button>
@@ -350,6 +353,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                         <span className="font-medium">
                           {formatPrice(product.unitPriceEffective)}
                         </span>
+                        {product.isAmostra && (
+                          <span className="ml-1 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                            Amostra
+                          </span>
+                        )}
                       </div>
 
                       <div className="border-l pl-3">

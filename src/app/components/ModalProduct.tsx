@@ -30,11 +30,6 @@ export type Personalizacao = {
 
 
 // ===== Helpers puros =====
-function toInt(val: string | number | undefined | null): number | undefined {
-  if (val === undefined || val === null) return undefined;
-  const n = parseInt(String(val).trim(), 10);
-  return Number.isFinite(n) ? n : undefined;
-}
 
 
 function toFloat(val: string | number | undefined | null): number | undefined {
@@ -49,34 +44,36 @@ function toFloat(val: string | number | undefined | null): number | undefined {
 }
 
 
-/** Retorna o preço unitário da personalização, baseado na faixa de quantidade. */
+/** 
+ * Retorna o preço unitário da personalização.
+ * Sempre retorna o preço da primeira faixa, independentemente da quantidade.
+ */
 export function getPersonalizationUnitPrice(
   personalization: Personalizacao,
-  quantity: number
+  _quantity: number // eslint-disable-line
 ): number {
-  if (!personalization?.precos?.length || quantity <= 0) return 0;
+  // Retorna o preço da primeira faixa, se existir
+  if (!personalization?.precos?.length) return 0;
 
-
-  const faixa = personalization.precos.find((p) => {
-    const min = toInt(p.qtdiPersonalPrc) ?? 0;
-    const max = toInt(p.qtdfPersonalPrc) ?? Number.MAX_SAFE_INTEGER;
-    return quantity >= min && quantity <= max;
-  });
-
-
-  return faixa ? (toFloat(faixa.vluPersonalPrc) ?? 0) : 0;
+  const primeiraFaixa = personalization.precos[0];
+  return toFloat(primeiraFaixa.vluPersonalPrc) ?? 0;
 }
 
-
-/** Soma o preço unitário de todas as personalizações selecionadas (1 por grupo). */
-export function sumSelectedPersonalizationsUnitPrice(
+/**
+ * Calculates the total price of all selected personalizations
+ * @param selected Record of selected personalizations
+ * @param quantity Quantity of items
+ * @param isSample Whether it's a sample
+ * @returns Total price of all personalizations
+ */
+function sumSelectedPersonalizationsUnitPrice(
   selected: Record<string, Personalizacao | null>,
-  quantity: number
+  quantity: number,
+  isSample: boolean // eslint-disable-line
 ): number {
-  if (!selected || quantity <= 0) return 0;
-  return Object.values(selected).reduce((acc, p) => {
-    if (!p) return acc;
-    return acc + getPersonalizationUnitPrice(p, quantity);
+  return Object.values(selected).reduce((total, personalization) => {
+    if (!personalization) return total;
+    return total + getPersonalizationUnitPrice(personalization, quantity);
   }, 0);
 }
 
@@ -99,8 +96,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const [QtdMsg, setQtdMsg] = useState(false);
   const [currentImage, setCurrentImage] = useState<string>(ProductData.srcFrontImage);
   const [descriFull, setDescriFull] = useState(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [product, setProduct] = useState<stock | undefined>(undefined);
+  const [isAmostra, setIsAmostra] = useState(false);
   // Personalização
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -121,41 +119,56 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     return Number(s);
   }, []);
 
-  // estoque do card (cálculo derivado p/ validação)
-  const availableInt = useMemo(() => {
+  const availableInt = useMemo(() => { // eslint-disable-line
     const available = toNumberBR(product?.quantidadeSaldo);
     return typeof available === "number" && isFinite(available) ? Math.trunc(available) : undefined;
   }, [product, toNumberBR]);
 
   const requestedQty = useMemo(() => parseInt(quantity || "0", 10), [quantity]);
-  const qtyInvalid = useMemo(
-    () => typeof availableInt === "number" && requestedQty > availableInt,
-    [availableInt, requestedQty]
-  );
 
   const hasQty = requestedQty > 0;
   const hasGravacao = hasAnyPersonalization(selectedPersonalizations);
 
-
-  // Preço unitário SOMENTE com gravação + quantidade válidas
   const personalizationUnit = React.useMemo(() => {
     if (!hasQty || !hasGravacao) return 0;
-    return sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, requestedQty);
-  }, [hasQty, hasGravacao, selectedPersonalizations, requestedQty]);
-
+    return sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, requestedQty, isAmostra);
+  }, [hasQty, hasGravacao, selectedPersonalizations, requestedQty, isAmostra]);
 
   const effectiveUnitPrice = React.useMemo(() => {
-    // Base do produto SEMPRE visível
-    // Personalização só soma quando há qty e gravação
-    return ProductData.price + personalizationUnit;
-  }, [ProductData.price, personalizationUnit]);
+    let price = 0;
 
+    // Usa o preço da primeira faixa se for amostra, senão usa o preço normal
+    if (isAmostra && ProductData.precos && ProductData.precos.length > 0) {
+      price = parseFloat(ProductData.precos[0].vluProPrc) || 0;
+    } else {
+      price = ProductData.price;
+    }
+
+    // Adiciona o valor da personalização se houver
+    if (hasQty && hasGravacao) {
+      price += personalizationUnit;
+    }
+
+    // Adiciona o valor adicional da amostra se estiver marcado
+    if (isAmostra) {
+      price += parseFloat(ProductData.valorAdicionalAmostraPro || '0');
+    }
+
+    return price;
+  }, [
+    ProductData.price,
+    ProductData.precos,
+    personalizationUnit,
+    hasQty,
+    hasGravacao,
+    isAmostra,
+    ProductData.valorAdicionalAmostraPro
+  ]);
 
   const total = React.useMemo(() => {
     if (!hasQty) return 0;
     return effectiveUnitPrice * requestedQty;
   }, [effectiveUnitPrice, hasQty, requestedQty]);
-
 
   const isControlledStock = ProductData.estControl === "1";
 
@@ -214,7 +227,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
         let res = await doRequest();
         if (!res.ok && (res.status === 429 || res.status >= 500)) {
-          res = await doRequest(); // retry simples
+          res = await doRequest();
         }
 
         const result: {
@@ -310,18 +323,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     [scheduleFetch, selectedColor]
   );
 
-  const handleQuantityChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setQtdMsg(false);
-      const value = e.target.value;
-      if (/^\d*$/.test(value)) {
-        setQuantity(value);
-        scheduleFetch(selectedColor, selectedSize);
-      }
-    },
-    [scheduleFetch, selectedColor, selectedSize]
-  );
-
   const decQty = useCallback(() => {
     if (loading) return;
     const qty = parseInt(quantity || "0", 10);
@@ -349,10 +350,8 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         return;
       }
 
-      // 1) Personalização (pega a primeira selecionada – ajuste se quiser exigir 1 por grupo)
       const selectedFirst = Object.values(selectedPersonalizations).find(p => p !== null) || null;
 
-      // 2) Validação do arquivo (opcional)
       if (file) {
         const maxBytes = 15 * 1024 * 1024; // 15MB
         const allowed = [
@@ -402,6 +401,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         subtotal: requestedQty * effectiveUnitPrice,
 
         hasPersonalization: !!selectedFirst,
+        isAmostra: isAmostra, // Add isAmostra flag
         personalization: selectedFirst
           ? {
             chavePersonal: selectedFirst.chavePersonal,
@@ -440,6 +440,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     ProductData.peso,
     ProductData.price,
     ProductData.product,
+    isAmostra,
     addProduct,
     effectiveUnitPrice,
     onClose,
@@ -476,25 +477,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   //     setFileError(null);
   //     setFilePreviewUrl(URL.createObjectURL(file));
   //   }
-  // }, []);
-
-  const canBuy = hasQty && (!ProductData.qtdMinPro || requestedQty >= Number(ProductData.qtdMinPro)) && hasGravacao;
-
-  // Adicione esta função para calcular o preço da personalização
-  // const calculatePersonalizationPrice = useCallback((
-  //   personalization: Personalizacao,
-  //   quantity: number
-  // ): number => {
-  //   if (!personalization.precos || personalization.precos.length === 0) return 0;
-
-  //   // Encontra o preço que corresponde à faixa de quantidade
-  //   const priceRange = personalization.precos.find(preco => {
-  //     const minQty = parseInt(preco.qtdiPersonalPrc, 10) || 0;
-  //     const maxQty = parseInt(preco.qtdfPersonalPrc, 10) || Number.MAX_SAFE_INTEGER;
-  //     return quantity >= minQty && quantity <= maxQty;
-  //   });
-
-  //   return priceRange ? parseFloat(priceRange.vluPersonalPrc) || 0 : 0;
   // }, []);
 
 
@@ -536,9 +518,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc
     };
   };
-
-
-
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-40">
@@ -781,13 +760,32 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               ))}
             </div>
 
+            {/* Checkbox de amostra */}
+            <div className="flex gap-2 items-center my-2">
+              <input
+                type="checkbox"
+                id="amostra"
+                checked={isAmostra}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setIsAmostra(checked);
+                  if (checked) {
+                    setQuantity("1");
+                  }
+                }}
+              />
+              <label className="font-Roboto text-sm">
+                Produto para amostra (1 unidade) + {formatPrice(parseFloat(ProductData.valorAdicionalAmostraPro || '0'))}
+              </label>
+            </div>
+
             <div className="flex flex-col">
               <label className="font-bold font-Roboto" htmlFor="quantity">Quantidade:</label>
               <div className="flex gap-2 items-center">
                 <button
                   type="button"
-                  disabled={loading}
-                  aria-disabled={loading}
+                  disabled={loading || isAmostra}
+                  aria-disabled={loading || isAmostra}
                   onClick={decQty}
                   className="disabled:opacity-50 disabled:cursor-not-allowed w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton"
                   aria-label="Diminuir quantidade"
@@ -797,20 +795,19 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
                 <input
                   className="border-2 pl-2 w-20 h-9 rounded-md outline-modalProduct-border"
-                  type="text"
+                  type="number"
                   id="quantity"
-                  name="quantity"
-                  value={quantity}
-                  onChange={handleQuantityChange}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="0"
+                  min="1"
+                  value={isAmostra ? "1" : quantity}
+                  onChange={(e) => !isAmostra && setQuantity(e.target.value)}
+                  readOnly={isAmostra}
+                  disabled={isAmostra}
                 />
 
                 <button
                   type="button"
-                  disabled={loading}
-                  aria-disabled={loading}
+                  disabled={loading || isAmostra}
+                  aria-disabled={loading || isAmostra}
                   onClick={incQty}
                   className="disabled:opacity-50 disabled:cursor-not-allowed w-6 h-6 rounded-full select-none flex items-center justify-center bg-modalProduct-button hover:bg-modalProduct-hoverButton text-modalProduct-textButton"
                   aria-label="Aumentar quantidade"
@@ -818,19 +815,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   <Plus size={18} />
                 </button>
               </div>
-
-              {typeof availableInt === "number" && requestedQty > availableInt && (
-                <span className="mt-4 text-red-500">{`Quantidade disponível: ${availableInt}`}</span>
-              )}
-
-              <span className={`text-sm pointer-events-none select-none flex gap-6 items-center ${loading ? "opacity-100" : "opacity-0"}`}>
-                <span>Consultando Estoque</span>
-                <span className="loader" />
-              </span>
-              <span className="opacity-60 text-sm pointer-events-none select-none mt-2">
-                *Quantidade mínima {Number(ProductData.qtdMinPro).toFixed(0) ?? 10} unidades.
-              </span>
             </div>
+
+
 
             <div className="flex gap-4 pointer-events-none select-none">
 
@@ -844,7 +831,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
                       const basePrice = parseFloat(currentPrice.vluProPrc);
                       const personalizationCost = hasGravacao
-                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, Number(quantity) || 1)
+                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, Number(quantity) || 1, isAmostra)
                         : 0;
 
                       return formatPrice(basePrice + personalizationCost);
@@ -866,14 +853,23 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             </div>
 
             {QtdMsg && <span className="text-red-500 text-sm">Digite uma quantidade válida para prosseguir</span>}
-            {Number(quantity) < Number(ProductData.qtdMinPro) && Number(quantity) !== 0 && <span className="text-red-500 text-sm">Esse produto é vendido na quantidade mínima de {Number(ProductData.qtdMinPro).toFixed(0)}</span>}
+            {!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro) && Number(quantity) !== 0 && (
+              <span className="text-red-500 text-sm">
+                Esse produto é vendido na quantidade mínima de {Number(ProductData.qtdMinPro).toFixed(0)}
+              </span>
+            )}
 
             {isOutOfStock ? (
               <Button type="button" name="BtnAvisar" className="flex gap-2 items-center justify-center select-none bg-orange-400 hover:bg-orange-500 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4">
                 Avise-me quando chegar!
               </Button>
             ) : (
-              <Button type="submit" disabled={loading || (!isOutOfStock && qtyInvalid) || !canBuy}
+              <Button type="submit" disabled={
+                loading ||
+                !quantity ||
+                Number(quantity) === 0 ||
+                (!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro))
+              }
                 className="disabled:bg-gray-500 flex gap-2 items-center justify-center cursor-pointer select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
               >
                 <ShoppingCart size={18} /> Comprar
@@ -896,7 +892,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   {ProductData.precos && ProductData.precos.length > 0 ? (
                     ProductData.precos.map((priceRange, index) => {
                       const personalizationPrice = hasGravacao
-                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, parseInt(priceRange.qtdiProPrc))
+                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, parseInt(priceRange.qtdiProPrc), isAmostra)
                         : 0;
 
                       return (

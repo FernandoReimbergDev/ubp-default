@@ -55,9 +55,7 @@ export default function EstoqueConsulta() {
                 </div>
                 {/* TOTAL PEDIDO(S) */}
                 <div className="w-full max-w-46 text-xs md:text-sm lg:text-base">
-                  <label className="text-xs 2xl:text-sm font-medium text-gray-700 flex gap-2">
-                    Total Pedido(s):
-                  </label>
+                  <label className="text-xs 2xl:text-sm font-medium text-gray-700 flex gap-2">Total Pedido(s):</label>
                   <input
                     readOnly
                     type="text"
@@ -91,8 +89,6 @@ export default function EstoqueConsulta() {
               </div>
             </div>
           </form>
-
-
         </div>
 
         {/* 📋 TABELA RESPONSIVA */}
@@ -125,16 +121,14 @@ export default function EstoqueConsulta() {
                     className="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-300"
                   >
                     {/* 🔹 Coluna fixa */}
-                    <td className="sticky left-0 bg-white z-[5] px-3 py-2 border border-gray-300 whitespace-nowrap">
+                    <td className="sticky left-0 bg-white z-5 px-3 py-2 border border-gray-300 whitespace-nowrap">
                       001399
                     </td>
 
-                    <td className="px-3 py-2 border border-gray-300">
-                      Centro De Idiomas Gobbi Ltda - Me
-                    </td>
+                    <td className="px-3 py-2 border border-gray-300">Centro De Idiomas Gobbi Ltda - Me</td>
                     <td className="px-3 py-2 border border-gray-300 whitespace-nowrap">{formatPrice(507.85)}</td>
                     <td className="px-3 py-2 border border-gray-300 whitespace-nowrap">{formatPrice(36.13)}</td>
-                    <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(0.00)}</td>
+                    <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(0.0)}</td>
                     <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(543.98)}</td>
                     <td className="px-3 py-2 border border-gray-300 text-right">21-10-2025</td>
                     <td className="px-3 py-2 border border-gray-300 text-right">10-11-2025</td>

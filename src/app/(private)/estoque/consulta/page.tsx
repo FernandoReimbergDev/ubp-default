@@ -5,7 +5,6 @@ import { formatPrice } from "@/app/utils/formatter";
 import { Eye, Package, Search, TableProperties } from "lucide-react";
 
 export default function EstoqueConsulta() {
-
   return (
     <div className="min-h-[calc(100dvh-114px)] w-full max-w-[96vw] mx-auto flex flex-col lg:flex-row bg-white pt-14 p-4 mt-10">
       <div className="w-full max-w-[96vw] flex flex-col bg-white mx-auto p-4 rounded-2xl">
@@ -145,7 +144,7 @@ export default function EstoqueConsulta() {
                     className="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-300"
                   >
                     {/* 🔹 Coluna fixa */}
-                    <td className="sticky left-0 bg-white z-[5] px-3 py-2 border border-gray-300 whitespace-nowrap">
+                    <td className="sticky left-0 bg-white z-5 px-3 py-2 border border-gray-300 whitespace-nowrap">
                       2053-amil
                     </td>
 

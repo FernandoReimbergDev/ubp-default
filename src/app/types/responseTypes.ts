@@ -91,6 +91,7 @@ export type Produto = {
   qtdiPersonalPrc: string;
   qtdfPersonalPrc: string;
   vluPersonalPrc: string;
+  valorAdicionalAmostraPro: string;
 };
 
 export type precos = {
@@ -223,6 +224,7 @@ export type ProdutosGrid = {
   qtdfPersonalPrc?: string;
   vluPersonalPrc?: string;
   precos: PrecoProduto[];
+  valorAdicionalAmostraPro: string;
 };
 
 export type CartContextType = {
@@ -279,6 +281,7 @@ export interface ProductDataProps {
   qtdiPersonalPrc?: string;
   qtdfPersonalPrc?: string;
   vluPersonalPrc?: string;
+  valorAdicionalAmostraPro: string;
 }
 
 export interface personalizacoes {
