@@ -11,14 +11,12 @@ import { Button } from "./Button";
 import { TitleSection } from "./TitleSection";
 
 interface ModalProps {
-  handleClick?: (
-    event: React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>
-  ) => void;
+  handleClick?: (event: React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>) => void;
   isOpen: boolean;
 }
 
 // tempos configuráveis
-const DEBOUNCE_MS = 900;         // pausa de digitação antes de consultar
+const DEBOUNCE_MS = 900; // pausa de digitação antes de consultar
 const REQUEST_TIMEOUT_MS = 8000; // abort da request
 
 export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
@@ -101,93 +99,89 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
 
   const hasInvalidQuantities = cart.some((item) => {
     const availableNum = toNumberBR(stockByItem[item.id]?.quantidadeSaldo);
-    const available =
-      typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
+    const available = typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
     if (typeof available !== "number") return false;
     const aggregatedRequested = getAggregatedRequestedForPool(item);
     return aggregatedRequested > available;
   });
 
-  const fetchItemStock = useCallback(
-    async (item: CartItemPersist, signal?: AbortSignal, reqId?: number) => {
-      if (!item.chavePro) {
-        setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
-        return;
+  const fetchItemStock = useCallback(async (item: CartItemPersist, signal?: AbortSignal, reqId?: number) => {
+    if (!item.chavePro) {
+      setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
+      return;
+    }
+    setLoadingByItem((prev) => ({ ...prev, [item.id]: true }));
+    try {
+      const doRequest = async () => {
+        const res = await fetch("/api/stock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            codPro: item.codPro,
+            chavePro: item.chavePro,
+            ...(item.color ? { descrProCor: item.color } : {}),
+            ...(item.size ? { descrProTamanho: item.size } : {}),
+          }),
+          signal,
+        });
+        return res;
+      };
+
+      let res = await doRequest();
+      if (!res.ok && (res.status === 429 || res.status >= 500)) {
+        res = await doRequest();
       }
-      setLoadingByItem((prev) => ({ ...prev, [item.id]: true }));
-      try {
-        const doRequest = async () => {
-          const res = await fetch("/api/stock", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              codPro: item.codPro,
-              chavePro: item.chavePro,
-              ...(item.color ? { descrProCor: item.color } : {}),
-              ...(item.size ? { descrProTamanho: item.size } : {}),
-            }),
-            signal,
-          });
-          return res;
-        };
 
-        let res = await doRequest();
-        if (!res.ok && (res.status === 429 || res.status >= 500)) {
-          res = await doRequest();
-        }
-
-        const result: {
+      const result: {
+        success: boolean;
+        data?: {
           success: boolean;
-          data?: {
-            success: boolean;
-            message: string;
-            result: { produtos: ProdutoEstoqueItem[] } | ProdutoEstoqueItem[];
-          };
-          message?: string;
-          details?: unknown;
-        } = await res.json();
+          message: string;
+          result: { produtos: ProdutoEstoqueItem[] } | ProdutoEstoqueItem[];
+        };
+        message?: string;
+        details?: unknown;
+      } = await res.json();
 
-        if (!res.ok) {
-          const detailsStr = typeof result.details === "string" ? result.details : undefined;
-          if (detailsStr === "Estoque não encontrado com os parâmetro(s) fornecido(s).") {
-            setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
-            return;
-          }
-          throw new Error(result.message || "Erro ao buscar produtos");
-        }
-
-        const raw = result.data?.result as unknown;
-        const produtos: ProdutoEstoqueItem[] = Array.isArray(raw)
-          ? (raw as ProdutoEstoqueItem[])
-          : ((raw as { produtos?: ProdutoEstoqueItem[] })?.produtos ?? []);
-        const first = produtos?.[0];
-
-        if (reqId === requestIdRef.current[item.id]) {
-          setStockByItem((prev) => ({ ...prev, [item.id]: first }));
-        }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          if (reqId === requestIdRef.current[item.id]) {
-            setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
-          }
+      if (!res.ok) {
+        const detailsStr = typeof result.details === "string" ? result.details : undefined;
+        if (detailsStr === "Estoque não encontrado com os parâmetro(s) fornecido(s).") {
+          setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
           return;
         }
-        console.error("erro ao requisitar produtos para api externa", error);
+        throw new Error(result.message || "Erro ao buscar produtos");
+      }
+
+      const raw = result.data?.result as unknown;
+      const produtos: ProdutoEstoqueItem[] = Array.isArray(raw)
+        ? (raw as ProdutoEstoqueItem[])
+        : (raw as { produtos?: ProdutoEstoqueItem[] })?.produtos ?? [];
+      const first = produtos?.[0];
+
+      if (reqId === requestIdRef.current[item.id]) {
+        setStockByItem((prev) => ({ ...prev, [item.id]: first }));
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
         if (reqId === requestIdRef.current[item.id]) {
-          setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
-        }
-      } finally {
-        if (reqId === requestIdRef.current[item.id]) {
-          if (fetchTimeoutRef.current[item.id]) {
-            clearTimeout(fetchTimeoutRef.current[item.id]!);
-            fetchTimeoutRef.current[item.id] = null;
-          }
           setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
         }
+        return;
       }
-    },
-    []
-  );
+      console.error("erro ao requisitar produtos para api externa", error);
+      if (reqId === requestIdRef.current[item.id]) {
+        setStockByItem((prev) => ({ ...prev, [item.id]: undefined }));
+      }
+    } finally {
+      if (reqId === requestIdRef.current[item.id]) {
+        if (fetchTimeoutRef.current[item.id]) {
+          clearTimeout(fetchTimeoutRef.current[item.id]!);
+          fetchTimeoutRef.current[item.id] = null;
+        }
+        setLoadingByItem((prev) => ({ ...prev, [item.id]: false }));
+      }
+    }
+  }, []);
 
   // Agenda consulta com debounce e cancelamento por item
   const scheduleFetch = useCallback(
@@ -201,7 +195,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
 
       fetchDebounceRef.current[id] = setTimeout(() => {
         if (fetchAbortRef.current[id]) {
-          try { fetchAbortRef.current[id]!.abort(); } catch { }
+          try {
+            fetchAbortRef.current[id]!.abort();
+          } catch {}
         }
 
         const current = requestIdRef.current[id] ?? 0;
@@ -213,7 +209,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
 
         if (fetchTimeoutRef.current[id]) clearTimeout(fetchTimeoutRef.current[id]!);
         fetchTimeoutRef.current[id] = setTimeout(() => {
-          try { controller.abort(); } catch { }
+          try {
+            controller.abort();
+          } catch {}
         }, REQUEST_TIMEOUT_MS);
 
         setLoadingByItem((prev) => ({ ...prev, [id]: true }));
@@ -252,11 +250,15 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   return (
     <div className="ContainerModal h-full w-full">
       <div
-        className={`h-[calc(h-screen-400px)] w-screen bg-black fixed inset-0 left-0 top-0 opacity-50 z-50 ${isOpen && cart.length > 0 ? "visible" : "hidden"}`}
+        className={`h-[calc(h-screen-400px)] w-screen bg-black fixed inset-0 left-0 top-0 opacity-50 z-50 ${
+          isOpen && cart.length > 0 ? "visible" : "hidden"
+        }`}
         onClick={handleClick}
       />
       <div
-        className={`h-[100dvh] md:h-screen w-full md:w-[550px] 2xl:w-[576px] right-0 fixed bg-white z-50 p-1 flex flex-col pt-2 transition-all duration-500 ${isOpen && cart.length > 0 ? "translate-x-0" : "translate-x-[100vw]"}`}
+        className={`h-dvh md:h-screen w-full md:w-[550px] 2xl:w-[576px] right-0 fixed bg-white z-50 p-1 flex flex-col pt-2 transition-all duration-500 ${
+          isOpen && cart.length > 0 ? "translate-x-0" : "translate-x-[100vw]"
+        }`}
       >
         <X
           onClick={handleClick}
@@ -268,137 +270,145 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
         />
 
         <div className="containerProdutos w-full h-[83%] pb-18 mx-auto flex flex-col p-4 overflow-x-hidden overflow-y-auto gap-4 scrollbar">
-          {Array.isArray(cart) && cart.map((product) => (
-            <div key={product.id} className="w-full">
-              <div className="flex flex-col sm:flex-row bg-white py-3 px-1 rounded-xl w-full gap-2 relative bg-whiteReference">
-                <div className="w-20 h-20 overflow-hidden rounded-lg min-w-20 ml-4 shadow-lg flex items-center justify-center bg-white">
-                  {product.thumb ? (
-                    <Image
-                      src={product.thumb}
-                      width={150}
-                      height={150}
-                      alt={product.alt || product.productName}
-                      className="h-full w-full object-cover hover:rotate-12 transition-all hover:scale-125 duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-100 text-gray-500">
-                      sem imagem
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2 px-4">
-                  <p className="text-sm 2xl:text-lg font-Roboto text-blackReference">{product.productName}</p>
-
-                  {product.hasPersonalization && product.personalization && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
-                        Personalização
-                      </span>
-
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm">
-                    <span className="text-gray-500">Cor:</span>
-                    <span className="font-medium uppercase">{product.color || "-"}</span>
-
-                    {product.size && (
-                      <>
-                        <span className="text-gray-500">Tamanho:</span>
-                        <span className="font-medium uppercase">{product.size}</span>
-                      </>
+          {Array.isArray(cart) &&
+            cart.map((product) => (
+              <div key={product.id} className="w-full">
+                <div className="flex flex-col sm:flex-row bg-white py-3 px-1 rounded-xl w-full gap-2 relative bg-whiteReference">
+                  <div className="w-20 h-20 overflow-hidden rounded-lg min-w-20 ml-4 shadow-lg flex items-center justify-center bg-white">
+                    {product.thumb ? (
+                      <Image
+                        src={product.thumb}
+                        width={150}
+                        height={150}
+                        alt={product.alt || product.productName}
+                        className="h-full w-full object-cover hover:rotate-12 transition-all hover:scale-125 duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-100 text-gray-500">
+                        sem imagem
+                      </div>
                     )}
                   </div>
 
-                  <div className="flex items-end gap-4 flex-wrap">
-                    <div className="flex flex-col items-start gap-2 mt-2">
-                      <div className="flex items-center gap-2">
-                        <button
-                          className={`w-6 h-6 flex justify-center items-center ${product.isAmostra ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 cursor-pointer'}`}
-                          onClick={() => !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", -1)}
-                          disabled={product.isAmostra}
-                        >
-                          <Minus size={16} />
-                        </button>
+                  <div className="flex flex-col gap-2 px-4">
+                    <p className="text-sm 2xl:text-lg font-Roboto text-blackReference">{product.productName}</p>
 
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={quantities[product.id] ?? ""}
-                          readOnly={product.isAmostra}
-                          className={`w-12 md:w-16 px-1 text-center rounded-md ${product.isAmostra ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                          onChange={(e) => !product.isAmostra && handleInputChange(product.id, e.target.value)}
-                        />
-
-                        <button
-                          className={`w-6 h-6 flex justify-center items-center ${product.isAmostra ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 cursor-pointer'}`}
-                          onClick={() => !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", 1)}
-                          disabled={product.isAmostra}
-                        >
-                          <Plus size={16} />
-                        </button>
-                      </div>
-                      {loadingByItem[product.id] && (
-                        <span className="text-xs opacity-70 select-none pointer-events-none">
-                          Consultando estoque...
+                    {product.hasPersonalization && product.personalization && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
+                          Personalização
                         </span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm">
+                      <span className="text-gray-500">Cor:</span>
+                      <span className="font-medium uppercase">{product.color || "-"}</span>
+
+                      {product.size && (
+                        <>
+                          <span className="text-gray-500">Tamanho:</span>
+                          <span className="font-medium uppercase">{product.size}</span>
+                        </>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <span>Unidade:</span>
-                        <span className="font-medium">
-                          {formatPrice(product.unitPriceEffective)}
-                        </span>
-                        {product.isAmostra && (
-                          <span className="ml-1 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                            Amostra
+                    <div className="flex items-end gap-4 flex-wrap">
+                      <div className="flex flex-col items-start gap-2 mt-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            className={`w-6 h-6 flex justify-center items-center ${
+                              product.isAmostra ? "text-gray-300 cursor-not-allowed" : "text-gray-600 cursor-pointer"
+                            }`}
+                            onClick={() =>
+                              !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", -1)
+                            }
+                            disabled={product.isAmostra}
+                          >
+                            <Minus size={16} />
+                          </button>
+
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={quantities[product.id] ?? ""}
+                            readOnly={product.isAmostra}
+                            className={`w-12 md:w-16 px-1 text-center rounded-md ${
+                              product.isAmostra ? "bg-gray-100 cursor-not-allowed" : ""
+                            }`}
+                            onChange={(e) => !product.isAmostra && handleInputChange(product.id, e.target.value)}
+                          />
+
+                          <button
+                            className={`w-6 h-6 flex justify-center items-center ${
+                              product.isAmostra ? "text-gray-300 cursor-not-allowed" : "text-gray-600 cursor-pointer"
+                            }`}
+                            onClick={() =>
+                              !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", 1)
+                            }
+                            disabled={product.isAmostra}
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                        {loadingByItem[product.id] && (
+                          <span className="text-xs opacity-70 select-none pointer-events-none">
+                            Consultando estoque...
                           </span>
                         )}
                       </div>
 
-                      <div className="border-l pl-3">
-                        <span className="font-semibold">Total: </span>
-                        <span className="font-bold">{calculateSubtotal(product)}</span>
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-1">
+                          <span>Unidade:</span>
+                          <span className="font-medium">{formatPrice(product.unitPriceEffective)}</span>
+                          {product.isAmostra && (
+                            <span className="ml-1 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                              Amostra
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="border-l pl-3">
+                          <span className="font-semibold">Total: </span>
+                          <span className="font-bold">{calculateSubtotal(product)}</span>
+                        </div>
                       </div>
+
+                      {(() => {
+                        const availableNum = toNumberBR(stockByItem[product.id]?.quantidadeSaldo);
+                        const available =
+                          typeof availableNum === "number" && isFinite(availableNum)
+                            ? Math.trunc(availableNum)
+                            : undefined;
+                        if (typeof available !== "number") return null;
+                        const aggregatedRequested = getAggregatedRequestedForPool(product);
+                        if (aggregatedRequested > available) {
+                          return (
+                            <span className="text-red-500 text-xs">
+                              Quantidade disponível (compartilhado): {available}. No carrinho: {aggregatedRequested}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {(!quantities[product.id] || parseInt(quantities[product.id]) <= 0) && (
+                        <span className="text-red-500 text-xs">Digite uma quantidade mínima para prosseguir</span>
+                      )}
+
+                      <Trash2
+                        size={20}
+                        className="absolute right-1 md:right-2 bottom-4 cursor-pointer text-red-600 hover:text-red-800"
+                        onClick={() => removeProduct(product.id)}
+                      />
                     </div>
-
-                    {(() => {
-                      const availableNum = toNumberBR(stockByItem[product.id]?.quantidadeSaldo);
-                      const available =
-                        typeof availableNum === "number" && isFinite(availableNum)
-                          ? Math.trunc(availableNum)
-                          : undefined;
-                      if (typeof available !== "number") return null;
-                      const aggregatedRequested = getAggregatedRequestedForPool(product);
-                      if (aggregatedRequested > available) {
-                        return (
-                          <span className="text-red-500 text-xs">
-                            Quantidade disponível (compartilhado): {available}. No carrinho: {aggregatedRequested}
-                          </span>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    {(!quantities[product.id] || parseInt(quantities[product.id]) <= 0) && (
-                      <span className="text-red-500 text-xs">Digite uma quantidade mínima para prosseguir</span>
-                    )}
-
-                    <Trash2
-                      size={20}
-                      className="absolute right-1 md:right-2 bottom-4 cursor-pointer text-red-600 hover:text-red-800"
-                      onClick={() => removeProduct(product.id)}
-                    />
                   </div>
                 </div>
+                <hr className="border w-full text-gray-300" />
               </div>
-              <hr className="border w-full text-gray-300" />
-            </div>
-          ))}
+            ))}
         </div>
 
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-fit w-[98%] border-t border-gray-200 p-2 flex flex-col bg-white">

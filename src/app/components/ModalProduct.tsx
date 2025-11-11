@@ -11,7 +11,6 @@ import { Button } from "./Button";
 import { ZoomProduct } from "./ZoomProduct";
 import type { CartItemInput } from "../types/cart";
 
-
 // ===== Tipos utilitários (ajuste os imports conforme seu projeto) =====
 export type PersonalizacaoPreco = {
   chavePersonalPrc: string;
@@ -28,23 +27,18 @@ export type Personalizacao = {
   precos?: PersonalizacaoPreco[];
 };
 
-
 // ===== Helpers puros =====
-
 
 function toFloat(val: string | number | undefined | null): number | undefined {
   if (val === undefined || val === null) return undefined;
   const s = String(val).trim();
   // Permite formatos "1.234,56" ou "1234.56"
-  const normalized = s.includes(',') && s.includes('.')
-    ? s.replace(/\./g, '').replace(',', '.')
-    : s.replace(',', '.');
+  const normalized = s.includes(",") && s.includes(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(",", ".");
   const n = Number(normalized);
   return Number.isFinite(n) ? n : undefined;
 }
 
-
-/** 
+/**
  * Retorna o preço unitário da personalização.
  * Sempre retorna o preço da primeira faixa, independentemente da quantidade.
  */
@@ -77,7 +71,6 @@ function sumSelectedPersonalizationsUnitPrice(
   }, 0);
 }
 
-
 /** Indica se há ao menos UMA personalização selecionada. */
 export function hasAnyPersonalization(selected: Record<string, Personalizacao | null>): boolean {
   return Object.values(selected).some((p) => !!p);
@@ -97,12 +90,13 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const [currentImage, setCurrentImage] = useState<string>(ProductData.srcFrontImage);
   const [descriFull, setDescriFull] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [product, setProduct] = useState<stock | undefined>(undefined);
+  const [, setProduct] = useState<stock | undefined>(undefined);
   const [isAmostra, setIsAmostra] = useState(false);
   // Personalização
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [personalizationError, setPersonalizationError] = useState(false);
 
   // ======= Infra por requisição (debounce/abort/timeout) =======
   const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -110,19 +104,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const requestIdRef = useRef(0);
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // ======= Utils =======
-  const toNumberBR = useCallback((val: string | number | undefined) => {
-    if (val === undefined || val === null) return undefined;
-    const s = String(val).trim();
-    if (s === "") return undefined;
-    if (s.includes(".") && s.includes(",")) return Number(s.replace(/\./g, "").replace(",", "."));
-    if (s.includes(",")) return Number(s.replace(",", "."));
-    return Number(s);
-  }, []);
-
-  const availableInt = useMemo(() => { // eslint-disable-line
-    const available = toNumberBR(product?.quantidadeSaldo);
-    return typeof available === "number" && isFinite(available) ? Math.trunc(available) : undefined;
-  }, [product, toNumberBR]);
 
   const requestedQty = useMemo(() => parseInt(quantity || "0", 10), [quantity]);
 
@@ -151,7 +132,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
     // Adiciona o valor adicional da amostra se estiver marcado
     if (isAmostra) {
-      price += parseFloat(ProductData.valorAdicionalAmostraPro || '0');
+      price += parseFloat(ProductData.valorAdicionalAmostraPro || "0");
     }
 
     return price;
@@ -162,7 +143,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     hasQty,
     hasGravacao,
     isAmostra,
-    ProductData.valorAdicionalAmostraPro
+    ProductData.valorAdicionalAmostraPro,
   ]);
 
   const total = React.useMemo(() => {
@@ -247,7 +228,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         }
 
         const raw = result.data?.result as unknown;
-        const produtos: stock[] = Array.isArray(raw) ? (raw as stock[]) : ((raw as { produtos?: stock[] })?.produtos ?? []);
+        const produtos: stock[] = Array.isArray(raw)
+          ? (raw as stock[])
+          : (raw as { produtos?: stock[] })?.produtos ?? [];
         const first = produtos?.[0];
 
         if (reqId === requestIdRef.current) {
@@ -292,7 +275,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
         if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
         fetchTimeoutRef.current = setTimeout(() => {
-          try { controller.abort(); } catch { }
+          try {
+            controller.abort();
+          } catch {}
         }, 8000);
 
         if (!isOutOfStock) {
@@ -350,7 +335,17 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         return;
       }
 
-      const selectedFirst = Object.values(selectedPersonalizations).find(p => p !== null) || null;
+      // Valida se existe personalização e se foi selecionada
+      const hasPersonalizationGroups =
+        ProductData.gruposPersonalizacoes && ProductData.gruposPersonalizacoes.length > 0;
+      if (hasPersonalizationGroups && !hasAnyPersonalization(selectedPersonalizations)) {
+        setPersonalizationError(true);
+        toast.alert("Por favor, selecione uma personalização para continuar.");
+        return;
+      }
+      setPersonalizationError(false);
+
+      const selectedFirst = Object.values(selectedPersonalizations).find((p) => p !== null) || null;
 
       if (file) {
         const maxBytes = 15 * 1024 * 1024; // 15MB
@@ -375,7 +370,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       // 3) ID determinístico inclui cor, tamanho e chaves de personalização
       const personalizationKeys = Object.values(selectedPersonalizations)
         .filter((p): p is Personalizacao => p !== null)
-        .map(p => p.chavePersonal)
+        .map((p) => p.chavePersonal)
         .sort()
         .join("_");
 
@@ -404,11 +399,11 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         isAmostra: isAmostra, // Add isAmostra flag
         personalization: selectedFirst
           ? {
-            chavePersonal: selectedFirst.chavePersonal,
-            descricao: selectedFirst.descrWebPersonal || selectedFirst.descrPersonal || "Personalização",
-            precoUnitario: personalizationUnit,
-            precoTotal: personalizationUnit * requestedQty,
-          }
+              chavePersonal: selectedFirst.chavePersonal,
+              descricao: selectedFirst.descrWebPersonal || selectedFirst.descrPersonal || "Personalização",
+              precoUnitario: personalizationUnit,
+              precoTotal: personalizationUnit * requestedQty,
+            }
           : undefined,
 
         // opcionais leves de logística (mantidos como number|string)
@@ -435,6 +430,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     ProductData.chavePro,
     ProductData.codePro,
     ProductData.comprimento,
+    ProductData.gruposPersonalizacoes,
     ProductData.images,
     ProductData.largura,
     ProductData.peso,
@@ -452,7 +448,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     toast,
     file,
   ]);
-
 
   // const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
   //   if (e.target.files) {
@@ -479,22 +474,28 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   //   }
   // }, []);
 
-
   // Função para manipular a seleção de personalizações
   const handlePersonalizationSelect = useCallback((groupId: string, personalization: Personalizacao | null) => {
-    setSelectedPersonalizations(prev => ({
-      ...prev,
-      [groupId]: personalization
-    }));
+    setSelectedPersonalizations((prev) => {
+      const newState = {
+        ...prev,
+        [groupId]: personalization,
+      };
+      // Limpa o erro se uma personalização foi selecionada
+      if (personalization) {
+        setPersonalizationError(false);
+      }
+      return newState;
+    });
   }, []);
 
   const findPriceForQuantity = (quantity: number) => {
     if (!ProductData.precos || ProductData.precos.length === 0) {
       //Retorna um objeto de preço padrão usando vluGrid quando não existem intervalos de preço.
       return {
-        qtdiProPrc: '1',
-        qtdfProPrc: '0',
-        vluProPrc: ProductData.vluGridPro || '0'
+        qtdiProPrc: "1",
+        qtdfProPrc: "0",
+        vluProPrc: ProductData.vluGridPro || "0",
       };
     }
 
@@ -502,21 +503,23 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     if (!quantity || quantity === 0) {
       return {
         ...ProductData.precos[0],
-        vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc
+        vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc,
       };
     }
 
-    // Se encontrar faixa de preço 
-    const foundPrice = ProductData.precos.find(price =>
-      quantity >= parseInt(price.qtdiProPrc) &&
-      (price.qtdfProPrc === '0' || quantity <= parseInt(price.qtdfProPrc))
+    // Se encontrar faixa de preço
+    const foundPrice = ProductData.precos.find(
+      (price) =>
+        quantity >= parseInt(price.qtdiProPrc) && (price.qtdfProPrc === "0" || quantity <= parseInt(price.qtdfProPrc))
     );
 
     //Se nenhum intervalo correspondente for encontrado, retorne o primeiro intervalo de preços com vluGridPro como alternativa.
-    return foundPrice || {
-      ...ProductData.precos[0],
-      vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc
-    };
+    return (
+      foundPrice || {
+        ...ProductData.precos[0],
+        vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc,
+      }
+    );
   };
 
   return (
@@ -546,7 +549,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
         {/* Imagem principal + miniaturas */}
         <div className="w-full lg:w-[50%] h-fit lg:h-full flex relative flex-col items-center justify-center p-2 lg:p-4 rounded-lg">
-          <div className="w-40 h-40 lg:w-80 lg:h-80 object-cover cursor-zoom-in overflow-hidden border-primary shadow-md rounded-xl relative" onClick={() => setZoomModal(true)}>
+          <div
+            className="w-40 h-40 lg:w-80 lg:h-80 object-cover cursor-zoom-in overflow-hidden border-primary shadow-md rounded-xl relative"
+            onClick={() => setZoomModal(true)}
+          >
             <Image
               className="w-full h-full"
               src={currentImage}
@@ -568,8 +574,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   height={64}
                   quality={75}
                   alt={`Product image ${index}`}
-                  className={`md:w-16 w-12 lg:w-24 cursor-pointer rounded-lg ${currentImage === image ? "border-2 border-primary" : ""
-                    }`}
+                  className={`md:w-16 w-12 lg:w-24 cursor-pointer rounded-lg ${
+                    currentImage === image ? "border-2 border-primary" : ""
+                  }`}
                   onMouseEnter={() => handleMouseEnter(image)}
                 />
               ))}
@@ -579,23 +586,38 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
           {/* Personalização */}
           <div className="w-full mt-4 p-3 rounded-lg bg-whiteReference border border-gray-200 pointer-events-none">
             <p className="font-bold mb-2">Personalize seu produto</p>
-            <p className="text-xs text-gray-600 mb-3">Envie o arquivo de arte para gravação (PNG, JPG, PDF, AI, CDR, SVG). Máx. 15MB.</p>
+            <p className="text-xs text-gray-600 mb-3">
+              Envie o arquivo de arte para gravação (PNG, JPG, PDF, AI, CDR, SVG). Máx. 15MB.
+            </p>
 
             <div
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               onDrop={(e) => {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
                 const f = e.dataTransfer.files?.[0];
                 if (!f) return;
                 const maxBytes = 15 * 1024 * 1024;
-                const allowed = ["image/png", "image/jpeg", "application/pdf", "image/svg+xml", "application/postscript", "application/vnd.corel-draw"];
+                const allowed = [
+                  "image/png",
+                  "image/jpeg",
+                  "application/pdf",
+                  "image/svg+xml",
+                  "application/postscript",
+                  "application/vnd.corel-draw",
+                ];
                 if (!allowed.includes(f.type)) {
-                  setFile(null); setFilePreviewUrl(null);
+                  setFile(null);
+                  setFilePreviewUrl(null);
                   setFileError("Formato não suportado. Envie PNG, JPG, PDF, AI, CDR ou SVG.");
                   return;
                 }
                 if (f.size > maxBytes) {
-                  setFile(null); setFilePreviewUrl(null);
+                  setFile(null);
+                  setFilePreviewUrl(null);
                   setFileError("Arquivo muito grande. Tamanho máximo: 15MB.");
                   return;
                 }
@@ -614,24 +636,36 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                     {filePreviewUrl ? (
                       <Image src={filePreviewUrl} alt="prévia" className="w-12 h-12 object-cover rounded" />
                     ) : (
-                      <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-xs">{file.type.split("/")[1]?.toUpperCase() || "ARQ"}</div>
+                      <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-xs">
+                        {file.type.split("/")[1]?.toUpperCase() || "ARQ"}
+                      </div>
                     )}
                     <div className="text-left">
-                      <p className="text-sm font-medium truncate max-w-[200px]" title={file.name}>{file.name}</p>
+                      <p className="text-sm font-medium truncate max-w-[200px]" title={file.name}>
+                        {file.name}
+                      </p>
                       <p className="text-xs text-gray-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     className="text-xs text-red-600 hover:text-red-700"
-                    onClick={(e) => { e.stopPropagation(); setFile(null); if (filePreviewUrl) { URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); } }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                      if (filePreviewUrl) {
+                        URL.revokeObjectURL(filePreviewUrl);
+                        setFilePreviewUrl(null);
+                      }
+                    }}
                   >
                     Remover
                   </button>
                 </div>
               ) : (
                 <div className="text-sm text-gray-700">
-                  Arraste e solte o arquivo aqui, ou <span className="text-primary underline">clique para selecionar</span>
+                  Arraste e solte o arquivo aqui, ou{" "}
+                  <span className="text-primary underline">clique para selecionar</span>
                 </div>
               )}
               <input
@@ -643,14 +677,23 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   const f = e.target.files?.[0];
                   if (!f) return;
                   const maxBytes = 15 * 1024 * 1024;
-                  const allowed = ["image/png", "image/jpeg", "application/pdf", "image/svg+xml", "application/postscript", "application/vnd.corel-draw"];
+                  const allowed = [
+                    "image/png",
+                    "image/jpeg",
+                    "application/pdf",
+                    "image/svg+xml",
+                    "application/postscript",
+                    "application/vnd.corel-draw",
+                  ];
                   if (!allowed.includes(f.type)) {
-                    setFile(null); setFilePreviewUrl(null);
+                    setFile(null);
+                    setFilePreviewUrl(null);
                     setFileError("Formato não suportado. Envie PNG, JPG, PDF, AI, CDR ou SVG.");
                     return;
                   }
                   if (f.size > maxBytes) {
-                    setFile(null); setFilePreviewUrl(null);
+                    setFile(null);
+                    setFilePreviewUrl(null);
                     setFileError("Arquivo muito grande. Tamanho máximo: 15MB.");
                     return;
                   }
@@ -667,17 +710,29 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         </div>
 
         {/* Detalhes e ações */}
-        <div className="lg:w-[60%] w-[100%] h-fit min-h-full flex flex-col gap-1 2xl:gap-2 items-start px-4 pt-2 mx-auto">
+        <div className="lg:w-[60%] w-full h-fit min-h-full flex flex-col gap-1 2xl:gap-2 items-start px-4 pt-2 mx-auto">
           <p className="text-blackReference text-md md:text-md 2xl:text-lg font-semibold max-w-[90%] text-primary">
             {ProductData.product}
           </p>
 
           <p className="text-blackReference scrollbar text-sm md:text-md 2xl:text-md font-Roboto max-w-[90%] ">
-            {descriFull ? ProductData.description : (ProductData.description.length > 40 ? `${ProductData.description.substring(0, 40)}...` : ProductData.description)}
+            {descriFull
+              ? ProductData.description
+              : ProductData.description.length > 40
+              ? `${ProductData.description.substring(0, 40)}...`
+              : ProductData.description}
           </p>
 
           <button type="button" className="text-primary text-xs cursor-pointer flex" onClick={handleDescriFull}>
-            {descriFull ? <>Ocultar descrição completa <ChevronUp size={18} /></> : <>Ver descrição completa <ChevronDown size={18} /></>}
+            {descriFull ? (
+              <>
+                Ocultar descrição completa <ChevronUp size={18} />
+              </>
+            ) : (
+              <>
+                Ver descrição completa <ChevronDown size={18} />
+              </>
+            )}
           </button>
 
           <form
@@ -694,8 +749,11 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   {ProductData.sizes.map((size) => (
                     <label
                       key={size}
-                      className={`px-3 py-2 2xl:px-4 2xl:py-2 rounded-lg cursor-pointer text-sm  ${selectedSize === size ? "bg-modalProduct-button text-white" : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
-                        }`}
+                      className={`px-3 py-2 2xl:px-4 2xl:py-2 rounded-lg cursor-pointer text-sm  ${
+                        selectedSize === size
+                          ? "bg-modalProduct-button text-white"
+                          : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
+                      }`}
                     >
                       <input
                         type="radio"
@@ -718,8 +776,11 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 {ProductData.colors.map((color) => (
                   <label
                     key={color}
-                    className={`px-2 py-2 2xl:px-3 rounded-lg cursor-pointer text-xs ${selectedColor === color ? "bg-modalProduct-button text-white" : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
-                      }`}
+                    className={`px-2 py-2 2xl:px-3 rounded-lg cursor-pointer text-xs ${
+                      selectedColor === color
+                        ? "bg-modalProduct-button text-white"
+                        : "bg-whiteReference hover:bg-modalProduct-hoverButton hover:text-white"
+                    }`}
                   >
                     <input
                       type="radio"
@@ -734,31 +795,43 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 ))}
               </div>
             </div>
-            <div className="flex w-fit flex-col lg:flex-row flex-wrap gap-4 mt-1">
-              {ProductData.gruposPersonalizacoes?.map((group) => (
-                <div key={group.chaveContPersonal}>
-                  <p className="font-bold font-Roboto text-sm">{group.descrWebContPersonal}</p>
-                  <select
-                    className="w-full p-2 border border-gray-300 rounded text-xs"
-                    value={selectedPersonalizations[group.chaveContPersonal]?.chavePersonal || ""}
-                    onChange={(e) => {
-                      const selectedKey = e.target.value;
-                      const selectedPersonalization = group.personalizacoes.find(
-                        p => p.chavePersonal === selectedKey
-                      ) || null;
-                      handlePersonalizationSelect(group.chaveContPersonal, selectedPersonalization);
-                    }}
-                  >
-                    <option value="">Selecione</option>
-                    {group.personalizacoes.map((personalization) => (
-                      <option key={personalization.chavePersonal} value={personalization.chavePersonal}>
-                        {personalization.descrPersonal}
-                      </option>
-                    ))}
-                  </select>
+            {ProductData.gruposPersonalizacoes && ProductData.gruposPersonalizacoes.length > 0 && (
+              <div className="flex w-fit flex-col gap-2">
+                <div className="flex w-fit flex-col lg:flex-row flex-wrap gap-4 mt-1">
+                  {ProductData.gruposPersonalizacoes.map((group) => (
+                    <div key={group.chaveContPersonal}>
+                      <p className="font-bold font-Roboto text-sm">
+                        {group.descrWebContPersonal}
+                        <span className="text-red-500 ml-1">*</span>
+                      </p>
+                      <select
+                        className={`w-full p-2 border rounded text-xs ${
+                          personalizationError ? "border-red-500" : "border-gray-300"
+                        }`}
+                        value={selectedPersonalizations[group.chaveContPersonal]?.chavePersonal || ""}
+                        onChange={(e) => {
+                          const selectedKey = e.target.value;
+                          const selectedPersonalization =
+                            group.personalizacoes.find((p) => p.chavePersonal === selectedKey) || null;
+                          handlePersonalizationSelect(group.chaveContPersonal, selectedPersonalization);
+                        }}
+                        required
+                      >
+                        <option value="">Selecione</option>
+                        {group.personalizacoes.map((personalization) => (
+                          <option key={personalization.chavePersonal} value={personalization.chavePersonal}>
+                            {personalization.descrPersonal}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+                {personalizationError && (
+                  <span className="text-red-500 text-sm">Por favor, selecione uma personalização para continuar.</span>
+                )}
+              </div>
+            )}
 
             {/* Checkbox de amostra */}
             <div className="flex gap-2 items-center my-2">
@@ -774,13 +847,13 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   }
                 }}
               />
-              <label className="font-Roboto text-sm">
-                Produto para amostra (1 unidade) + {formatPrice(parseFloat(ProductData.valorAdicionalAmostraPro || '0'))}
-              </label>
+              <label className="font-Roboto text-sm">Produto para amostra (1 unidade)</label>
             </div>
 
             <div className="flex flex-col">
-              <label className="font-bold font-Roboto" htmlFor="quantity">Quantidade:</label>
+              <label className="font-bold font-Roboto" htmlFor="quantity">
+                Quantidade:
+              </label>
               <div className="flex gap-2 items-center">
                 <button
                   type="button"
@@ -817,21 +890,24 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               </div>
             </div>
 
-
-
             <div className="flex gap-4 pointer-events-none select-none">
-
               <div className="flex gap-4 pointer-events-none select-none">
                 <div className="flex items-center gap-2">
-                  <label className="font-bold select-none" htmlFor="price">Valor unitário:</label>
+                  <label className="font-bold select-none" htmlFor="price">
+                    Valor unitário:
+                  </label>
                   <span className="w-32 p-1 select-none">
                     {(() => {
                       const currentPrice = findPriceForQuantity(Number(quantity) || 0);
-                      if (!currentPrice) return 'Selecione uma quantidade';
+                      if (!currentPrice) return "Selecione uma quantidade";
 
                       const basePrice = parseFloat(currentPrice.vluProPrc);
                       const personalizationCost = hasGravacao
-                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, Number(quantity) || 1, isAmostra)
+                        ? sumSelectedPersonalizationsUnitPrice(
+                            selectedPersonalizations,
+                            Number(quantity) || 1,
+                            isAmostra
+                          )
                         : 0;
 
                       return formatPrice(basePrice + personalizationCost);
@@ -840,7 +916,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 </div>
 
                 <div>
-                  <label className="font-bold select-none" htmlFor="subtotal">Subtotal:</label>
+                  <label className="font-bold select-none" htmlFor="subtotal">
+                    Subtotal:
+                  </label>
                   <input
                     className="w-32 p-1 rounded-md select-none"
                     type="text"
@@ -860,16 +938,25 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             )}
 
             {isOutOfStock ? (
-              <Button type="button" name="BtnAvisar" className="flex gap-2 items-center justify-center select-none bg-orange-400 hover:bg-orange-500 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4">
+              <Button
+                type="button"
+                name="BtnAvisar"
+                className="flex gap-2 items-center justify-center select-none bg-orange-400 hover:bg-orange-500 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
+              >
                 Avise-me quando chegar!
               </Button>
             ) : (
-              <Button type="submit" disabled={
-                loading ||
-                !quantity ||
-                Number(quantity) === 0 ||
-                (!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro))
-              }
+              <Button
+                type="submit"
+                disabled={
+                  loading ||
+                  !quantity ||
+                  Number(quantity) === 0 ||
+                  (!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro)) ||
+                  (ProductData.gruposPersonalizacoes &&
+                    ProductData.gruposPersonalizacoes.length > 0 &&
+                    !hasAnyPersonalization(selectedPersonalizations))
+                }
                 className="disabled:bg-gray-500 flex gap-2 items-center justify-center cursor-pointer select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
               >
                 <ShoppingCart size={18} /> Comprar
@@ -877,57 +964,61 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             )}
           </form>
 
-          <div className="mt-6">
-            <h3 className="font-bold text-lg mb-3">Tabela de Preços</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd Mín</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd Máx</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preço Unitário</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {ProductData.precos && ProductData.precos.length > 0 ? (
-                    ProductData.precos.map((priceRange, index) => {
-                      const personalizationPrice = hasGravacao
-                        ? sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, parseInt(priceRange.qtdiProPrc), isAmostra)
-                        : 0;
+          {hasGravacao && (
+            <div className="mt-6">
+              <h3 className="font-bold text-lg mb-3">Tabela de Preços</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Qtd Mín
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Qtd Máx
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Preço Unitário
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {ProductData.precos && ProductData.precos.length > 0 ? (
+                      ProductData.precos.map((priceRange, index) => {
+                        const personalizationPrice = sumSelectedPersonalizationsUnitPrice(
+                          selectedPersonalizations,
+                          parseInt(priceRange.qtdiProPrc),
+                          isAmostra
+                        );
 
-                      return (
-                        <tr key={`price-${index}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                            {parseInt(priceRange.qtdiProPrc).toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                            {priceRange.qtdfProPrc === '999999999'
-                              ? '+'
-                              : parseInt(priceRange.qtdfProPrc).toLocaleString('pt-BR')}
-                          </td>
-                          {hasGravacao ? (
+                        return (
+                          <tr key={`price-${index}`} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                              {parseInt(priceRange.qtdiProPrc).toLocaleString("pt-BR")}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                              {priceRange.qtdfProPrc === "999999999"
+                                ? "+"
+                                : parseInt(priceRange.qtdfProPrc).toLocaleString("pt-BR")}
+                            </td>
                             <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-green-700">
                               {formatPrice(personalizationPrice + parseFloat(priceRange.vluProPrc))}
                             </td>
-                          ) : (
-                            <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-green-700">
-                              {formatPrice(parseFloat(priceRange.vluProPrc))}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={hasGravacao ? 4 : 3} className="px-4 py-4 text-center text-sm text-gray-500">
-                        Consulte os preços.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-4 text-center text-sm text-gray-500">
+                          Consulte os preços.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

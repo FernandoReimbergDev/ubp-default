@@ -84,21 +84,41 @@ export function Resumo({ delivery }: ResumoProps) {
     return { ready: Boolean(zip.length === 8 && uf && city), zip, uf, city };
   }, [delivery]);
 
-  // 5) Normaliza parâmetros
+  // 5) Normaliza parâmetros com validação robusta
   const norm = useMemo(() => {
-    const pesoKg = Math.max(pkg?.pesoTotal ?? 0, 0);
-    const altura = Math.max(pkg?.altura ?? 0, 0);
-    const largura = Math.max(pkg?.largura ?? 0, 0);
-    const comprimento = Math.max(pkg?.comprimento ?? 0, 0);
+    // Função auxiliar para validar e normalizar valores numéricos
+    const safeNumber = (value: number | undefined | null, min: number = 0, defaultValue: number = 0): number => {
+      if (value === undefined || value === null) {
+        return defaultValue;
+      }
+      const num = typeof value === "number" ? value : Number(value);
+      if (isNaN(num) || !Number.isFinite(num) || num < min) {
+        return defaultValue;
+      }
+      return num;
+    };
+
+    // Peso em gramas, converte para kg (divide por 1000)
+    const pesoTotalGrams = safeNumber(pkg?.pesoTotal, 0, 0);
+    const pesoKg = pesoTotalGrams > 0 ? pesoTotalGrams / 1000 : 0;
+
+    // Dimensões em cm (valores mínimos de segurança)
+    const altura = safeNumber(pkg?.altura, 1, 1);
+    const largura = safeNumber(pkg?.largura, 1, 1);
+    const comprimento = safeNumber(pkg?.comprimento, 1, 1);
+
+    // Valor total da compra
+    const purchaseAmountNum = typeof totalValue === "number" && Number.isFinite(totalValue) ? totalValue : 0;
+
     return {
-      purchaseAmount: totalValue.toFixed(2),
-      uf: deliveryReady.uf,
-      city: deliveryReady.city,
-      zip: deliveryReady.zip,
+      purchaseAmount: purchaseAmountNum.toFixed(2),
+      uf: deliveryReady.uf || "",
+      city: deliveryReady.city || "",
+      zip: deliveryReady.zip || "",
       weightKg: pesoKg.toFixed(2),
-      altura: String(altura),
-      largura: String(largura),
-      comprimento: String(comprimento),
+      altura: String(Math.max(1, Math.ceil(altura))), // Mínimo 1cm, arredonda para cima
+      largura: String(Math.max(1, Math.ceil(largura))), // Mínimo 1cm, arredonda para cima
+      comprimento: String(Math.max(1, Math.ceil(comprimento))), // Mínimo 1cm, arredonda para cima
     };
   }, [
     pkg?.pesoTotal,
@@ -130,70 +150,195 @@ export function Resumo({ delivery }: ResumoProps) {
     ].join("#");
   }, [cart, quantities, norm]);
 
-  // 7) Consulta com retry e cache da chave
+  // 7) Consulta com retry e cache da chave - função robusta com tratamento de erros
   const runFrete = useCallback(
     async (key: string) => {
-      if (!cartReady) return;
-      if (!deliveryReady.ready) return;
-      if (!cart?.length) return;
-      if (lastKeyRef.current === key) return;
+      // Validações iniciais
+      if (!cartReady) {
+        console.debug("Carrinho não está pronto");
+        return;
+      }
+      if (!deliveryReady.ready) {
+        console.debug("Dados de entrega não estão prontos");
+        return;
+      }
+      if (!cart || !Array.isArray(cart) || cart.length === 0) {
+        console.debug("Carrinho vazio");
+        return;
+      }
+      if (!fetchProductFrete) {
+        console.warn("Função fetchProductFrete não disponível");
+        return;
+      }
+      if (lastKeyRef.current === key) {
+        console.debug("Chave de frete não mudou, ignorando");
+        return;
+      }
 
-      abortRef.current?.abort();
+      // Cancela requisição anterior se existir
+      try {
+        abortRef.current?.abort();
+      } catch {
+        // Ignora erros ao abortar
+      }
+
       const controller = new AbortController();
       abortRef.current = controller;
-
       const reqId = ++requestIdRef.current;
 
       try {
         setLoadingFrete(true);
         setFreteErro(false);
 
-        const call = async () =>
-          fetchProductFrete?.(
-            norm.purchaseAmount,
-            norm.uf,
-            norm.city,
-            norm.zip,
-            norm.weightKg,
-            norm.altura,
-            norm.largura,
-            norm.comprimento
-          );
+        // Valida valores antes de fazer a consulta
+        const purchaseAmountNum = Number(norm.purchaseAmount);
+        const weightKgNum = Number(norm.weightKg);
+        const alturaNum = Number(norm.altura);
+        const larguraNum = Number(norm.largura);
+        const comprimentoNum = Number(norm.comprimento);
 
+        // Se o valor da compra for maior que 1500, frete é grátis
+        if (!isNaN(purchaseAmountNum) && purchaseAmountNum > 1500) {
+          if (reqId === requestIdRef.current) {
+            setValorFrete(0);
+            setLoadingFrete(false);
+            setFreteErro(false);
+            lastKeyRef.current = key;
+          }
+          return;
+        }
+
+        // Valida se os valores necessários são válidos
+        if (
+          isNaN(weightKgNum) ||
+          weightKgNum <= 0 ||
+          isNaN(alturaNum) ||
+          alturaNum <= 0 ||
+          isNaN(larguraNum) ||
+          larguraNum <= 0 ||
+          isNaN(comprimentoNum) ||
+          comprimentoNum <= 0
+        ) {
+          console.warn("Valores inválidos para cálculo de frete:", {
+            weightKg: norm.weightKg,
+            altura: norm.altura,
+            largura: norm.largura,
+            comprimento: norm.comprimento,
+          });
+          if (reqId === requestIdRef.current) {
+            setFreteErro(true);
+            setLoadingFrete(false);
+          }
+          return;
+        }
+
+        // Função auxiliar para fazer a chamada com validação
+        const callFrete = async (): Promise<number | undefined> => {
+          try {
+            const result = await fetchProductFrete(
+              norm.purchaseAmount,
+              norm.uf,
+              norm.city,
+              norm.zip,
+              norm.weightKg,
+              norm.altura,
+              norm.largura,
+              norm.comprimento
+            );
+
+            // Valida o resultado
+            if (result === undefined || result === null) {
+              return undefined;
+            }
+
+            const resultNum = typeof result === "number" ? result : Number(result);
+
+            if (isNaN(resultNum) || !Number.isFinite(resultNum)) {
+              console.warn("Valor de frete inválido retornado:", result);
+              return undefined;
+            }
+
+            // Garante que o valor seja >= 0
+            return Math.max(0, resultNum);
+          } catch (error) {
+            // Erro já foi tratado na função fetchProductFrete
+            console.debug("Erro na chamada de frete (já tratado):", error);
+            return undefined;
+          }
+        };
+
+        // Tenta fazer a consulta com retry
         let amount: number | undefined;
 
-        if (Number(norm.purchaseAmount) > 1500) {
-          amount = 0;
-        } else {
+        try {
+          amount = await callFrete();
+        } catch (firstError) {
+          // Se for AbortError, apenas retorna
+          if (firstError instanceof Error && firstError.name === "AbortError") {
+            return;
+          }
+
+          // Aguarda um pouco e tenta novamente
           try {
-            amount = await call();
-          } catch {
-            await new Promise((r) => setTimeout(r, 400));
-            amount = await call();
+            await new Promise((resolve) => setTimeout(resolve, 600));
+            if (reqId === requestIdRef.current && !controller.signal.aborted) {
+              amount = await callFrete();
+            }
+          } catch (retryError) {
+            // Se for AbortError no retry, apenas retorna
+            if (retryError instanceof Error && retryError.name === "AbortError") {
+              return;
+            }
+            console.debug("Erro no retry de frete:", retryError);
           }
         }
-        if (Number(totalValue) > 1500) {
-          setValorFrete(0);
-        } else {
-          setValorFrete(amount);
+
+        // Atualiza o estado apenas se ainda for a requisição atual
+        if (reqId === requestIdRef.current) {
+          // Se foi abortado, não atualiza o estado
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          // Se o valor total da compra for maior que 1500, frete é grátis
+          const totalValueNum = Number(totalValue);
+          if (!isNaN(totalValueNum) && totalValueNum > 1500) {
+            setValorFrete(0);
+            setFreteErro(false);
+          } else if (amount !== undefined && amount !== null) {
+            // Valor válido retornado - valida antes de setar
+            const validAmount = typeof amount === "number" && Number.isFinite(amount) ? Math.max(0, amount) : 0;
+            setValorFrete(validAmount);
+            setFreteErro(false);
+          } else {
+            // Não conseguiu obter o valor do frete
+            setFreteErro(true);
+            // Mantém o valor anterior se existir, senão deixa undefined
+            // Não remove do cookie para manter o último valor válido
+          }
+
+          setLoadingFrete(false);
+          lastKeyRef.current = key;
         }
-        setLoadingFrete(false);
-      } catch (e) {
-        // Abortado
-        // @ts-expect-error narrow
-        if (e?.name === "AbortError") return;
-        // setValorFrete(undefined);
-        setFreteErro(true);
-        try {
-          Cookies.remove("valorFrete");
-        } catch {
-          /* noop */
+      } catch (e: unknown) {
+        // Tratamento de erro geral
+        if (reqId === requestIdRef.current) {
+          // Se for AbortError, apenas retorna sem atualizar estado
+          if (e instanceof Error && e.name === "AbortError") {
+            return;
+          }
+
+          // Outros erros
+          console.error("Erro inesperado ao calcular frete:", e);
+          setFreteErro(true);
+          setLoadingFrete(false);
+
+          // Não remove o cookie para manter o último valor válido
+          // O usuário ainda pode ver o último valor calculado
         }
-      } finally {
-        if (reqId === requestIdRef.current) setLoadingFrete(false);
       }
     },
-    [cartReady, deliveryReady.ready, cart?.length, fetchProductFrete, norm, totalValue]
+    [cartReady, deliveryReady.ready, cart, fetchProductFrete, norm, totalValue]
   );
 
   // 8) Executa a consulta de frete quando necessário (apenas no cliente após montagem)
@@ -217,12 +362,39 @@ export function Resumo({ delivery }: ResumoProps) {
       <div className="w-full flex justify-between items-center">
         <p>Valor do Frete:</p>
         <span>
-          {!mounted || loadingFrete ? formatPrice(0) : formatPrice(valorFrete !== undefined ? Number(valorFrete) : 0)}
+          {(() => {
+            if (!mounted || loadingFrete) {
+              return formatPrice(0);
+            }
+
+            // Função segura para converter valor do frete
+            const getFreteValue = (): number => {
+              if (valorFrete === undefined || valorFrete === null) {
+                return 0;
+              }
+
+              const numValue = typeof valorFrete === "number" ? valorFrete : Number(valorFrete);
+
+              if (isNaN(numValue) || !Number.isFinite(numValue)) {
+                return 0;
+              }
+
+              return Math.max(0, numValue);
+            };
+
+            return formatPrice(getFreteValue());
+          })()}
         </span>
       </div>
 
       {mounted && valorFrete === 0 && !loadingFrete && !freteErro && (
         <p className="text-[11px] text-green-700">* Frete gratuito para compras acima de R$ 1.500,00</p>
+      )}
+
+      {mounted && freteErro && !loadingFrete && (
+        <p className="text-[11px] text-orange-600">
+          * Não foi possível calcular o frete. Entre em contato para mais informações.
+        </p>
       )}
 
       <hr className="text-gray-300" />
@@ -231,9 +403,36 @@ export function Resumo({ delivery }: ResumoProps) {
         <div className="bg-green-300 flex justify-between items-center px-2 py-4">
           <p className="text-sm">Valor Total:</p>
           <span>
-            {!mounted || loadingFrete
-              ? formatPrice(totalValue)
-              : formatPrice(Number(totalValue) + (valorFrete !== undefined ? Number(valorFrete) : 0))}
+            {(() => {
+              // Função segura para calcular o total
+              const calculateTotal = (): number => {
+                const totalValueNum = typeof totalValue === "number" ? totalValue : Number(totalValue);
+                const safeTotalValue = isNaN(totalValueNum) || !Number.isFinite(totalValueNum) ? 0 : totalValueNum;
+
+                if (!mounted || loadingFrete) {
+                  return safeTotalValue;
+                }
+
+                // Função segura para obter valor do frete
+                const getFreteValue = (): number => {
+                  if (valorFrete === undefined || valorFrete === null) {
+                    return 0;
+                  }
+
+                  const numValue = typeof valorFrete === "number" ? valorFrete : Number(valorFrete);
+
+                  if (isNaN(numValue) || !Number.isFinite(numValue)) {
+                    return 0;
+                  }
+
+                  return Math.max(0, numValue);
+                };
+
+                return safeTotalValue + getFreteValue();
+              };
+
+              return formatPrice(calculateTotal());
+            })()}
           </span>
         </div>
       </div>

@@ -12,7 +12,7 @@ import Cookies from "js-cookie";
 import { useCart } from "@/app/Context/CartContext";
 
 export function FormDadosEntrega() {
-  const { fetchSendAddress } = useCart()
+  const { fetchSendAddress } = useCart();
 
   const [adressShipping, setAdressShipping] = useState({
     cep: "04583-110",
@@ -150,8 +150,6 @@ export function FormDadosEntrega() {
     }
   }, []);
 
-
-
   useEffect(() => {
     if (!clientData) return;
 
@@ -185,7 +183,22 @@ export function FormDadosEntrega() {
       setValue("ddd", phones[0].areaCode ?? "11");
       setValue("contato_entrega", clientData.result[0].fullName);
     }
-  }, [clientData, setValue, trigger, setError, clearErrors, adressShipping.complemento, adressShipping.cep, adressShipping.logradouro, adressShipping.numero, adressShipping.bairro, adressShipping.municipio, adressShipping.uf, adressShipping.razao_social, adressShipping.cnpj]);
+  }, [
+    clientData,
+    setValue,
+    trigger,
+    setError,
+    clearErrors,
+    adressShipping.complemento,
+    adressShipping.cep,
+    adressShipping.logradouro,
+    adressShipping.numero,
+    adressShipping.bairro,
+    adressShipping.municipio,
+    adressShipping.uf,
+    adressShipping.razao_social,
+    adressShipping.cnpj,
+  ]);
 
   const handleAddressChange = useCallback(
     (endereco: (typeof enderecos)[number]) => {
@@ -228,14 +241,33 @@ export function FormDadosEntrega() {
 
       const cookieDDD = c?.areaCode || c?.ddd || c?.phone?.areaCode || c?.phones?.[0]?.areaCode || "";
       const cookiePhone = c?.telefone || c?.phone || c?.phone?.number || c?.phones?.[0]?.number || "";
-      const cookieCEP = c?.zipCodeBilling || c?.addressZip || c?.zipcode || c?.cep || c?.address?.zipcode || c?.addresses?.[0]?.zipcode || "";
-      const cookieUF = (c?.uf || c?.addressState || c?.stateCode || c?.address?.stateCode || c?.addresses?.[0]?.stateCode || c?.address?.uf || "").toString().toUpperCase();
+      const cookieCEP =
+        c?.zipCodeBilling ||
+        c?.addressZip ||
+        c?.zipcode ||
+        c?.cep ||
+        c?.address?.zipcode ||
+        c?.addresses?.[0]?.zipcode ||
+        "";
+      const cookieUF = (
+        c?.uf ||
+        c?.addressState ||
+        c?.stateCode ||
+        c?.address?.stateCode ||
+        c?.addresses?.[0]?.stateCode ||
+        c?.address?.uf ||
+        ""
+      )
+        .toString()
+        .toUpperCase();
 
       if (!watch("ddd") && cookieDDD) setValue("ddd", cookieDDD);
       if (!watch("telefone") && cookiePhone) handlePhoneMask(cookiePhone, setValue, trigger, setError, clearErrors);
       if (!watch("cep") && cookieCEP) handleCEPMask(cookieCEP, setValue, trigger, setError, clearErrors);
       if (!watch("uf") && cookieUF) setValue("uf", cookieUF);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [setValue, trigger, setError, clearErrors, watch]);
 
   function onSubmit(form: any) {
@@ -261,12 +293,11 @@ export function FormDadosEntrega() {
         form.municipio,
         form.uf
       );
-
     } catch (error) {
       console.error("Erro ao enviar dados de entrega:", error);
     }
     setSubmitting(false);
-    router.push("/forma-de-pagamento")
+    router.push("/forma-de-pagamento");
   }
 
   return (
@@ -281,7 +312,9 @@ export function FormDadosEntrega() {
       </header>
       <div className="flex w-full h-full flex-col lg:flex-row">
         <form method="POST" onSubmit={handleSubmit(onSubmit)} className="w-full">
-          <h2 className="px-2 text-sm 2xl:text-lg font-bold font-plutoRegular text-zinc-600">Selecione o local de entrega:</h2>
+          <h2 className="px-2 text-sm 2xl:text-lg font-bold font-plutoRegular text-zinc-600">
+            Selecione o local de entrega:
+          </h2>
           <section className="flex flex-col 2xl:flex-row 2xl:items-center gap-4 mt-2 mb-6">
             {enderecos.map((endereco, index) => {
               const isSelected = adressShipping.cep === endereco.CEP;
@@ -297,7 +330,7 @@ export function FormDadosEntrega() {
                   />
                   <label
                     htmlFor={`filial_${index + 1}`}
-                    className={`text-gray-800 cursor-pointer ${isSelected ? 'font-bold text-primary' : ''}`}
+                    className={`text-gray-800 cursor-pointer ${isSelected ? "font-bold text-primary" : ""}`}
                   >
                     {endereco.LABEL}
                   </label>
@@ -315,10 +348,11 @@ export function FormDadosEntrega() {
                 {...register("cep")}
                 placeholder="00000-000"
                 onChange={(e) => handleCEPMask(e.target.value, setValue, trigger, setError, clearErrors)}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.cep
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.cep
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                }`}
               />
               {errors.cep && <span className="text-red-500 text-xs">{errors.cep.message}</span>}
             </div>
@@ -342,10 +376,11 @@ export function FormDadosEntrega() {
                   readOnly
                   id="logradouro"
                   {...register("logradouro")}
-                  className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.logradouro
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                    }`}
+                  className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.logradouro
+                      ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                      : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  }`}
                 />
                 {errors.logradouro && <span className="text-red-500 text-xs">{errors.logradouro.message}</span>}
                 <br />
@@ -358,10 +393,11 @@ export function FormDadosEntrega() {
                   readOnly
                   id="numero"
                   {...register("numero")}
-                  className={`w-[66px] flex-none px-1 py-1  md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.numero
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                    }`}
+                  className={`w-[66px] flex-none px-1 py-1  md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.numero
+                      ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                      : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  }`}
                 />
               </div>
             </div>
@@ -372,10 +408,11 @@ export function FormDadosEntrega() {
                 readOnly
                 id="complemento"
                 {...register("complemento")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.complemento
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.complemento
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                }`}
               />
               {errors.complemento && <span className="text-red-500 text-xs">{errors.complemento.message}</span>}
             </div>
@@ -386,10 +423,11 @@ export function FormDadosEntrega() {
                 id="bairro"
                 readOnly
                 {...register("bairro")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.bairro
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.bairro
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                }`}
               />
               {errors.bairro && <span className="text-red-500 text-xs">{errors.bairro.message}</span>}
             </div>
@@ -401,10 +439,11 @@ export function FormDadosEntrega() {
                   readOnly
                   id="municipio"
                   {...register("municipio")}
-                  className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.municipio
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                    }`}
+                  className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.municipio
+                      ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                      : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  }`}
                 />
                 {errors.municipio && <span className="text-red-500 text-xs">{errors.municipio.message}</span>}
                 {errors.uf && <span className="text-red-500 text-xs">{errors.uf.message}</span>}
@@ -416,10 +455,11 @@ export function FormDadosEntrega() {
                   readOnly
                   id="uf"
                   {...register("uf")}
-                  className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.uf
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                    }`}
+                  className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.uf
+                      ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                      : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                  }`}
                 />
               </div>
             </div>
@@ -433,10 +473,11 @@ export function FormDadosEntrega() {
                 id="razao_social"
                 {...register("razao_social")}
                 readOnly
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.razao_social
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.razao_social
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                }`}
               />
               {errors.razao_social && <span className="text-red-500 text-xs">{errors.razao_social.message}</span>}
             </div>
@@ -451,10 +492,11 @@ export function FormDadosEntrega() {
                 placeholder="00.000.000/0001-00"
                 onChange={(e) => handleCnpjCpfMask(e.target.value, setValue, trigger, setError, clearErrors)}
                 className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 rounded-md border transition-all duration-150
-                                        ${errors.cnpj_cpf
-                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                                        ${
+                                          errors.cnpj_cpf
+                                            ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                                            : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                                        }`}
                 maxLength={18}
               />
               {errors.cnpj_cpf && <span className="text-red-500 text-xs">{errors.cnpj_cpf.message}</span>}
@@ -467,10 +509,11 @@ export function FormDadosEntrega() {
                 id="inscricao_estadual"
                 {...register("inscricao_estadual")}
                 readOnly
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.inscricao_estadual
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.inscricao_estadual
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                }`}
               />
               {errors.inscricao_estadual && (
                 <span className="text-red-500 text-xs">{errors.inscricao_estadual.message}</span>
@@ -478,15 +521,18 @@ export function FormDadosEntrega() {
             </div>
 
             <div className="px-2">
-              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">Nome do contato para entrega</label>
+              <label className="block text-xs 2xl:text-sm font-medium text-gray-700">
+                Nome do contato para entrega
+              </label>
               <input
                 type="text"
                 id="contato_entrega"
                 {...register("contato_entrega")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.contato_entrega
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.contato_entrega
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                }`}
               />
               {errors.contato_entrega && <span className="text-red-500 text-xs">{errors.contato_entrega.message}</span>}
             </div>
@@ -499,11 +545,13 @@ export function FormDadosEntrega() {
                     <input
                       type="text"
                       id="ddd"
+                      maxLength={2}
                       {...register("ddd")}
-                      className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ddd
-                        ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                        : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                        }`}
+                      className={`w-[66px] flex-none px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        errors.ddd
+                          ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                          : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                      }`}
                     />
                   </div>
                   <div className="px-2 w-full grow">
@@ -514,10 +562,11 @@ export function FormDadosEntrega() {
                       {...register("telefone")}
                       placeholder="0000-0000"
                       onChange={(e) => handlePhoneMask(e.target.value, setValue, trigger, setError, clearErrors)}
-                      className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.telefone
-                        ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                        : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                        }`}
+                      className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        errors.telefone
+                          ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                          : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                      }`}
                     />
                   </div>
                 </div>
@@ -533,22 +582,23 @@ export function FormDadosEntrega() {
                 type="email"
                 id="email"
                 {...register("email")}
-                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email
-                  ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
-                  : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
-                  }`}
+                className={`w-full mx-auto px-2 py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.email
+                    ? "border-red-500 focus:ring-red-500 focus:outline-none focus:ring-2"
+                    : "border-gray-300 focus:ring-blue-500 focus:outline-none focus:ring-2"
+                }`}
               />
               {errors.email && <span className="text-red-500 text-xs">{errors.email.message}</span>}
             </div>
           </section>
           <section className="grid md:grid-cols-1 gap-2 2xl:gap-4 bg-white ">
-
             <div className="p-2">
               <button
                 type="submit"
                 disabled={submitting}
-                className={`px-4 py-2 rounded-md cursor-pointer  ${submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
-                  } text-white text-xs 2xl:text-sm`}
+                className={`px-4 py-2 rounded-md cursor-pointer  ${
+                  submitting ? "bg-gray-400" : "bg-emerald-500 hover:bg-emerald-400"
+                } text-white text-xs 2xl:text-sm`}
               >
                 {submitting ? `'ENVIANDO...'` : "CONTINUAR"}
               </button>
@@ -558,9 +608,7 @@ export function FormDadosEntrega() {
         <div className="w-full lg:w-full lg:max-w-80 h-full border-t lg:border-t-0 lg:border-l border-gray-300 px-2 mt-4">
           <Resumo delivery={delivery} />
         </div>
-
       </div>
-
     </div>
   );
 }
