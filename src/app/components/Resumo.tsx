@@ -15,9 +15,28 @@ interface ResumoProps {
 export function Resumo({ delivery }: ResumoProps) {
   const { cart, fetchProductFrete, cartReady } = useCart();
 
-  const [valorFrete, setValorFrete] = useState<number | string | undefined>(undefined);
+  const [valorFrete, setValorFrete] = useState<number | string | undefined>(() => {
+    // Tenta carregar o valor inicial do cookie
+    try {
+      const savedFrete = Cookies.get('valorFrete');
+      return savedFrete ? Number(savedFrete) : undefined;
+    } catch {
+      return undefined;
+    }
+  });
   const [loadingFrete, setLoadingFrete] = useState(false);
   const [freteErro, setFreteErro] = useState<string | null>(null);
+
+  // Salva o valor do frete no cookie sempre que ele mudar
+  useEffect(() => {
+    if (valorFrete !== undefined) {
+      try {
+        Cookies.set('valorFrete', String(valorFrete), { expires: 1 }); // Expira em 1 dia
+      } catch (error) {
+        console.error('Erro ao salvar valor do frete no cookie:', error);
+      }
+    }
+  }, [valorFrete]);
 
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);

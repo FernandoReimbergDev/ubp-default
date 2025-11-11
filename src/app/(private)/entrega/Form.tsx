@@ -13,6 +13,7 @@ import { useCart } from "@/app/Context/CartContext";
 
 export function FormDadosEntrega() {
   const { fetchSendAddress } = useCart()
+
   const [adressShipping, setAdressShipping] = useState({
     cep: "04583-110",
     logradouro: "Av. Doutor Chucri Zaidan",
@@ -24,44 +25,47 @@ export function FormDadosEntrega() {
     razao_social: "Caixa Vida e Previdencia S/A",
     cnpj: "03.730.204/0001-76",
   });
-  const enderecos = [
-    {
-      "LABEL": "Escritório Riverview (Morumbi)",
-      "RAZÃO_SOCIAL": "Caixa Vida e Previdencia S/A",
-      "CNPJ": "03.730.204/0001-76",
-      "CEP": "04583-110",
-      "LOGRADOURO": "Av. Doutor Chucri Zaidan",
-      "NUMERO": "246",
-      "COMPLEMENTO": "12ºandar",
-      "BAIRRO": "Vila Cordeiro",
-      "MUNICIPIO": "São Paulo",
-      "UF": "SP",
-    },
-    {
-      "LABEL": "Escritório CEA (Alphaville)",
-      "RAZÃO_SOCIAL": "Caixa Vida e Previdencia S/A",
-      "CNPJ": "03.730.204/0004-19",
-      "CEP": "06455-000",
-      "LOGRADOURO": "Alameda Araguaia",
-      "NUMERO": "2104",
-      "COMPLEMENTO": "Condomínio CEA - Andar 23",
-      "BAIRRO": "Sitio Tamboré",
-      "MUNICIPIO": "Barueri",
-      "UF": "SP",
-    },
-    {
-      "LABEL": "Transportadora Profile (Armazém)",
-      "RAZÃO_SOCIAL": "Profile Solucoes em Logistica LTDA",
-      "CNPJ": "05.935.141/0001-10",
-      "CEP": "06268-110",
-      "LOGRADOURO": "Av. Lourenço Beloli",
-      "NUMERO": "1415",
-      "COMPLEMENTO": "",
-      "BAIRRO": "Vila Menck",
-      "MUNICIPIO": "Osasco",
-      "UF": "SP",
-    }
-  ]
+  const enderecos = useMemo(
+    () => [
+      {
+        LABEL: "Escritório Riverview (Morumbi)",
+        RAZÃO_SOCIAL: "Caixa Vida e Previdencia S/A",
+        CNPJ: "03.730.204/0001-76",
+        CEP: "04583-110",
+        LOGRADOURO: "Av. Doutor Chucri Zaidan",
+        NUMERO: "246",
+        COMPLEMENTO: "12ºandar",
+        BAIRRO: "Vila Cordeiro",
+        MUNICIPIO: "São Paulo",
+        UF: "SP",
+      },
+      {
+        LABEL: "Escritório CEA (Alphaville)",
+        RAZÃO_SOCIAL: "Caixa Vida e Previdencia S/A",
+        CNPJ: "03.730.204/0004-19",
+        CEP: "06455-000",
+        LOGRADOURO: "Alameda Araguaia",
+        NUMERO: "2104",
+        COMPLEMENTO: "Condomínio CEA - Andar 23",
+        BAIRRO: "Sitio Tamboré",
+        MUNICIPIO: "Barueri",
+        UF: "SP",
+      },
+      {
+        LABEL: "Transportadora Profile (Armazém)",
+        RAZÃO_SOCIAL: "Profile Solucoes em Logistica LTDA",
+        CNPJ: "05.935.141/0001-10",
+        CEP: "06268-110",
+        LOGRADOURO: "Av. Lourenço Beloli",
+        NUMERO: "1415",
+        COMPLEMENTO: "",
+        BAIRRO: "Vila Menck",
+        MUNICIPIO: "Osasco",
+        UF: "SP",
+      },
+    ],
+    []
+  );
   const router = useRouter();
   const [clientData, setClientData] = useState<UsuarioResponse>({
     success: false,
@@ -146,10 +150,7 @@ export function FormDadosEntrega() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchUserData();
-    handleAddressChange(enderecos[0]);
-  }, [fetchUserData]);
+
 
   useEffect(() => {
     if (!clientData) return;
@@ -186,30 +187,38 @@ export function FormDadosEntrega() {
     }
   }, [clientData, setValue, trigger, setError, clearErrors, adressShipping.complemento, adressShipping.cep, adressShipping.logradouro, adressShipping.numero, adressShipping.bairro, adressShipping.municipio, adressShipping.uf, adressShipping.razao_social, adressShipping.cnpj]);
 
-  const handleAddressChange = (endereco: typeof enderecos[number]) => {
-    setAdressShipping({
-      cep: endereco.CEP,
-      logradouro: endereco.LOGRADOURO,
-      numero: endereco.NUMERO,
-      complemento: endereco.COMPLEMENTO,
-      bairro: endereco.BAIRRO,
-      municipio: endereco.MUNICIPIO,
-      uf: endereco.UF,
-      razao_social: endereco.RAZÃO_SOCIAL,
-      cnpj: endereco.CNPJ,
-    });
+  const handleAddressChange = useCallback(
+    (endereco: (typeof enderecos)[number]) => {
+      setAdressShipping({
+        cep: endereco.CEP,
+        logradouro: endereco.LOGRADOURO,
+        numero: endereco.NUMERO,
+        complemento: endereco.COMPLEMENTO,
+        bairro: endereco.BAIRRO,
+        municipio: endereco.MUNICIPIO,
+        uf: endereco.UF,
+        razao_social: endereco.RAZÃO_SOCIAL,
+        cnpj: endereco.CNPJ,
+      });
 
-    // Update form fields
-    setValue("cep", endereco.CEP);
-    setValue("logradouro", endereco.LOGRADOURO);
-    setValue("numero", endereco.NUMERO);
-    setValue("complemento", endereco.COMPLEMENTO);
-    setValue("bairro", endereco.BAIRRO);
-    setValue("municipio", endereco.MUNICIPIO);
-    setValue("uf", endereco.UF);
-    setValue("razao_social", endereco.RAZÃO_SOCIAL);
-    setValue("cnpj_cpf", endereco.CNPJ);
-  };
+      // Atualiza os campos do form
+      setValue("cep", endereco.CEP);
+      setValue("logradouro", endereco.LOGRADOURO);
+      setValue("numero", endereco.NUMERO);
+      setValue("complemento", endereco.COMPLEMENTO);
+      setValue("bairro", endereco.BAIRRO);
+      setValue("municipio", endereco.MUNICIPIO);
+      setValue("uf", endereco.UF);
+      setValue("razao_social", endereco.RAZÃO_SOCIAL);
+      setValue("cnpj_cpf", endereco.CNPJ);
+    },
+    [setValue] // setAdressShipping é estável, não precisa entrar
+  );
+
+  useEffect(() => {
+    fetchUserData();
+    handleAddressChange(enderecos[0]);
+  }, [fetchUserData, handleAddressChange, enderecos]);
 
   useEffect(() => {
     try {

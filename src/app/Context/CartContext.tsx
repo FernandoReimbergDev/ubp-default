@@ -69,7 +69,6 @@ function parsePersist(raw: string | undefined): CartItemPersist[] {
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const { cliente } = useAuth();
   const userId = cliente?.id ?? null;
-  console.log(userId)
   const userKey = keyFor(userId);
   const [cart, setCart] = useState<CartItemPersist[]>([]);
   const [openCart, setOpenCart] = useState(false);
@@ -247,7 +246,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('Falha ao enviar endereço de entrega do formulario para a api externa.');
       }
       const data = await response.json();
-      console.log(data)
       return data.result;
     } catch (error) {
       console.error('Error ao enviar dados do endereço de entrega:', error);

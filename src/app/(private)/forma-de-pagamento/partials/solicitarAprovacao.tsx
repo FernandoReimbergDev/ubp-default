@@ -123,12 +123,9 @@ export function SolicitarAprovacao() {
     const [freteValido, setFreteValido] = useState(false);
     const [addressShipping, setAddressShipping] = useState<Address | null>(null);
 
-    // Observa o cookie 'valorFrete' e mantém um flag local de validade
     useEffect(() => {
         const id = setInterval(() => {
             try {
-                const raw = Cookies.get("valorFrete");
-                const num = raw !== undefined ? Number(raw) : NaN;
                 setFreteValido(true);
             } catch {
                 setFreteValido(false);
@@ -181,7 +178,7 @@ export function SolicitarAprovacao() {
 
             const result = await res.json();
             if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados do usuário");
-            console.log(result)
+            // console.log(result)
             setUser(result?.data?.result?.[0]);
         } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") return;
@@ -209,13 +206,13 @@ export function SolicitarAprovacao() {
 
             const result = await res.json();
             if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados de entrega temp");
-            console.log(result.data.result)
+            // console.log(result.data.result)
             setAddressShipping(result?.data?.result);
         } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") return;
             console.error("Erro ao requisitar dados de entrega temp para API externa:", err);
         }
-    }, []);
+    }, [getUserIdFromCookie]);
 
     useEffect(() => {
         const ac = new AbortController();
@@ -223,15 +220,21 @@ export function SolicitarAprovacao() {
         fetchShippingTemp(ac.signal);
         return () => ac.abort();
     }, [fetchUser, fetchShippingTemp]);
-    // -------- Totais do carrinho --------
-    const totals = useMemo(() => {
-        const totalProducts = cart.reduce((sum: number, it: any) => {
-            const q = Number.parseInt(String(it.quantity || 0), 10) || 0;
-            const price = Number(it.price || 0);
-            return sum + q * price;
-        }, 0);
-        return { totalProducts };
+
+    const quantities = useMemo(() => {
+        return cart.reduce((acc, item) => {
+            acc[item.id] = String(item.quantity);
+            return acc;
+        }, {} as Record<string, string>);
     }, [cart]);
+
+    // -------- Totais do carrinho --------
+    const totalValue = useMemo(() => {
+        return cart.reduce((total, product) => {
+            const q = parseInt(quantities[product.id] || "0", 10);
+            return total + (isNaN(q) ? 0 : q * product.unitPriceEffective);
+        }, 0);
+    }, [cart, quantities]);
 
     const delivery = useMemo(() => {
         const zipDigits = (addressShipping?.zipCodeShipping || "").replace(/\D/g, "");
@@ -258,10 +261,10 @@ export function SolicitarAprovacao() {
         legalNameBilling: "Caixa Vida e Previdencia S/A",
         contactNameBilling: user?.fullName || "",
         cpfCnpfBilling: "03730204000176",
-        ieBilling: (user?.ie || "") || "",
-        emailBilling: (user?.email || "") || "",
-        areaCodeBilling: (user?.phone?.areaCode || "") || "11",
-        phoneBilling: (user?.phone?.number || "") || "",
+        ieBilling: user?.ie || "",
+        emailBilling: user?.email || "",
+        areaCodeBilling: user?.phones?.[0].areaCode || "11",
+        phoneBilling: user?.phones?.[0].number || "",
         addressIbgeCodeBilling: "",
         zipCodeBilling: "04583110",
         streetNameBilling: "Av. Doutor Chucri Zaidan",
@@ -290,11 +293,11 @@ export function SolicitarAprovacao() {
 
         paymentMethod: "Boleto",
         numberOfInstallments: "1",
-        totalProductsAmount: totals.totalProducts.toFixed(2),
+        totalProductsAmount: totalValue.toFixed(2),
         totalDiscountAmount: "0.00",
         totalShippingAmount: frete.toFixed(2),
         totalInterestAmount: "0.00",
-        orderTotalAmount: (totals.totalProducts + frete).toFixed(2),
+        orderTotalAmount: (totalValue + frete).toFixed(2),
         totalTaxAmount: "0",
         paymentStatus: "PENDENTE",
         orderStatus: isAdmin ? "Aprovado" : "Aguardando aprovação",
@@ -311,7 +314,6 @@ export function SolicitarAprovacao() {
             try { Cookies.remove("pedidoPayload", { path: "/" }); } catch { }
             await fetchOrderNumber();
         } finally {
-            console.log("finalizado")
             router.push("/pedido");
         }
     };

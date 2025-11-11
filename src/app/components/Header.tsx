@@ -6,11 +6,14 @@ import { LogoHorizontal } from "./LogoHeader";
 import MenuNav from "./MenuNav";
 import { CartModal } from "./ModalCart";
 import { SearchBar } from "./SearchBar";
+import { usePathname } from "next/navigation";
 
 export function Header() {
   const [menuNav, setMenuNav] = useState(false);
   const [fixNavbar, setFixNavbar] = useState(false);
   const { cart, openCart, setOpenCart } = useCart();
+  const pathname = usePathname();
+  const isPedidoPage = pathname === '/pedido';
 
   function handleCartOpen() {
     if (cart.length > 0) {
@@ -55,17 +58,21 @@ export function Header() {
               <MenuNav />
             </nav>
             <div className="flex items-center">
-              <ShoppingBag
-                size={28}
-                className={`cursor-pointer z-50 ${cart.length > 0 ? "text-Slider-bg" : " "}`}
-                onClick={handleCartOpen}
-              />
-              {cart.length > 0 && <span>{cart.length}</span>}
+              {!isPedidoPage && (
+                <div className="relative cursor-pointer" onClick={handleCartOpen}>
+                  <ShoppingBag size={28} />
+                  {cart.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {cart.length}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
-      <CartModal handleClick={handleCartClose} isOpen={openCart} />
+      {!isPedidoPage && <CartModal handleClick={handleCartClose} isOpen={openCart} />}
     </>
   );
 }
