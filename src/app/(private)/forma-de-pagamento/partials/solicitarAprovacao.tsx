@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-
+import dynamic from 'next/dynamic';
 import { useAuth } from "@/app/Context/AuthContext";
 import { useCart } from "@/app/Context/CartContext";
-import { Resumo } from "@/app/components/Resumo";
+const Resumo = dynamic(() => import('../../../components/Resumo').then(m => m.Resumo), { ssr: false });
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -110,6 +110,7 @@ interface OrderPayload {
     deliveryDate: string;
     paymentDate: string;
 }
+
 
 export function SolicitarAprovacao() {
     const { hasAnyRole, fetchOrderNumber } = useAuth();
@@ -254,8 +255,8 @@ export function SolicitarAprovacao() {
         cpfCnpf: user?.cpf || user?.cnpj || "",
         ie: user?.ie || "",
         email: user?.email || "",
-        areaCode: user?.phones?.[0].areaCode || "11",
-        phone: user?.phones?.[0].number || "",
+        areaCode: user?.phone?.areaCode || "",
+        phone: user?.phone?.number || "",
 
         entityTypeBilling: "PJ",
         legalNameBilling: "Caixa Vida e Previdencia S/A",
@@ -263,8 +264,8 @@ export function SolicitarAprovacao() {
         cpfCnpfBilling: "03730204000176",
         ieBilling: user?.ie || "",
         emailBilling: user?.email || "",
-        areaCodeBilling: user?.phones?.[0].areaCode || "11",
-        phoneBilling: user?.phones?.[0].number || "",
+        areaCodeBilling: user?.phone?.areaCode || "11",
+        phoneBilling: user?.phone?.number || "",
         addressIbgeCodeBilling: "",
         zipCodeBilling: "04583110",
         streetNameBilling: "Av. Doutor Chucri Zaidan",

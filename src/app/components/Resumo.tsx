@@ -24,6 +24,7 @@ export function Resumo({ delivery }: ResumoProps) {
       return undefined;
     }
   });
+
   const [loadingFrete, setLoadingFrete] = useState(false);
   const [freteErro, setFreteErro] = useState<string | null>(null);
 
