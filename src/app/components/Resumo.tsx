@@ -15,12 +15,32 @@ interface ResumoProps {
 export function Resumo({ delivery }: ResumoProps) {
   const { cart, fetchProductFrete, cartReady } = useCart();
 
-  const [valorFrete, setValorFrete] = useState<number | null>(null);
-  const [isLoadingFrete, setIsLoadingFrete] = useState(true);
+  const [valorFrete, setValorFrete] = useState<number | string | undefined>(() => {
+    try {
+      const savedFrete = Cookies.get('valorFrete');
+      return savedFrete ? Number(savedFrete) : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+
+  const [loadingFrete, setLoadingFrete] = useState(false);
   const [freteErro, setFreteErro] = useState<string | null>(null);
 
-  // evita recálculo duplicado no mesmo ciclo de vida
-  const freteCalculadoRef = useRef(false);
+  // Salva o valor do frete no cookie sempre que ele mudar
+  useEffect(() => {
+    if (valorFrete !== undefined) {
+      try {
+        Cookies.set('valorFrete', String(valorFrete), { expires: 1 }); // Expira em 1 dia
+      } catch (error) {
+        console.error('Erro ao salvar valor do frete no cookie:', error);
+      }
+    }
+  }, [valorFrete]);
+
+  const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const lastKeyRef = useRef<string>("");
 
   // 1) Quantidades e total
   const quantities = useMemo(() => {
@@ -57,7 +77,7 @@ export function Resumo({ delivery }: ResumoProps) {
     return { ready: Boolean(zip.length === 8 && uf && city), zip, uf, city };
   }, [delivery]);
 
-  // 4) Normaliza parâmetros
+  // 5) Normaliza parâmetros
   const norm = useMemo(() => {
     const pesoKg = Math.max(pkg?.pesoTotal ?? 0, 0);
     const altura = Math.max(pkg?.altura ?? 0, 0);
@@ -84,20 +104,47 @@ export function Resumo({ delivery }: ResumoProps) {
     deliveryReady.zip,
   ]);
 
-  // 5) Calcular frete (com retry e frete grátis > 1500)
-  const calcularFrete = useCallback(async () => {
-    if (!cartReady || !deliveryReady.ready || !cart?.length || freteCalculadoRef.current) return;
+  // 6) Chave única do frete
+  const freteKey = useMemo(() => {
+    const ids = cart.map((p) => `${p.id}:${quantities[p.id]}`).sort().join("|");
+    return [
+      norm.purchaseAmount,
+      norm.uf,
+      norm.city,
+      norm.zip,
+      norm.weightKg,
+      norm.altura,
+      norm.largura,
+      norm.comprimento,
+      ids,
+    ].join("#");
+  }, [cart, quantities, norm]);
 
-    freteCalculadoRef.current = true;
-    setIsLoadingFrete(true);
-    setFreteErro(null);
+  const freteCalculadoRef = useRef(false);
 
-    try {
-      let amount: number | undefined;
+  useEffect(() => {
+    freteCalculadoRef.current = false;
+  }, [freteKey]);
 
-      if (Number(norm.purchaseAmount) > 1500) {
-        amount = 0;
-      } else {
+
+  // 7) Consulta com retry e cache da chave'
+  const runFrete = useCallback(
+    async (key: string) => {
+      if (!cartReady) return;
+      if (!deliveryReady.ready) return;
+      if (!cart?.length) return;
+      if (lastKeyRef.current === key) return;
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const reqId = ++requestIdRef.current;
+
+      try {
+        setLoadingFrete(true);
+        setFreteErro(null);
+
         const call = async () =>
           fetchProductFrete?.(
             norm.purchaseAmount,
@@ -110,44 +157,50 @@ export function Resumo({ delivery }: ResumoProps) {
             norm.comprimento,
           );
 
-        try {
-          amount = await call();
-        } catch {
-          // retry simples
-          await new Promise((r) => setTimeout(r, 400));
-          amount = await call();
+        let amount: number | undefined;
+
+        if (Number(norm.purchaseAmount) > 1500) {
+          amount = 0;
+        } else {
+          try {
+            amount = await call();
+          } catch {
+            await new Promise((r) => setTimeout(r, 400));
+            amount = await call();
+          }
         }
+        if (Number(totalValue) > 1500) {
+          setValorFrete(0);
+        } else {
+          setValorFrete(amount);
+        }
+        setLoadingFrete(false);
+
+      } catch (e) {
+        // Abortado
+        // @ts-expect-error narrow
+        if (e?.name === "AbortError") return;
+        // setValorFrete(undefined);
+        setFreteErro("Falha ao consultar frete.");
+        try {
+          Cookies.remove("valorFrete");
+        } catch {
+          /* noop */
+        }
+      } finally {
+        if (reqId === requestIdRef.current) setLoadingFrete(false);
       }
+    },
+    [cartReady, deliveryReady.ready, cart?.length, fetchProductFrete, norm, totalValue]
+  );
 
-      const freteFinal = Number(norm.purchaseAmount) > 1500 ? 0 : amount ?? null;
-      setValorFrete(freteFinal);
-
-      // Salva no cookie apenas para persistência; não carregamos mais do cookie inicialmente
-      if (freteFinal !== null) {
-        Cookies.set("valorFrete", String(freteFinal), { expires: 1 });
-      }
-    } catch (error) {
-      setFreteErro("Falha ao calcular o frete. Tente novamente.");
-      console.error("Erro ao calcular frete:", error);
-    } finally {
-      setIsLoadingFrete(false);
-    }
-  }, [cart, cartReady, deliveryReady.ready, fetchProductFrete, norm]);
-
-  // 6) Dispara cálculo ao montar / quando dependências mudarem
+  // 8) Dispara ao mudar a key
   useEffect(() => {
-    calcularFrete();
-  }, [calcularFrete]);
+    if (!cartReady || !deliveryReady.ready || !cart?.length || !freteKey) return;
+    runFrete(freteKey);
+    return () => abortRef.current?.abort();
+  }, [cartReady, deliveryReady.ready, cart?.length, freteKey, runFrete]);
 
-  const freteFormatado = useMemo(() => {
-    const v = valorFrete ?? 0;
-    return formatPrice(v);
-  }, [valorFrete]);
-
-  const totalComFrete = useMemo(() => {
-    const frete = valorFrete ?? 0;
-    return formatPrice(Number(totalValue) + Number(frete));
-  }, [totalValue, valorFrete]);
 
   return (
     <div className="space-y-4 w-full">
@@ -163,25 +216,13 @@ export function Resumo({ delivery }: ResumoProps) {
 
       <div className="w-full flex justify-between items-center">
         <p>Valor do Frete:</p>
-        <span
-          className={
-            valorFrete === 0 && !isLoadingFrete && !freteErro
-              ? "px-2 py-0.5 rounded bg-green-100 text-green-700"
-              : ""
-          }
-        >
-          {isLoadingFrete ? "Calculando..." : freteFormatado}
+        <span className={valorFrete === 0 && !loadingFrete && !freteErro ? "px-2 py-0.5 rounded bg-green-100 text-green-700" : ""}>
+          {formatPrice(typeof valorFrete === 'string' ? parseFloat(valorFrete) || 0 : (valorFrete || 0))}
         </span>
       </div>
 
-      {valorFrete === 0 && !isLoadingFrete && !freteErro && (
+      {valorFrete === 0 && !loadingFrete && !freteErro && (
         <p className="text-[11px] text-green-700">* Frete gratuito para compras acima de R$ 1.500,00</p>
-      )}
-
-      {freteErro && (
-        <p className="text-[12px] text-red-600">
-          {freteErro}
-        </p>
       )}
 
       <hr className="text-gray-300" />
@@ -189,7 +230,7 @@ export function Resumo({ delivery }: ResumoProps) {
       <div>
         <div className="bg-green-300 flex justify-between items-center px-2 py-4">
           <p className="text-sm">Valor Total:</p>
-          <span>{totalComFrete}</span>
+          <span>{formatPrice((Number(totalValue) + Number(valorFrete)))}</span>
         </div>
       </div>
 
@@ -254,6 +295,7 @@ export function Resumo({ delivery }: ResumoProps) {
                       <p>{product.size}</p>
                     </div>
                   )}
+
 
                   <div className="flex items-center gap-2 text-xs">
                     Subtotal: {formatPrice(product.quantity * product.unitPriceEffective)}
