@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
 import { useCart } from "@/app/Context/CartContext";
 import { formatPrice } from "@/app/utils/formatter";
 import { FileSearch2, ShoppingCart } from "lucide-react";
