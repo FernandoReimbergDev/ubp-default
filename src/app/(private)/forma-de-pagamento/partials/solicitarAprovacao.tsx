@@ -181,8 +181,8 @@ export function SolicitarAprovacao() {
 
             const result = await res.json();
             if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados do usuário");
-
-            setUser(result?.data?.result?.[0] ?? result);
+            console.log(result)
+            setUser(result?.data?.result?.[0]);
         } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") return;
             console.error("Erro ao requisitar dados do usuário para API externa:", err);
@@ -251,19 +251,19 @@ export function SolicitarAprovacao() {
         cpfCnpf: user?.cpf || user?.cnpj || "",
         ie: user?.ie || "",
         email: user?.email || "",
-        areaCode: user?.phone?.areaCode || "",
-        phone: user?.phone?.number || "",
+        areaCode: user?.phones?.[0].areaCode || "11",
+        phone: user?.phones?.[0].number || "",
 
         entityTypeBilling: "PJ",
         legalNameBilling: "Caixa Vida e Previdencia S/A",
         contactNameBilling: user?.fullName || "",
-        cpfCnpfBilling: "03.730.204/0001-76",
+        cpfCnpfBilling: "03730204000176",
         ieBilling: (user?.ie || "") || "",
         emailBilling: (user?.email || "") || "",
-        areaCodeBilling: (user?.phone?.areaCode || "") || "",
+        areaCodeBilling: (user?.phone?.areaCode || "") || "11",
         phoneBilling: (user?.phone?.number || "") || "",
         addressIbgeCodeBilling: "",
-        zipCodeBilling: "04583-110",
+        zipCodeBilling: "04583110",
         streetNameBilling: "Av. Doutor Chucri Zaidan",
         streetNumberBilling: "246",
         addressLine2Billing: "12º andar",
