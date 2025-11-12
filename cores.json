@@ -35,7 +35,8 @@
   },
   "Slider": {
     "bg": "#005CA9",
-    "bgDegrade": "#005Cb9"
+    "bgDegrade": "#005Cb9",
+    "bgSkew": "#00fCb9"
   },
   "Categorias": {
     "bg": "#fff",

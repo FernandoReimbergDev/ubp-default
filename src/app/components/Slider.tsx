@@ -8,90 +8,68 @@ import { ProdutosGrid } from "../types/responseTypes";
 
 const produtosBanner = [
   {
-    "id": 1,
-    "codePro": "93735-CXP-PRE",
-    "product": "Conjunto de blocos adesivos Tazy",
-    "description": "6 blocos adesivados: 22 folhas cada. Cartão. Com suporte para cartões de visita.",
-    "price": 4.79,
-    "srcFrontImage": "https://www2.unitycorp.com.br/teste/93735.png",
-    "srcBackImage": "https://www2.unitycorp.com.br/teste/93735-2.png",
-    "images": [
-      "https://www2.unitycorp.com.br/teste/93735.png",
-      "https://www2.unitycorp.com.br/teste/93735-2.png"
-    ],
-    "alt": "Conjunto de blocos adesivos Tazy",
-    "colors": [
-      "azul"
-    ],
-    "bannerImg": [
-      "https://www2.unitycorp.com.br/teste/93735.png",
-      "https://www2.unitycorp.com.br/teste/93735-2.png"
-    ],
-    "sizes": [],
-    "promotion": false,
-    "percent_discont": 0,
-    "peso": "0.0196",
-    "altura": "6.0000",
-    "largura": "10.0000",
-    "comprimento": "2.0000",
+    id: 1,
+    codePro: "93735-CXP-PRE",
+    product: "Conjunto de blocos adesivos Tazy",
+    description: "6 blocos adesivados: 22 folhas cada. Cartão. Com suporte para cartões de visita.",
+    price: 4.79,
+    srcFrontImage: "https://www2.unitycorp.com.br/teste/93735.png",
+    srcBackImage: "https://www2.unitycorp.com.br/teste/93735-2.png",
+    images: ["https://www2.unitycorp.com.br/teste/93735.png", "https://www2.unitycorp.com.br/teste/93735-2.png"],
+    alt: "Conjunto de blocos adesivos Tazy",
+    colors: ["azul"],
+    bannerImg: ["https://www2.unitycorp.com.br/teste/93735.png", "https://www2.unitycorp.com.br/teste/93735-2.png"],
+    sizes: [],
+    promotion: false,
+    percent_discont: 0,
+    peso: "0.0196",
+    altura: "6.0000",
+    largura: "10.0000",
+    comprimento: "2.0000",
   },
   {
-    "id": 2,
-    "codePro": "93967-CXP-PRE",
-    "product": "Conjunto base para copos. Bambu. 4 bases com caixa aberta.",
-    "description": "Conjunto base para copos. Bambu. 4 bases com caixa aberta.\r\nMedidas: Base 110x110x45mm / Base copos 90x90x8mm\r\nPersonalização: Incluso silk 1 cor, 1 posição (simulação de laser) \r\n",
-    "price": 26.93,
-    "srcFrontImage": "https://www2.unitycorp.com.br/teste/93967.png",
-    "srcBackImage": "https://www2.unitycorp.com.br/teste/93967-2.png",
-    "images": [
-      "https://www2.unitycorp.com.br/teste/93967.png",
-      "https://www2.unitycorp.com.br/teste/93967-2.png"
-    ],
-    "alt": "Conjunto base para copos. Bambu. 4 bases com caixa aberta.",
-    "colors": [
-      "azul"
-    ],
-    "bannerImg": [
-      "https://www2.unitycorp.com.br/teste/93967.png",
-      "https://www2.unitycorp.com.br/teste/93967-2.png"
-    ],
-    "sizes": [],
-    "promotion": false,
-    "percent_discont": 0,
-    "peso": "0.3000",
-    "altura": "5.0000",
-    "largura": "11.0000",
-    "comprimento": "12.0000",
+    id: 2,
+    codePro: "93967-CXP-PRE",
+    product: "Conjunto base para copos. Bambu. 4 bases com caixa aberta.",
+    description:
+      "Conjunto base para copos. Bambu. 4 bases com caixa aberta.\r\nMedidas: Base 110x110x45mm / Base copos 90x90x8mm\r\nPersonalização: Incluso silk 1 cor, 1 posição (simulação de laser) \r\n",
+    price: 26.93,
+    srcFrontImage: "https://www2.unitycorp.com.br/teste/93967.png",
+    srcBackImage: "https://www2.unitycorp.com.br/teste/93967-2.png",
+    images: ["https://www2.unitycorp.com.br/teste/93967.png", "https://www2.unitycorp.com.br/teste/93967-2.png"],
+    alt: "Conjunto base para copos. Bambu. 4 bases com caixa aberta.",
+    colors: ["azul"],
+    bannerImg: ["https://www2.unitycorp.com.br/teste/93967.png", "https://www2.unitycorp.com.br/teste/93967-2.png"],
+    sizes: [],
+    promotion: false,
+    percent_discont: 0,
+    peso: "0.3000",
+    altura: "5.0000",
+    largura: "11.0000",
+    comprimento: "12.0000",
   },
   {
-    "id": 3,
-    "codePro": "94058-CXP-PRE",
-    "product": "Copo ecológico para viagem 380ml em fibra de bambú",
-    "description": "Copo de viagem com tampa em fibra de bambu (50%) e PP (50%), com capacidade até 380 ml e tira em silicone para facilitar o transporte de bebidas quentes. \r\nPersonalização: Incluso silk 1 cor, 1 posição.",
-    "price": 9.77,
-    "srcFrontImage": "https://www2.unitycorp.com.br/teste/94058.png",
-    "srcBackImage": "https://www2.unitycorp.com.br/teste/94058-2.png",
-    "images": [
-      "https://www2.unitycorp.com.br/teste/94058.png",
-      "https://www2.unitycorp.com.br/teste/94058-2.png"
-    ],
-    "alt": "Conjunto de blocos adesivos Tazy",
-    "colors": [
-      "azul"
-    ],
-    "bannerImg": [
-      "https://www2.unitycorp.com.br/teste/94058.png",
-      "https://www2.unitycorp.com.br/teste/94058-2.png"
-    ],
-    "sizes": ['17x24', '21x28', '15x21'],
-    "promotion": false,
-    "percent_discont": 0,
-    "peso": "0.112",
-    "altura": "11.0000",
-    "largura": "9.0000",
-    "comprimento": "9.0000",
+    id: 3,
+    codePro: "94058-CXP-PRE",
+    product: "Copo ecológico para viagem 380ml em fibra de bambú",
+    description:
+      "Copo de viagem com tampa em fibra de bambu (50%) e PP (50%), com capacidade até 380 ml e tira em silicone para facilitar o transporte de bebidas quentes. \r\nPersonalização: Incluso silk 1 cor, 1 posição.",
+    price: 9.77,
+    srcFrontImage: "https://www2.unitycorp.com.br/teste/94058.png",
+    srcBackImage: "https://www2.unitycorp.com.br/teste/94058-2.png",
+    images: ["https://www2.unitycorp.com.br/teste/94058.png", "https://www2.unitycorp.com.br/teste/94058-2.png"],
+    alt: "Conjunto de blocos adesivos Tazy",
+    colors: ["azul"],
+    bannerImg: ["https://www2.unitycorp.com.br/teste/94058.png", "https://www2.unitycorp.com.br/teste/94058-2.png"],
+    sizes: [],
+    promotion: false,
+    percent_discont: 0,
+    peso: "0.112",
+    altura: "11.0000",
+    largura: "9.0000",
+    comprimento: "9.0000",
   },
-]
+];
 
 export const Slider = () => {
   const [produto, setProduto] = useState<ProdutosGrid[]>([]);
@@ -223,7 +201,7 @@ export const Slider = () => {
                 <Heart className="text-green-400  text-sm xl:text-base 2xl:text-xl" fill="currentColor" stroke="none" />
                 Recomendados
               </p>
-              <p className="flex items-start justify-center flex-col text-white w-full sm:w-[300px] lg:w-[400px] text-xl 2xl:text-3xl font-semibold min-h-[6rem]">
+              <p className="flex items-start justify-center flex-col text-white w-full sm:w-[300px] lg:w-[400px] text-xl 2xl:text-3xl font-semibold min-h-24">
                 {currentProduct.product}
               </p>
               <button
@@ -237,7 +215,7 @@ export const Slider = () => {
             </div>
           </div>
           <div className="w-1/2 h-full flex items-center justify-start">
-            <div className="w-[300px] h-[60%] 2xl:w-[400px] bg-gradient-to-t from-Slider-bgDegrade to-Slider-bg -skew-x-[20deg] absolute bottom-0 lg:ml-20"></div>
+            <div className="w-[300px] h-[60%] 2xl:w-[400px] bg-linear-to-t from-Slider-bgSkew to-Slider-bg -skew-x-20 absolute bottom-0 lg:ml-20"></div>
             <div
               ref={produtoImgRef}
               className="flex justify-center xl:justify-start items-center bottom-0 w-full h-full animate-appear-right min-w-[200px] pr-4"
@@ -265,8 +243,9 @@ export const Slider = () => {
               <div
                 key={index}
                 onClick={() => handleSelectSlide(index)}
-                className={`rounded-full h-4 w-4 cursor-pointer transition-all duration-300 ${index === currentIndex ? "scale-125 bg-green-500" : "bg-white scale-100"
-                  }`}
+                className={`rounded-full h-4 w-4 cursor-pointer transition-all duration-300 ${
+                  index === currentIndex ? "scale-125 bg-green-500" : "bg-white scale-100"
+                }`}
               />
             ))}
           </div>

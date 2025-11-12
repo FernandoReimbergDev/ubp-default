@@ -315,7 +315,7 @@ export function FormDadosEntrega() {
           <h2 className="px-2 text-sm 2xl:text-lg font-bold font-plutoRegular text-zinc-600">
             Selecione o local de entrega:
           </h2>
-          <section className="flex flex-col 2xl:flex-row 2xl:items-center gap-4 mt-2 mb-6">
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:flex-row 2xl:items-center gap-4 mt-2 mb-6">
             {enderecos.map((endereco, index) => {
               const isSelected = adressShipping.cep === endereco.CEP;
               return (

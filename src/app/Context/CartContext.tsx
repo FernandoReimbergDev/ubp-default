@@ -3,38 +3,47 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { useAuth } from "./AuthContext";
 import { loadCartStorage, saveCartStorage, removeCartStorage } from "./storage";
 import type { CartContextType, CartItemInput, CartItemPersist } from "../types/cart";
+import { recalculateEffectivePrice } from "../utils/priceCalculation";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const keyFor = (id: string | number | null) => (id ? `cart_${id}` : "cart_guest");
 
 // Normaliza valores numéricos e garante subtotal consistente
+// IMPORTANTE: Esta função recalcula o preço baseado na quantidade atual e faixas de preço
 function normalize(item: CartItemInput): CartItemPersist {
   const quantity = Number.isFinite(item.quantity) ? Math.max(1, Math.trunc(item.quantity)) : 1;
   const unitBase = Number(item.unitPriceBase) || 0;
   const unitPers = Number(item.unitPricePersonalization) || 0;
-  const unitEff = Number.isFinite(item.unitPriceEffective) ? item.unitPriceEffective : unitBase + unitPers;
 
-  return {
+  // Prepara o item para cálculo (preserva informações de faixas de preço)
+  const itemForCalculation: CartItemPersist = {
     ...item,
     quantity,
     unitPriceBase: unitBase,
     unitPricePersonalization: unitPers,
-    unitPriceEffective: unitEff,
-    subtotal: quantity * unitEff,
-    isAmostra: item.isAmostra || false, // Garante que isAmostra seja sempre booleano
-    // Preserva informações de faixas de preço para recálculo no carrinho
+    unitPriceEffective: Number.isFinite(item.unitPriceEffective) ? item.unitPriceEffective : unitBase + unitPers,
+    subtotal: 0, // será recalculado abaixo
+    isAmostra: item.isAmostra || false,
     precos: item.precos,
     qtdMinPro: item.qtdMinPro,
     vluGridPro: item.vluGridPro,
     valorAdicionalAmostraPro: item.valorAdicionalAmostraPro,
-    // Preserva faixas de preço da personalização
     personalization: item.personalization
       ? {
           ...item.personalization,
           precos: item.personalization.precos,
         }
       : undefined,
+  };
+
+  // Recalcula o preço efetivo usando as faixas de preço baseado na quantidade atual
+  const unitEff = recalculateEffectivePrice(itemForCalculation, quantity);
+
+  return {
+    ...itemForCalculation,
+    unitPriceEffective: unitEff,
+    subtotal: quantity * unitEff,
   };
 }
 
@@ -158,7 +167,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const idx = prev.findIndex((p) => p.id === id);
       if (idx < 0) return prev;
       const it = prev[idx];
-      const updated: CartItemPersist = { ...it, quantity: q, subtotal: q * it.unitPriceEffective };
+      // Recalcula o preço unitário efetivo baseado na nova quantidade
+      const newUnitPriceEffective = recalculateEffectivePrice(it, q);
+      const updated: CartItemPersist = {
+        ...it,
+        quantity: q,
+        unitPriceEffective: newUnitPriceEffective,
+        subtotal: q * newUnitPriceEffective,
+      };
       const next = prev.slice();
       next[idx] = updated;
       persist(next);
@@ -201,7 +217,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     stateCode: string,
     city: string,
     zipCode: string,
-    weight: string,
+    weightGrams: string, // Peso em gramas (sem ponto decimal, ex: "6000")
     height: string,
     width: string,
     length: string
@@ -220,14 +236,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         return undefined;
       }
 
-      // Validação de valores numéricos (peso e dimensões devem ser válidos)
-      const weightNum = parseFloat(weight);
+      // Validação de valores numéricos
+      // Peso vem em gramas (string sem ponto decimal, ex: "6000")
+      const weightGramsNum = parseInt(weightGrams, 10);
       const heightNum = parseFloat(height);
       const widthNum = parseFloat(width);
       const lengthNum = parseFloat(length);
 
-      if (isNaN(weightNum) || weightNum <= 0) {
-        console.warn("Peso inválido para cálculo de frete:", weight);
+      if (isNaN(weightGramsNum) || weightGramsNum <= 0) {
+        console.warn("Peso inválido para cálculo de frete:", weightGrams);
         return undefined;
       }
 
@@ -243,6 +260,27 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         return undefined;
       }
 
+      // Normaliza os parâmetros antes de enviar
+      const normalizedStateCode = stateCode.toUpperCase().trim();
+      const normalizedCity = city.trim();
+      const normalizedZipCode = zipDigits;
+
+      // Peso deve ser enviado em gramas, sem ponto decimal
+      // Exemplo: "6000" (não "6.00" ou "6000.00")
+      const weightString = String(weightGramsNum); // Garante que é string sem ponto decimal
+
+      // Log para debug - verificar se os parâmetros estão corretos
+      console.log("Enviando requisição de frete para API:", {
+        purchaseAmount,
+        stateCode: normalizedStateCode,
+        city: normalizedCity,
+        zipCode: normalizedZipCode,
+        weight: weightString, // Peso em gramas, sem ponto decimal
+        height,
+        width,
+        length,
+      });
+
       // Faz a requisição com timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
@@ -257,12 +295,11 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             reqEndpoint: "/shipping-quote",
             reqHeaders: {
               "X-Environment": "HOMOLOGACAO",
-              storeId: "32",
               purchaseAmount,
-              stateCode: stateCode.toUpperCase().trim(),
-              city: city.trim(),
-              zipCode: zipDigits,
-              weight,
+              stateCode: normalizedStateCode,
+              city: normalizedCity,
+              zipCode: normalizedZipCode,
+              weight: weightString, // Peso em gramas, sem ponto decimal (ex: "6000")
               height,
               width,
               length,
@@ -286,6 +323,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       let data: unknown;
       try {
         data = await response.json();
+        console.log("Resposta da API de frete:", data);
       } catch (parseError) {
         console.error("Erro ao fazer parse da resposta do frete:", parseError);
         return undefined;

@@ -154,14 +154,14 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
 
   // Função para validar quantidade mínima (qtdi) das faixas de preço
   const validateMinimumQuantity = useCallback(
-    (item: CartItemPersist, quantity: number): { valid: boolean; minQty: number; message?: string } => {
+    (item: CartItemPersist, quantity: number | undefined): { valid: boolean; minQty: number; message?: string } => {
       if (item.isAmostra) {
         // Amostra sempre permite quantidade 1
         return { valid: true, minQty: 1 };
       }
 
-      // Se quantidade for 0 ou inválida, retorna inválido
-      if (!quantity || quantity <= 0) {
+      // Se quantidade for undefined, 0 ou inválida, retorna inválido
+      if (quantity === undefined || quantity === null || isNaN(quantity) || quantity <= 0) {
         return { valid: false, minQty: 1, message: "Digite uma quantidade válida para prosseguir" };
       }
 
@@ -236,14 +236,28 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     setQuantities(initial);
   }, [cart]);
 
-  // Calcula o preço unitário efetivo recalculado para cada item baseado na quantidade atual
+  // Calcula o preço unitário efetivo recalculado para cada item baseado na quantidade digitada
+  // Isso é necessário para mostrar o preço em tempo real enquanto o usuário digita
+  // Quando a quantidade for confirmada, o carrinho será atualizado com o preço correto
   const effectivePrices = useMemo(() => {
     const prices: Record<string, number> = {};
     cart.forEach((item) => {
-      const quantity = parseInt(quantities[item.id] || "0", 10);
-      if (!isNaN(quantity) && quantity > 0) {
-        prices[item.id] = recalculateEffectivePrice(item, quantity);
+      const quantityInCart = item.quantity;
+      const quantityStr = quantities[item.id] ?? "";
+      // Se estiver vazio, usa o preço do carrinho
+      if (quantityStr === "") {
+        prices[item.id] = item.unitPriceEffective;
+        return;
+      }
+      const quantityInInput = parseInt(quantityStr, 10);
+
+      // Se a quantidade digitada é diferente da quantidade no carrinho,
+      // recalcula para mostrar em tempo real
+      // Caso contrário, usa o preço já calculado no carrinho
+      if (!isNaN(quantityInInput) && quantityInInput !== quantityInCart && quantityInInput > 0) {
+        prices[item.id] = recalculateEffectivePrice(item, quantityInInput);
       } else {
+        // Usa o preço já calculado e persistido no carrinho
         prices[item.id] = item.unitPriceEffective;
       }
     });
@@ -254,8 +268,10 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   const quantityValidations = useMemo(() => {
     const validations: Record<string, { valid: boolean; minQty: number; message?: string }> = {};
     cart.forEach((item) => {
-      const quantity = parseInt(quantities[item.id] || "0", 10);
-      validations[item.id] = validateMinimumQuantity(item, quantity);
+      // Permite valores vazios (undefined) ou zero para validação
+      const quantityStr = quantities[item.id];
+      const quantity = quantityStr === "" || quantityStr === undefined ? undefined : parseInt(quantityStr, 10);
+      validations[item.id] = validateMinimumQuantity(item, isNaN(quantity!) ? undefined : quantity);
     });
     return validations;
   }, [cart, quantities, validateMinimumQuantity]);
@@ -266,51 +282,90 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
   }, [quantityValidations]);
 
   const calculateSubtotal = (product: CartItemPersist) => {
-    const quantityStr = quantities[product.id] ?? "0";
+    const quantityStr = quantities[product.id] ?? "";
+    // Se estiver vazio ou zero, retorna 0
+    if (quantityStr === "" || quantityStr === "0") return formatPrice(0);
     const quantity = parseInt(quantityStr, 10);
     if (isNaN(quantity) || quantity <= 0) return formatPrice(0);
-    // Usa o preço recalculado baseado na quantidade atual
-    const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
-    return formatPrice(quantity * effectivePrice);
+
+    // Se a quantidade digitada é diferente da quantidade no carrinho,
+    // usa o preço recalculado em tempo real
+    // Caso contrário, usa o subtotal já calculado no carrinho
+    if (quantity !== product.quantity) {
+      const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
+      return formatPrice(quantity * effectivePrice);
+    }
+    // Usa o subtotal já calculado e persistido no carrinho
+    return formatPrice(product.subtotal || 0);
   };
 
   const handleInputChange = (id: string, value: string) => {
-    if (/^\d*$/.test(value)) {
+    // Permite qualquer valor numérico, incluindo string vazia e zero
+    if (value === "" || /^\d+$/.test(value)) {
       setQuantities((prev) => ({ ...prev, [id]: value }));
-      const parsed = parseInt(value, 10);
-      // updateQuantity agora espera number
-      updateQuantity(id, isNaN(parsed) ? 0 : parsed);
-      const item = cart.find((p) => p.id === id);
-      if (item) scheduleFetch(item); // só dispara após a pausa
+
+      // Só atualiza o carrinho se o valor for válido e maior que zero
+      // Isso permite que o usuário digite zero ou apague o valor sem forçar atualização
+      const parsed = value === "" ? 0 : parseInt(value, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        updateQuantity(id, parsed);
+        const item = cart.find((p) => p.id === id);
+        if (item) scheduleFetch(item); // só dispara após a pausa
+      } else if (value === "" || parsed === 0) {
+        // Se for zero ou vazio, não atualiza o carrinho mas mantém no estado local
+        // O carrinho mantém o valor anterior até que seja digitado um valor válido
+      }
     }
   };
 
   const changeQuantity = (id: string, current: string, delta: number) => {
-    const parsed = parseInt(current || "0", 10);
-    const newQty = Math.max(parsed + delta, 0);
+    // Se current estiver vazio, usa o valor do produto como fallback
+    const currentValue = current === "" ? undefined : current;
+    const parsed = currentValue === undefined ? undefined : parseInt(currentValue, 10);
+    // Se não conseguiu parsear, usa o valor do produto do carrinho
+    const baseValue = isNaN(parsed!) || parsed === undefined 
+      ? cart.find((p) => p.id === id)?.quantity ?? 1 
+      : parsed;
+    const newQty = Math.max(baseValue + delta, 0); // Permite ir até 0
     setQuantities((prev) => ({ ...prev, [id]: String(newQty) }));
-    updateQuantity(id, newQty);
-    const item = cart.find((p) => p.id === id);
-    if (item) scheduleFetch(item);
+    // Só atualiza o carrinho se for maior que 0
+    if (newQty > 0) {
+      updateQuantity(id, newQty);
+      const item = cart.find((p) => p.id === id);
+      if (item) scheduleFetch(item);
+    }
   };
 
   const totalValue = useMemo(() => {
     return cart.reduce((total, product) => {
-      const quantity = parseInt(quantities[product.id] || "0", 10);
-      if (isNaN(quantity) || quantity <= 0) return total;
-      // Usa o preço recalculado baseado na quantidade atual
-      const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
-      return total + quantity * effectivePrice;
+      const quantityStr = quantities[product.id] ?? "";
+      // Se estiver vazio ou zero, não adiciona ao total
+      if (quantityStr === "" || quantityStr === "0") {
+        return total;
+      }
+      const quantityInInput = parseInt(quantityStr, 10);
+
+      // Se a quantidade digitada é diferente da quantidade no carrinho,
+      // recalcula para mostrar em tempo real
+      if (!isNaN(quantityInInput) && quantityInInput !== product.quantity && quantityInInput > 0) {
+        const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
+        return total + quantityInInput * effectivePrice;
+      }
+      // Usa o subtotal já calculado e persistido no carrinho
+      return total + (product.subtotal || 0);
     }, 0);
   }, [cart, quantities, effectivePrices]);
 
-  const hasInvalidQuantities = cart.some((item) => {
-    const availableNum = toNumberBR(stockByItem[item.id]?.quantidadeSaldo);
-    const available = typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
-    if (typeof available !== "number") return false;
-    const aggregatedRequested = getAggregatedRequestedForPool(item);
-    return aggregatedRequested > available;
-  });
+  const hasInvalidQuantities = useMemo(() => {
+    return cart.some((item) => {
+      const availableNum = toNumberBR(stockByItem[item.id]?.quantidadeSaldo);
+      const available =
+        typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
+      if (typeof available !== "number") return false;
+      const aggregatedRequested = getAggregatedRequestedForPool(item);
+      return aggregatedRequested > available;
+    });
+  }, [cart, stockByItem, getAggregatedRequestedForPool]);
 
   const fetchItemStock = useCallback(async (item: CartItemPersist, signal?: AbortSignal, reqId?: number) => {
     if (!item.chavePro) {
@@ -528,7 +583,8 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                               product.isAmostra ? "text-gray-300 cursor-not-allowed" : "text-gray-600 cursor-pointer"
                             }`}
                             onClick={() =>
-                              !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", -1)
+                              !product.isAmostra &&
+                              changeQuantity(product.id, quantities[product.id] ?? String(product.quantity), -1)
                             }
                             disabled={product.isAmostra}
                           >
@@ -544,7 +600,15 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                             className={`w-12 md:w-16 px-1 text-center rounded-md ${
                               product.isAmostra ? "bg-gray-100 cursor-not-allowed" : ""
                             }`}
-                            onChange={(e) => !product.isAmostra && handleInputChange(product.id, e.target.value)}
+                            onChange={(e) => {
+                              if (!product.isAmostra) {
+                                const value = e.target.value;
+                                // Permite string vazia ou apenas dígitos (incluindo zero)
+                                if (value === "" || /^\d+$/.test(value)) {
+                                  handleInputChange(product.id, value);
+                                }
+                              }
+                            }}
                           />
 
                           <button
@@ -552,7 +616,8 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                               product.isAmostra ? "text-gray-300 cursor-not-allowed" : "text-gray-600 cursor-pointer"
                             }`}
                             onClick={() =>
-                              !product.isAmostra && changeQuantity(product.id, quantities[product.id] ?? "0", 1)
+                              !product.isAmostra &&
+                              changeQuantity(product.id, quantities[product.id] ?? String(product.quantity), 1)
                             }
                             disabled={product.isAmostra}
                           >
@@ -570,7 +635,24 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                         <div className="flex items-center gap-1">
                           <span>Unidade:</span>
                           <span className="font-medium">
-                            {formatPrice(effectivePrices[product.id] || product.unitPriceEffective)}
+                            {(() => {
+                              const quantityStr = quantities[product.id] ?? "";
+                              // Se estiver vazio ou zero, mostra o preço do carrinho
+                              if (quantityStr === "" || quantityStr === "0") {
+                                return formatPrice(product.unitPriceEffective);
+                              }
+                              const quantityInInput = parseInt(quantityStr, 10);
+                              // Se está digitando uma quantidade diferente, mostra o preço recalculado
+                              // Caso contrário, mostra o preço já calculado no carrinho
+                              if (
+                                !isNaN(quantityInInput) &&
+                                quantityInInput !== product.quantity &&
+                                quantityInInput > 0
+                              ) {
+                                return formatPrice(effectivePrices[product.id] || product.unitPriceEffective);
+                              }
+                              return formatPrice(product.unitPriceEffective);
+                            })()}
                           </span>
                           {product.isAmostra && (
                             <span className="ml-1 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
@@ -606,10 +688,11 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                       {/* Validação de quantidade mínima (qtdi) e quantidade válida */}
                       {(() => {
                         const validation = quantityValidations[product.id];
-                        const quantity = parseInt(quantities[product.id] || "0", 10);
+                        const quantityStr = quantities[product.id] ?? "";
+                        const quantity = quantityStr === "" ? undefined : parseInt(quantityStr, 10);
 
-                        // Se não há quantidade ou é 0, mostra mensagem genérica
-                        if (!quantities[product.id] || quantity <= 0) {
+                        // Se não há quantidade ou é 0 ou vazio, mostra mensagem genérica
+                        if (quantityStr === "" || quantity === undefined || quantity === 0 || isNaN(quantity!)) {
                           return (
                             <span className="text-red-500 text-xs">Digite uma quantidade válida para prosseguir</span>
                           );

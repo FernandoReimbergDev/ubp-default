@@ -11,10 +11,16 @@ import { Resumo } from "@/app/components/Resumo";
 import { useCart } from "@/app/Context/CartContext";
 import { formatCep } from "@/app/services/utils";
 import { useAuth } from "@/app/Context/AuthContext";
+import { CartGuard } from "@/app/components/CartGuard";
 
 type EnderecoEntrega = {
-  contato_entrega: string; logradouro: string; numero: string; bairro: string;
-  municipio: string; uf: string; cep: string;
+  contato_entrega: string;
+  logradouro: string;
+  numero: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string;
 };
 
 type PedidoPayload = {
@@ -45,7 +51,9 @@ export default function PedidoSucesso() {
           // 1) Fonte da verdade: localStorage
           const ls = typeof window !== "undefined" ? localStorage.getItem("pedidoPayload") : null;
           if (ls) {
-            try { setPedidoPayload(JSON.parse(ls)); } catch { }
+            try {
+              setPedidoPayload(JSON.parse(ls));
+            } catch {}
             return;
           }
           // 2) Fallback: se existir cookie legado, migra para LS e remove cookie
@@ -54,8 +62,12 @@ export default function PedidoSucesso() {
             try {
               const parsed = JSON.parse(raw);
               setPedidoPayload(parsed);
-              try { localStorage.setItem("pedidoPayload", JSON.stringify(parsed)); } catch { }
-              try { Cookies.remove("pedidoPayload", { path: "/" }); } catch { }
+              try {
+                localStorage.setItem("pedidoPayload", JSON.stringify(parsed));
+              } catch {}
+              try {
+                Cookies.remove("pedidoPayload", { path: "/" });
+              } catch {}
             } catch (e) {
               console.error("Falha ao parsear cookie pedidoPayload:", e);
             }
@@ -88,32 +100,34 @@ export default function PedidoSucesso() {
   }, [pedidoPayload]);
 
   // Callback que só dispara quando tudo estiver pronto
-  const fetchCadastroPedido = useCallback(async (signal?: AbortSignal) => {
-    if (!pedidoPayload || !orderId) return; // guarda
-    try {
-      const res = await fetch("/api/send-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reqMethod: "POST",
-          reqEndpoint: `/order/${orderId}`,
-          reqHeaders: {
-            "X-Environment": "HOMOLOGACAO",
-            ...pedidoPayload,
-          },
-        }),
-        signal,
-      });
+  const fetchCadastroPedido = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!pedidoPayload || !orderId) return; // guarda
+      try {
+        const res = await fetch("/api/send-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reqMethod: "POST",
+            reqEndpoint: `/order/${orderId}`,
+            reqHeaders: {
+              "X-Environment": "HOMOLOGACAO",
+              ...pedidoPayload,
+            },
+          }),
+          signal,
+        });
 
-      const result = await res.json();
-      if (!res.ok) throw new Error(result?.message || "Erro ao cadastrar pedido");
-      console.log(result);
-
-    } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      console.error("Erro ao cadastrar pedido do usuário na API externa:", err);
-    }
-  }, [pedidoPayload, orderId]);
+        const result = await res.json();
+        if (!res.ok) throw new Error(result?.message || "Erro ao cadastrar pedido");
+        console.log(result);
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("Erro ao cadastrar pedido do usuário na API externa:", err);
+      }
+    },
+    [pedidoPayload, orderId]
+  );
 
   // Só chama quando: cookie lido (payloadReady), payload existe e orderId definido
   useEffect(() => {
@@ -149,32 +163,14 @@ export default function PedidoSucesso() {
             pedidoPayload.legalNameShipping,
             pedidoPayload.contactNameShipping,
             pedidoPayload.legalName,
-            pedidoPayload.legalNameBilling,
+            pedidoPayload.legalNameBilling
           ),
-          logradouro: pick(
-            pedidoPayload.streetNameShipping,
-            pedidoPayload.streetNameBilling,
-          ),
-          numero: pick(
-            pedidoPayload.streetNumberShipping,
-            pedidoPayload.streetNumberBilling,
-          ),
-          bairro: pick(
-            pedidoPayload.addressNeighborhoodShipping,
-            pedidoPayload.addressNeighborhoodBilling,
-          ),
-          municipio: pick(
-            pedidoPayload.addressCityShipping,
-            pedidoPayload.addressCityBilling,
-          ),
-          uf: upper(pick(
-            pedidoPayload.addressStateCodeShipping,
-            pedidoPayload.addressStateCodeBilling,
-          )),
-          cep: digits(pick(
-            pedidoPayload.zipCodeShipping,
-            pedidoPayload.zipCodeBilling,
-          )),
+          logradouro: pick(pedidoPayload.streetNameShipping, pedidoPayload.streetNameBilling),
+          numero: pick(pedidoPayload.streetNumberShipping, pedidoPayload.streetNumberBilling),
+          bairro: pick(pedidoPayload.addressNeighborhoodShipping, pedidoPayload.addressNeighborhoodBilling),
+          municipio: pick(pedidoPayload.addressCityShipping, pedidoPayload.addressCityBilling),
+          uf: upper(pick(pedidoPayload.addressStateCodeShipping, pedidoPayload.addressStateCodeBilling)),
+          cep: digits(pick(pedidoPayload.zipCodeShipping, pedidoPayload.zipCodeBilling)),
         };
 
         const zipOk = entregaDerivada.cep?.length === 8;
@@ -215,8 +211,9 @@ export default function PedidoSucesso() {
             return;
           }
         }
-      } catch { /* ignore */ }
-
+      } catch {
+        /* ignore */
+      }
     } catch (e) {
       console.error("Falha ao preparar dados de entrega:", e);
     } finally {
@@ -244,93 +241,127 @@ export default function PedidoSucesso() {
     router.push("/");
   };
 
-  function handleImprimir() { window.print(); }
+  function handleImprimir() {
+    window.print();
+  }
 
   if (loading) return <SkeletonPedido />;
 
   return (
-    <div className="min-h-[calc(100dvh-114px)] w-full flex flex-col lg:flex-row bg-body-bg pt-14">
-      <Container>
-        <div className="mx-auto max-w-5xl">
-          <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 mb-6">
-            <div className="flex items-center justify-center p-4 rounded-full bg-green-50 shrink-0">
-              <div className="flex items-center justify-center h-14 w-14 rounded-full bg-green-500 shrink-0">
-                <Check size={32} className="text-white" strokeWidth={4} />
+    <CartGuard allowEmptyWithPayload>
+      <div className="min-h-[calc(100dvh-114px)] w-full flex flex-col lg:flex-row bg-body-bg pt-14">
+        <Container>
+          <div className="mx-auto max-w-5xl">
+            <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 mb-6">
+              <div className="flex items-center justify-center p-4 rounded-full bg-green-50 shrink-0">
+                <div className="flex items-center justify-center h-14 w-14 rounded-full bg-green-500 shrink-0">
+                  <Check size={32} className="text-white" strokeWidth={4} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold text-green-700">Solicitação realizada com sucesso!</h1>
+                <p className="text-gray-600 mt-1">Recebemos sua solicitação e em breve retornaremos.</p>
+                <p className="text-red-300 mt-1 text-sm italic">Esse sistema é somente demonstrativo.</p>
+                {!hasAnyRole(["Administrador"]) && (
+                  <>
+                    <p className="text-gray-500 mt-1 text-sm italic">
+                      O estoque será reservado por até 48 horas. Após esse período, caso o pedido ainda esteja
+                      aguardando aprovação, a reserva será automaticamente cancelada e o estoque será liberado.
+                    </p>
+                    <p className="text-gray-500 mt-1 text-sm italic">
+                      O prazo de entrega é estimado e poderá ser alterado conforme as aprovações do pedido e da amostra
+                      virtual, quando aplicável.
+                    </p>
+                  </>
+                )}
+                <div className="mt-3 text-sm text-gray-500 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
+                  <span>
+                    <strong>Nº da Solicitação:</strong> {orderId}
+                  </span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>
+                    <strong>Previsão de entrega:</strong> {dataPedido}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  onClick={handleImprimir}
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3 py-2 text-sm text-gray-700 cursor-pointer"
+                >
+                  Imprimir
+                </button>
+                <button
+                  onClick={handleNovaCompra}
+                  className="inline-flex items-center justify-center rounded-lg bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm cursor-pointer"
+                >
+                  Voltar à loja
+                </button>
               </div>
             </div>
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-green-700">Solicitação realizada com sucesso!</h1>
-              <p className="text-gray-600 mt-1">Recebemos sua solicitação e em breve retornaremos.</p>
-              <p className="text-red-300 mt-1 text-sm italic">Esse sistema é somente demonstrativo.</p>
-              {!hasAnyRole(["Administrador"]) && (
-                <>
-                  <p className="text-gray-500 mt-1 text-sm italic">O estoque será reservado por até 48 horas. Após esse período, caso o pedido ainda esteja aguardando aprovação, a reserva será automaticamente cancelada e o estoque será liberado.</p>
-                  <p className="text-gray-500 mt-1 text-sm italic">O prazo de entrega é estimado e poderá ser alterado conforme as aprovações do pedido e da amostra virtual, quando aplicável.</p>
-                </>
 
-              )}
-              <div className="mt-3 text-sm text-gray-500 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
-                <span><strong>Nº da Solicitação:</strong> {orderId}</span>
-                <span className="hidden sm:inline">•</span>
-                <span><strong>Previsão de entrega:</strong> {dataPedido}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 print:hidden">
-              <button onClick={handleImprimir} className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-3 py-2 text-sm text-gray-700 cursor-pointer">
-                Imprimir
-              </button>
-              <button onClick={handleNovaCompra} className="inline-flex items-center justify-center rounded-lg bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm cursor-pointer">
-                Voltar à loja
-              </button>
-            </div>
-          </div>
+            <div className="grid md:grid-cols-12 gap-6">
+              <section className="md:col-span-7">
+                <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 h-full">
+                  {entrega && (
+                    <Resumo delivery={{ stateCode: entrega.uf, city: entrega.municipio, zipCode: entrega.cep }} />
+                  )}
+                </div>
+              </section>
 
-          <div className="grid md:grid-cols-12 gap-6">
-            <section className="md:col-span-7">
-              <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 h-full">
-                {entrega &&
-                  <Resumo delivery={{ stateCode: entrega.uf, city: entrega.municipio, zipCode: entrega.cep }} />
-                }
-              </div>
-            </section>
-
-            <aside className="md:col-span-5">
-              <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 h-full">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Dados de entrega</h2>
-                <div className="text-gray-700 leading-relaxed space-y-2">
-                  <div>
-                    <strong className="text-gray-900">Contato para entrega: </strong>
-                    <p className="capitalize text-gray-700">
-                      {pedidoPayload?.contactNameShipping
-                        || entrega?.contato_entrega
-                      }
+              <aside className="md:col-span-5">
+                <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 h-full">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-4">Dados de entrega</h2>
+                  <div className="text-gray-700 leading-relaxed space-y-2">
+                    <div>
+                      <strong className="text-gray-900">Contato para entrega: </strong>
+                      <p className="capitalize text-gray-700">
+                        {pedidoPayload?.contactNameShipping || entrega?.contato_entrega}
+                      </p>
+                    </div>
+                    <p className="text-gray-700">
+                      <strong className="text-gray-900">Endereço: </strong>
+                      {entrega?.logradouro}- {entrega?.numero} — {entrega?.bairro}
+                    </p>
+                    <p>
+                      <strong className="text-gray-900">Cidade/UF: </strong>
+                      {entrega?.municipio} — {entrega?.uf}
+                    </p>
+                    <p>
+                      <strong className="text-gray-900">CEP: </strong>
+                      {formatCep(entrega?.cep)}
                     </p>
                   </div>
-                  <p className="text-gray-700"><strong className="text-gray-900">Endereço: </strong>{entrega?.logradouro}- {entrega?.numero} — {entrega?.bairro}</p>
-                  <p><strong className="text-gray-900">Cidade/UF: </strong>{entrega?.municipio} — {entrega?.uf}</p>
-                  <p><strong className="text-gray-900">CEP: </strong>{formatCep(entrega?.cep)}</p>
+                  <div className="mt-6 rounded-xl bg-green-50 border border-green-100 p-4">
+                    <p className="text-sm text-green-800">Sua Solicitação está sendo preparada.</p>
+                  </div>
+                  <div className="mt-6 flex flex-col sm:flex-row gap-2 print:hidden">
+                    <button
+                      onClick={handleImprimir}
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-4 py-2 text-sm text-gray-700 cursor-pointer"
+                    >
+                      Imprimir comprovante
+                    </button>
+                    <button
+                      onClick={handleNovaCompra}
+                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm cursor-pointer"
+                    >
+                      Finalizar
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-6 rounded-xl bg-green-50 border border-green-100 p-4">
-                  <p className="text-sm text-green-800">Sua Solicitação está sendo preparada.</p>
-                </div>
-                <div className="mt-6 flex flex-col sm:flex-row gap-2 print:hidden">
-                  <button onClick={handleImprimir} className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-4 py-2 text-sm text-gray-700 cursor-pointer">
-                    Imprimir comprovante
-                  </button>
-                  <button onClick={handleNovaCompra} className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm cursor-pointer">
-                    Finalizar
-                  </button>
-                </div>
-              </div>
-            </aside>
-          </div>
+              </aside>
+            </div>
 
-          <div className="mt-8 flex items-center justify-center gap-3 text-sm text-gray-500 print:hidden">
-            <span>Precisa de ajuda?</span>
-            <Link href={'/fale-conosco'} className="text-blue-600 hover:underline cursor-pointer">Fale conosco</Link>
+            <div className="mt-8 flex items-center justify-center gap-3 text-sm text-gray-500 print:hidden">
+              <span>Precisa de ajuda?</span>
+              <Link href={"/fale-conosco"} className="text-blue-600 hover:underline cursor-pointer">
+                Fale conosco
+              </Link>
+            </div>
           </div>
-        </div>
-      </Container>
-    </div>
+        </Container>
+      </div>
+    </CartGuard>
   );
 }

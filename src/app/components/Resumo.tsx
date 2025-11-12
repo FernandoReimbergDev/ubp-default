@@ -7,8 +7,6 @@ import Image from "next/image";
 import { useMemo, useEffect, useRef, useState, useCallback } from "react";
 import { getPackageVolumeAndWeight } from "@/app/services/mountVolume";
 import Cookies from "js-cookie";
-import type { CartItemPersist, PersonalizacaoPreco } from "@/app/types/cart";
-import type { PrecoProduto } from "@/app/types/responseTypes";
 
 interface ResumoProps {
   delivery: { stateCode: string; city: string; zipCode: string };
@@ -24,21 +22,14 @@ export function Resumo({ delivery }: ResumoProps) {
   // Handle client-side initialization - só executa no cliente após montagem
   useEffect(() => {
     setMounted(true);
-    try {
-      const savedFrete = Cookies.get("valorFrete");
-      if (savedFrete) {
-        setValorFrete(Number(savedFrete));
-      }
-      setLoadingFrete(false);
-    } catch (error) {
-      console.error("Error reading frete from cookies:", error);
-      setLoadingFrete(false);
-    }
+    // NÃO carrega o valor do cookie no início
+    // O frete será recalculado sempre que os dados de entrega mudarem
+    setLoadingFrete(false);
   }, []);
 
   // Salva o valor do frete no cookie sempre que ele mudar
   useEffect(() => {
-    if (valorFrete !== undefined) {
+    if (valorFrete !== undefined && valorFrete !== null) {
       try {
         Cookies.set("valorFrete", String(valorFrete), { expires: 1 }); // Expira em 1 dia
       } catch (error) {
@@ -51,119 +42,9 @@ export function Resumo({ delivery }: ResumoProps) {
   const abortRef = useRef<AbortController | null>(null);
   const lastKeyRef = useRef<string>("");
 
-  // Função auxiliar para converter string/number para float
-  const toFloat = useCallback((val: string | number | undefined | null): number | undefined => {
-    if (val === undefined || val === null) return undefined;
-    const s = String(val).trim();
-    const normalized =
-      s.includes(",") && s.includes(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(",", ".");
-    const n = Number(normalized);
-    return Number.isFinite(n) ? n : undefined;
-  }, []);
-
-  // Função para encontrar o preço do produto baseado na quantidade
-  const findPriceForQuantity = useCallback(
-    (precos: PrecoProduto[] | undefined, vluGridPro: string | undefined, quantity: number) => {
-      if (!precos || precos.length === 0) {
-        return {
-          qtdiProPrc: "1",
-          qtdfProPrc: "0",
-          vluProPrc: vluGridPro || "0",
-        };
-      }
-
-      if (!quantity || quantity === 0) {
-        return {
-          ...precos[0],
-          vluProPrc: vluGridPro || precos[0].vluProPrc,
-        };
-      }
-
-      const foundPrice = precos.find((price) => {
-        const qtdi = parseInt(price.qtdiProPrc) || 0;
-        const qtdf = parseInt(price.qtdfProPrc) || 0;
-
-        if (qtdf === 0 || qtdf >= 999999999) {
-          return quantity >= qtdi;
-        }
-
-        return quantity >= qtdi && quantity <= qtdf;
-      });
-
-      return (
-        foundPrice || {
-          ...precos[0],
-          vluProPrc: vluGridPro || precos[0].vluProPrc,
-        }
-      );
-    },
-    []
-  );
-
-  // Função para obter preço da personalização baseado na quantidade
-  const getPersonalizationUnitPrice = useCallback(
-    (personalization: PersonalizacaoPreco[] | undefined, quantity: number): number => {
-      if (!personalization?.length || !quantity || quantity <= 0) {
-        if (personalization?.length) {
-          return toFloat(personalization[0].vluPersonalPrc) ?? 0;
-        }
-        return 0;
-      }
-
-      const faixaEncontrada = personalization.find((faixa) => {
-        const qtdi = parseInt(faixa.qtdiPersonalPrc) || 0;
-        const qtdf = parseInt(faixa.qtdfPersonalPrc) || 0;
-
-        if (qtdf === 0 || qtdf >= 999999999) {
-          return quantity >= qtdi;
-        }
-
-        return quantity >= qtdi && quantity <= qtdf;
-      });
-
-      if (faixaEncontrada) {
-        return toFloat(faixaEncontrada.vluPersonalPrc) ?? 0;
-      }
-
-      return toFloat(personalization[0].vluPersonalPrc) ?? 0;
-    },
-    [toFloat]
-  );
-
-  // Função para recalcular o preço unitário efetivo baseado na quantidade atual
-  const recalculateEffectivePrice = useCallback(
-    (item: CartItemPersist, quantity: number): number => {
-      let price = 0;
-
-      // Busca o preço do produto baseado na quantidade atual
-      if (quantity > 0) {
-        const currentPrice = findPriceForQuantity(item.precos, item.vluGridPro, quantity);
-        if (currentPrice) {
-          price = parseFloat(currentPrice.vluProPrc) || 0;
-        } else {
-          price = item.unitPriceBase;
-        }
-      } else {
-        price = item.unitPriceBase;
-      }
-
-      // Adiciona o valor da personalização se houver
-      if (item.hasPersonalization && item.personalization && quantity > 0) {
-        const personalizationPrice = getPersonalizationUnitPrice(item.personalization.precos, quantity);
-        price += personalizationPrice;
-      }
-
-      // Adiciona o valor adicional da amostra se estiver marcado
-      if (item.isAmostra && item.valorAdicionalAmostraPro) {
-        price += parseFloat(item.valorAdicionalAmostraPro || "0");
-      }
-
-      return price;
-    },
-    [findPriceForQuantity, getPersonalizationUnitPrice]
-  );
-
   // 1) Quantidades e total
+  // Os preços já estão recalculados no carrinho quando a quantidade muda
+  // Basta somar os subtotais de cada item
   const quantities = useMemo(() => {
     return cart.reduce((acc, item) => {
       acc[item.id] = String(item.quantity);
@@ -171,30 +52,11 @@ export function Resumo({ delivery }: ResumoProps) {
     }, {} as Record<string, string>);
   }, [cart]);
 
-  // Calcula o preço unitário efetivo recalculado para cada item baseado na quantidade atual
-  const effectivePrices = useMemo(() => {
-    const prices: Record<string, number> = {};
-    cart.forEach((item) => {
-      const quantity = parseInt(quantities[item.id] || "0", 10);
-      if (!isNaN(quantity) && quantity > 0) {
-        prices[item.id] = recalculateEffectivePrice(item, quantity);
-      } else {
-        prices[item.id] = item.unitPriceEffective;
-      }
-    });
-    return prices;
-  }, [cart, quantities, recalculateEffectivePrice]);
-
-  // Calcula o total usando os preços recalculados
   const totalValue = useMemo(() => {
     return cart.reduce((total, product) => {
-      const q = parseInt(quantities[product.id] || "0", 10);
-      if (isNaN(q) || q <= 0) return total;
-      // Usa o preço recalculado baseado na quantidade atual
-      const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
-      return total + q * effectivePrice;
+      return total + (product.subtotal || 0);
     }, 0);
-  }, [cart, quantities, effectivePrices]);
+  }, [cart]);
 
   // 2) Pacote (aceita dimensões/peso como string)
   const pkg = useMemo(() => {
@@ -230,9 +92,11 @@ export function Resumo({ delivery }: ResumoProps) {
       return num;
     };
 
-    // Peso em gramas, converte para kg (divide por 1000)
+    // Peso já está em gramas (vem de mountVolume)
+    // A API espera peso em gramas, sem ponto decimal (ex: "6000", não "6.00")
     const pesoTotalGrams = safeNumber(pkg?.pesoTotal, 0, 0);
-    const pesoKg = pesoTotalGrams > 0 ? pesoTotalGrams / 1000 : 0;
+    // Converte para string sem ponto decimal (inteiro)
+    const pesoGramasString = String(Math.round(pesoTotalGrams));
 
     // Dimensões em cm (valores mínimos de segurança)
     const altura = safeNumber(pkg?.altura, 1, 1);
@@ -247,10 +111,10 @@ export function Resumo({ delivery }: ResumoProps) {
       uf: deliveryReady.uf || "",
       city: deliveryReady.city || "",
       zip: deliveryReady.zip || "",
-      weightKg: pesoKg.toFixed(2),
-      altura: String(Math.max(1, Math.ceil(altura))), // Mínimo 1cm, arredonda para cima
-      largura: String(Math.max(1, Math.ceil(largura))), // Mínimo 1cm, arredonda para cima
-      comprimento: String(Math.max(1, Math.ceil(comprimento))), // Mínimo 1cm, arredonda para cima
+      weightGrams: pesoGramasString, // Peso em gramas, sem ponto decimal
+      altura: String(Math.max(1, Math.ceil(altura))),
+      largura: String(Math.max(1, Math.ceil(largura))),
+      comprimento: String(Math.max(1, Math.ceil(comprimento))),
     };
   }, [
     pkg?.pesoTotal,
@@ -274,7 +138,7 @@ export function Resumo({ delivery }: ResumoProps) {
       norm.uf,
       norm.city,
       norm.zip,
-      norm.weightKg,
+      norm.weightGrams,
       norm.altura,
       norm.largura,
       norm.comprimento,
@@ -302,10 +166,16 @@ export function Resumo({ delivery }: ResumoProps) {
         console.warn("Função fetchProductFrete não disponível");
         return;
       }
+      // Verifica se a chave mudou (incluindo dados de entrega)
+      // Se a chave for igual, mas os dados de entrega mudaram, força recálculo
       if (lastKeyRef.current === key) {
         console.debug("Chave de frete não mudou, ignorando");
         return;
       }
+
+      // Limpa o valor anterior do frete quando a chave muda
+      // Isso força um novo cálculo mesmo se houver valor em cache
+      setValorFrete(undefined);
 
       // Cancela requisição anterior se existir
       try {
@@ -324,7 +194,8 @@ export function Resumo({ delivery }: ResumoProps) {
 
         // Valida valores antes de fazer a consulta
         const purchaseAmountNum = Number(norm.purchaseAmount);
-        const weightKgNum = Number(norm.weightKg);
+        // Peso vem em gramas (string sem ponto decimal, ex: "6000")
+        const weightGramsNum = Number(norm.weightGrams);
         const alturaNum = Number(norm.altura);
         const larguraNum = Number(norm.largura);
         const comprimentoNum = Number(norm.comprimento);
@@ -342,8 +213,8 @@ export function Resumo({ delivery }: ResumoProps) {
 
         // Valida se os valores necessários são válidos
         if (
-          isNaN(weightKgNum) ||
-          weightKgNum <= 0 ||
+          isNaN(weightGramsNum) ||
+          weightGramsNum <= 0 ||
           isNaN(alturaNum) ||
           alturaNum <= 0 ||
           isNaN(larguraNum) ||
@@ -352,7 +223,7 @@ export function Resumo({ delivery }: ResumoProps) {
           comprimentoNum <= 0
         ) {
           console.warn("Valores inválidos para cálculo de frete:", {
-            weightKg: norm.weightKg,
+            weightGrams: norm.weightGrams,
             altura: norm.altura,
             largura: norm.largura,
             comprimento: norm.comprimento,
@@ -367,16 +238,30 @@ export function Resumo({ delivery }: ResumoProps) {
         // Função auxiliar para fazer a chamada com validação
         const callFrete = async (): Promise<number | undefined> => {
           try {
+            // Log para debug - verificar se os parâmetros estão corretos
+            console.log("Calculando frete com parâmetros:", {
+              purchaseAmount: norm.purchaseAmount,
+              stateCode: norm.uf,
+              city: norm.city,
+              zipCode: norm.zip,
+              weightGrams: norm.weightGrams, // Peso em gramas, sem ponto decimal
+              height: norm.altura,
+              width: norm.largura,
+              length: norm.comprimento,
+            });
+
             const result = await fetchProductFrete(
               norm.purchaseAmount,
               norm.uf,
               norm.city,
               norm.zip,
-              norm.weightKg,
+              norm.weightGrams,
               norm.altura,
               norm.largura,
               norm.comprimento
             );
+
+            console.log("Resultado do frete:", result);
 
             // Valida o resultado
             if (result === undefined || result === null) {
@@ -476,8 +361,26 @@ export function Resumo({ delivery }: ResumoProps) {
   // 8) Executa a consulta de frete quando necessário (apenas no cliente após montagem)
   useEffect(() => {
     if (!mounted) return;
+
+    // Quando a chave muda (incluindo dados de entrega), limpa o valor anterior
+    // Isso força o recálculo mesmo se houver valor em cache
+    if (lastKeyRef.current && lastKeyRef.current !== freteKey) {
+      console.log("Chave de frete mudou, limpando valor anterior:", {
+        anterior: lastKeyRef.current,
+        nova: freteKey,
+        delivery: delivery,
+      });
+      setValorFrete(undefined);
+      // Limpa o cookie também para forçar novo cálculo
+      try {
+        Cookies.remove("valorFrete", { path: "/" });
+      } catch (error) {
+        console.error("Erro ao limpar cookie de frete:", error);
+      }
+    }
+
     runFrete(freteKey);
-  }, [mounted, freteKey, runFrete]);
+  }, [mounted, freteKey, runFrete, delivery]);
 
   return (
     <div className="space-y-4 w-full">
@@ -621,7 +524,7 @@ export function Resumo({ delivery }: ResumoProps) {
                   </div>
 
                   <div className="flex items-center gap-2 text-xs">
-                    valor produto: {formatPrice(effectivePrices[product.id] || product.unitPriceEffective)}
+                    valor produto: {formatPrice(product.unitPriceEffective)}
                   </div>
 
                   <div className="flex items-start gap-2 text-xs">
@@ -636,10 +539,7 @@ export function Resumo({ delivery }: ResumoProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 text-xs">
-                    Subtotal:{" "}
-                    {formatPrice(product.quantity * (effectivePrices[product.id] || product.unitPriceEffective))}
-                  </div>
+                  <div className="flex items-center gap-2 text-xs">Subtotal: {formatPrice(product.subtotal || 0)}</div>
                 </div>
               </div>
 

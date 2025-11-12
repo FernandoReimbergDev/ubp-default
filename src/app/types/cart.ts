@@ -89,7 +89,7 @@ export type CartContextType = {
     uf: string,
     city: string,
     zip: string,
-    weightKg: string,
+    weightGrams: string, // Peso em gramas, sem ponto decimal (ex: "6000")
     altura: string,
     largura: string,
     comprimento: string

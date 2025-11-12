@@ -7,109 +7,7 @@ import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { useCallback, useEffect, useMemo, useState } from "react";
-type Phone = { areaCode?: string; number?: string };
-type Address = {
-  entityTypeShipping: string;
-  legalNameShipping: string;
-  contactNameShipping: string;
-  cpfCnpjShipping: string;
-  ieShipping: string;
-  emailShipping: string;
-  areaCodeShipping: string;
-  phoneShipping: string;
-  addressIbgeCodeShipping: string;
-  zipCodeShipping: string;
-  streetNameShipping: string;
-  streetNumberShipping: string;
-  addressLine2Shipping: string;
-  addressNeighborhoodShipping: string;
-  addressCityShipping: string;
-  addressStateCodeShipping: string;
-};
-
-type UserShape = {
-  id?: string | number;
-  userId?: string | number;
-  entityType?: "PF" | "PJ" | string;
-  legalName?: string;
-  fullName?: string;
-  cpf?: string;
-  cnpj?: string;
-  cpfCnpj?: string;
-  ie?: string;
-  email?: string;
-  phone?: Phone;
-  phones?: Phone[];
-  address?: OrderPayload;
-  addresses?: Address[];
-};
-
-interface OrderPayload {
-  // Basic info
-  storeId: string;
-  userId: number;
-
-  // User info
-  entityType: string;
-  legalName: string;
-  fullName: string;
-  cpfCnpj: string;
-  ie: string;
-  email: string;
-  areaCode: string;
-  phone: string;
-
-  // Billing info
-  entityTypeBilling: string;
-  legalNameBilling: string;
-  contactNameBilling: string;
-  cpfCnpjBilling: string;
-  ieBilling: string;
-  emailBilling: string;
-  areaCodeBilling: string;
-  phoneBilling: string;
-  addressIbgeCodeBilling: string;
-  zipCodeBilling: string;
-  streetNameBilling: string;
-  streetNumberBilling: string;
-  addressLine2Billing: string;
-  addressNeighborhoodBilling: string;
-  addressCityBilling: string;
-  addressStateCodeBilling: string;
-
-  // Shipping info
-  entityTypeShipping: string;
-  legalNameShipping: string;
-  contactNameShipping: string;
-  cpfCnpjShipping: string;
-  ieShipping: string;
-  emailShipping: string;
-  areaCodeShipping: string;
-  phoneShipping: string;
-  addressIbgeCodeShipping: string;
-  zipCodeShipping: string;
-  streetNameShipping: string;
-  streetNumberShipping: string;
-  addressLine2Shipping: string;
-  addressNeighborhoodShipping: string;
-  addressCityShipping: string;
-  addressStateCodeShipping: string;
-
-  // Order info
-  paymentMethod: string;
-  numberOfInstallments: string;
-  totalProductsAmount: string;
-  totalDiscountAmount: string;
-  totalShippingAmount: string;
-  totalInterestAmount: string;
-  orderTotalAmount: string;
-  totalTaxAmount: string;
-  paymentStatus: string;
-  orderStatus: string;
-  expectedDeliveryDate: string;
-  deliveryDate: string;
-  paymentDate: string;
-}
+import { Address, UserShape } from "@/app/types/payloadPedido";
 
 export function SolicitarAprovacao() {
   const { hasAnyRole, fetchOrderNumber } = useAuth();
@@ -181,7 +79,6 @@ export function SolicitarAprovacao() {
 
         const result = await res.json();
         if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados do usuário");
-        console.log(result);
         setUser(result?.data?.result?.[0]);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -212,7 +109,6 @@ export function SolicitarAprovacao() {
 
         const result = await res.json();
         if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados de entrega temp");
-        console.log(result.data.result);
         setAddressShipping(result?.data?.result);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -229,154 +125,14 @@ export function SolicitarAprovacao() {
     return () => ac.abort();
   }, [fetchUser, fetchShippingTemp]);
 
-  const quantities = useMemo(() => {
-    return cart.reduce((acc, item) => {
-      acc[item.id] = String(item.quantity);
-      return acc;
-    }, {} as Record<string, string>);
-  }, [cart]);
-
-  // Importa tipos necessários para recálculo de preço
-  type CartItemPersist = import("@/app/types/cart").CartItemPersist;
-  type PersonalizacaoPreco = import("@/app/types/cart").PersonalizacaoPreco;
-  type PrecoProduto = import("@/app/types/responseTypes").PrecoProduto;
-
-  // Função auxiliar para converter string/number para float
-  const toFloat = useCallback((val: string | number | undefined | null): number | undefined => {
-    if (val === undefined || val === null) return undefined;
-    const s = String(val).trim();
-    const normalized =
-      s.includes(",") && s.includes(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(",", ".");
-    const n = Number(normalized);
-    return Number.isFinite(n) ? n : undefined;
-  }, []);
-
-  // Função para encontrar o preço do produto baseado na quantidade
-  const findPriceForQuantity = useCallback(
-    (precos: PrecoProduto[] | undefined, vluGridPro: string | undefined, quantity: number) => {
-      if (!precos || precos.length === 0) {
-        return {
-          qtdiProPrc: "1",
-          qtdfProPrc: "0",
-          vluProPrc: vluGridPro || "0",
-        };
-      }
-
-      if (!quantity || quantity === 0) {
-        return {
-          ...precos[0],
-          vluProPrc: vluGridPro || precos[0].vluProPrc,
-        };
-      }
-
-      const foundPrice = precos.find((price) => {
-        const qtdi = parseInt(price.qtdiProPrc) || 0;
-        const qtdf = parseInt(price.qtdfProPrc) || 0;
-
-        if (qtdf === 0 || qtdf >= 999999999) {
-          return quantity >= qtdi;
-        }
-
-        return quantity >= qtdi && quantity <= qtdf;
-      });
-
-      return (
-        foundPrice || {
-          ...precos[0],
-          vluProPrc: vluGridPro || precos[0].vluProPrc,
-        }
-      );
-    },
-    []
-  );
-
-  // Função para obter preço da personalização baseado na quantidade
-  const getPersonalizationUnitPrice = useCallback(
-    (personalization: PersonalizacaoPreco[] | undefined, quantity: number): number => {
-      if (!personalization?.length || !quantity || quantity <= 0) {
-        if (personalization?.length) {
-          return toFloat(personalization[0].vluPersonalPrc) ?? 0;
-        }
-        return 0;
-      }
-
-      const faixaEncontrada = personalization.find((faixa) => {
-        const qtdi = parseInt(faixa.qtdiPersonalPrc) || 0;
-        const qtdf = parseInt(faixa.qtdfPersonalPrc) || 0;
-
-        if (qtdf === 0 || qtdf >= 999999999) {
-          return quantity >= qtdi;
-        }
-
-        return quantity >= qtdi && quantity <= qtdf;
-      });
-
-      if (faixaEncontrada) {
-        return toFloat(faixaEncontrada.vluPersonalPrc) ?? 0;
-      }
-
-      return toFloat(personalization[0].vluPersonalPrc) ?? 0;
-    },
-    [toFloat]
-  );
-
-  // Função para recalcular o preço unitário efetivo baseado na quantidade atual
-  const recalculateEffectivePrice = useCallback(
-    (item: CartItemPersist, quantity: number): number => {
-      let price = 0;
-
-      // Busca o preço do produto baseado na quantidade atual
-      if (quantity > 0) {
-        const currentPrice = findPriceForQuantity(item.precos, item.vluGridPro, quantity);
-        if (currentPrice) {
-          price = parseFloat(currentPrice.vluProPrc) || 0;
-        } else {
-          price = item.unitPriceBase;
-        }
-      } else {
-        price = item.unitPriceBase;
-      }
-
-      // Adiciona o valor da personalização se houver
-      if (item.hasPersonalization && item.personalization && quantity > 0) {
-        const personalizationPrice = getPersonalizationUnitPrice(item.personalization.precos, quantity);
-        price += personalizationPrice;
-      }
-
-      // Adiciona o valor adicional da amostra se estiver marcado
-      if (item.isAmostra && item.valorAdicionalAmostraPro) {
-        price += parseFloat(item.valorAdicionalAmostraPro || "0");
-      }
-
-      return price;
-    },
-    [findPriceForQuantity, getPersonalizationUnitPrice]
-  );
-
-  // Calcula o preço unitário efetivo recalculado para cada item baseado na quantidade atual
-  const effectivePrices = useMemo(() => {
-    const prices: Record<string, number> = {};
-    cart.forEach((item) => {
-      const quantity = parseInt(quantities[item.id] || "0", 10);
-      if (!isNaN(quantity) && quantity > 0) {
-        prices[item.id] = recalculateEffectivePrice(item, quantity);
-      } else {
-        prices[item.id] = item.unitPriceEffective;
-      }
-    });
-    return prices;
-  }, [cart, quantities, recalculateEffectivePrice]);
-
   // -------- Totais do carrinho --------
+  // Os preços já estão recalculados no carrinho quando a quantidade muda
+  // Basta somar os subtotais de cada item
   const totalValue = useMemo(() => {
     return cart.reduce((total, product) => {
-      const q = parseInt(quantities[product.id] || "0", 10);
-      if (isNaN(q) || q <= 0) return total;
-      // Usa o preço recalculado baseado na quantidade atual
-      const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
-      return total + q * effectivePrice;
+      return total + (product.subtotal || 0);
     }, 0);
-  }, [cart, quantities, effectivePrices]);
+  }, [cart]);
 
   const delivery = useMemo(() => {
     const zipDigits = (addressShipping?.zipCodeShipping || "").replace(/\D/g, "");
@@ -488,8 +244,8 @@ export function SolicitarAprovacao() {
         <div className="rounded-lg border border-gray-200 p-4 flex flex-col justify-center items-center gap-3 w-full h-fit md:w-1/2 shadow-lg ">
           {isAdmin ? (
             <>
-              <div className="w-full h-full flex justify-center items-center flex-col flex-wrap gap-8">
-                <div className="w-full h-full flex justify-center items-center flex-col flex-wrap gap-6">
+              <div className="w-full h-full flex justify-center items-center flex-col  gap-8">
+                <div className="w-full h-full flex justify-center items-center flex-col  gap-6">
                   <div className="flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 border border-green-200">
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-600">
                       <Check size={14} className="text-white" />
@@ -502,7 +258,7 @@ export function SolicitarAprovacao() {
                   </h1>
                 </div>
 
-                <div className="flex flex-col justify-center gap-4 max-w-[300px] w-full">
+                <div className="flex flex-col justify-center gap-4">
                   <button
                     onClick={handleAproved}
                     disabled={!freteValido}

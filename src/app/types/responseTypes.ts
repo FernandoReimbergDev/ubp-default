@@ -106,7 +106,7 @@ export type precos = {
   dataCadastradoPersonalPrc: string;
   dataAtualizadoPersonalPrc: string;
   cadastradoPersonalPrc: string;
-}
+};
 
 export type CorProduto = {
   chaveProCor: string;
@@ -213,7 +213,9 @@ export type ProdutosGrid = {
   quantidadeEstoquePro: string;
   estControl: string;
   peso: string;
-  altura: string; largura: string; comprimento: string;
+  altura: string;
+  largura: string;
+  comprimento: string;
   qtdMinPro: string;
   vluGridPro: string;
   gruposPersonalizacoes?: GrupoPersonalizacao[];
@@ -243,7 +245,7 @@ export type CartContextType = {
     stateCode: string,
     city: string,
     zipCode: string,
-    weight: string,
+    weightGrams: string, // Peso em gramas, sem ponto decimal (ex: "6000")
     height: string,
     width: string,
     length: string,
@@ -285,30 +287,29 @@ export interface ProductDataProps {
 }
 
 export interface personalizacoes {
-  chavePersonalPro: string,
-  chavePro: string,
-  chaveContPersonal: string,
-  chaveGruPersonal: string,
-  chavePersonal: string,
-  chavePlataforma: string,
-  chavePersonalPlataforma: string,
-  descrContPersonal: string,
-  descrWebContPersonal: string,
-  codPersonal: string,
-  descrPersonal: string,
-  descrWebPersonal: string,
-  qtdMaxPersonalPro: string,
-  padraoPersonalPro: string,
-  opcionalPersonal: string,
-  qtdPersonal: string,
-  baseQtdPersonal: string,
-  ordemPersonal: string,
-  cadastradoPersonalPlataforma: string,
-  cadastradoPersonalPro: string,
-  cadastradoPersonal: string,
-  precos: precos[],
+  chavePersonalPro: string;
+  chavePro: string;
+  chaveContPersonal: string;
+  chaveGruPersonal: string;
+  chavePersonal: string;
+  chavePlataforma: string;
+  chavePersonalPlataforma: string;
+  descrContPersonal: string;
+  descrWebContPersonal: string;
+  codPersonal: string;
+  descrPersonal: string;
+  descrWebPersonal: string;
+  qtdMaxPersonalPro: string;
+  padraoPersonalPro: string;
+  opcionalPersonal: string;
+  qtdPersonal: string;
+  baseQtdPersonal: string;
+  ordemPersonal: string;
+  cadastradoPersonalPlataforma: string;
+  cadastradoPersonalPro: string;
+  cadastradoPersonal: string;
+  precos: precos[];
 }
-
 
 export interface PrecoPersonalizacao {
   qtdf: string;
@@ -328,7 +329,94 @@ export interface PrecoPersonalizacao {
 }
 
 export interface Personalizacao {
-  map(arg0: (precos: { chavePersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; qtdiPersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; qtdfPersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; vluPersonalPrc: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; }) => JSX.Element): unknown;
+  map(
+    arg0: (precos: {
+      chavePersonalPrc:
+        | string
+        | number
+        | bigint
+        | boolean
+        | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+        | Iterable<React.ReactNode>
+        | React.ReactPortal
+        | Promise<
+            | string
+            | number
+            | bigint
+            | boolean
+            | React.ReactPortal
+            | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+            | Iterable<React.ReactNode>
+            | null
+            | undefined
+          >
+        | null
+        | undefined;
+      qtdiPersonalPrc:
+        | string
+        | number
+        | bigint
+        | boolean
+        | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+        | Iterable<React.ReactNode>
+        | React.ReactPortal
+        | Promise<
+            | string
+            | number
+            | bigint
+            | boolean
+            | React.ReactPortal
+            | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+            | Iterable<React.ReactNode>
+            | null
+            | undefined
+          >
+        | null
+        | undefined;
+      qtdfPersonalPrc:
+        | string
+        | number
+        | bigint
+        | boolean
+        | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+        | Iterable<React.ReactNode>
+        | React.ReactPortal
+        | Promise<
+            | string
+            | number
+            | bigint
+            | boolean
+            | React.ReactPortal
+            | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+            | Iterable<React.ReactNode>
+            | null
+            | undefined
+          >
+        | null
+        | undefined;
+      vluPersonalPrc:
+        | string
+        | number
+        | bigint
+        | boolean
+        | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+        | Iterable<React.ReactNode>
+        | React.ReactPortal
+        | Promise<
+            | string
+            | number
+            | bigint
+            | boolean
+            | React.ReactPortal
+            | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+            | Iterable<React.ReactNode>
+            | null
+            | undefined
+          >
+        | null
+        | undefined;
+    }) => JSX.Element
+  ): unknown;
   chavePersonalPro: string;
   chavePro: string;
   chaveContPersonal: string;
@@ -406,8 +494,8 @@ export type ProdutoCart = {
   largura: string;
   comprimento: string;
   estControl?: string;
-  qtdMinPro: string,
-  vluGridPro: string,
+  qtdMinPro: string;
+  vluGridPro: string;
   gruposPersonalizacoes: string[];
   chavePersonal: string;
   precosPersonal: PrecoPersonalizacao[];
@@ -523,10 +611,7 @@ export type AuthContextType = {
     password: string,
     confirmPassword: string
   ) => Promise<{ success: boolean; message?: string }>;
-  setNewPassword: (
-    password: string,
-    confirmPassword: string
-  ) => Promise<{ success: boolean; message?: string }>;
+  setNewPassword: (password: string, confirmPassword: string) => Promise<{ success: boolean; message?: string }>;
   requestCodePassword: () => Promise<{
     success: boolean;
     message: string;
@@ -626,4 +711,3 @@ export interface ToastContextType {
 }
 
 export type ToastModel = "default" | "alert" | "danger" | "success";
-
