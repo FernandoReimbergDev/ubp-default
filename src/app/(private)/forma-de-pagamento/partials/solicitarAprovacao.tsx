@@ -236,13 +236,147 @@ export function SolicitarAprovacao() {
     }, {} as Record<string, string>);
   }, [cart]);
 
+  // Importa tipos necessários para recálculo de preço
+  type CartItemPersist = import("@/app/types/cart").CartItemPersist;
+  type PersonalizacaoPreco = import("@/app/types/cart").PersonalizacaoPreco;
+  type PrecoProduto = import("@/app/types/responseTypes").PrecoProduto;
+
+  // Função auxiliar para converter string/number para float
+  const toFloat = useCallback((val: string | number | undefined | null): number | undefined => {
+    if (val === undefined || val === null) return undefined;
+    const s = String(val).trim();
+    const normalized =
+      s.includes(",") && s.includes(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(",", ".");
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : undefined;
+  }, []);
+
+  // Função para encontrar o preço do produto baseado na quantidade
+  const findPriceForQuantity = useCallback(
+    (precos: PrecoProduto[] | undefined, vluGridPro: string | undefined, quantity: number) => {
+      if (!precos || precos.length === 0) {
+        return {
+          qtdiProPrc: "1",
+          qtdfProPrc: "0",
+          vluProPrc: vluGridPro || "0",
+        };
+      }
+
+      if (!quantity || quantity === 0) {
+        return {
+          ...precos[0],
+          vluProPrc: vluGridPro || precos[0].vluProPrc,
+        };
+      }
+
+      const foundPrice = precos.find((price) => {
+        const qtdi = parseInt(price.qtdiProPrc) || 0;
+        const qtdf = parseInt(price.qtdfProPrc) || 0;
+
+        if (qtdf === 0 || qtdf >= 999999999) {
+          return quantity >= qtdi;
+        }
+
+        return quantity >= qtdi && quantity <= qtdf;
+      });
+
+      return (
+        foundPrice || {
+          ...precos[0],
+          vluProPrc: vluGridPro || precos[0].vluProPrc,
+        }
+      );
+    },
+    []
+  );
+
+  // Função para obter preço da personalização baseado na quantidade
+  const getPersonalizationUnitPrice = useCallback(
+    (personalization: PersonalizacaoPreco[] | undefined, quantity: number): number => {
+      if (!personalization?.length || !quantity || quantity <= 0) {
+        if (personalization?.length) {
+          return toFloat(personalization[0].vluPersonalPrc) ?? 0;
+        }
+        return 0;
+      }
+
+      const faixaEncontrada = personalization.find((faixa) => {
+        const qtdi = parseInt(faixa.qtdiPersonalPrc) || 0;
+        const qtdf = parseInt(faixa.qtdfPersonalPrc) || 0;
+
+        if (qtdf === 0 || qtdf >= 999999999) {
+          return quantity >= qtdi;
+        }
+
+        return quantity >= qtdi && quantity <= qtdf;
+      });
+
+      if (faixaEncontrada) {
+        return toFloat(faixaEncontrada.vluPersonalPrc) ?? 0;
+      }
+
+      return toFloat(personalization[0].vluPersonalPrc) ?? 0;
+    },
+    [toFloat]
+  );
+
+  // Função para recalcular o preço unitário efetivo baseado na quantidade atual
+  const recalculateEffectivePrice = useCallback(
+    (item: CartItemPersist, quantity: number): number => {
+      let price = 0;
+
+      // Busca o preço do produto baseado na quantidade atual
+      if (quantity > 0) {
+        const currentPrice = findPriceForQuantity(item.precos, item.vluGridPro, quantity);
+        if (currentPrice) {
+          price = parseFloat(currentPrice.vluProPrc) || 0;
+        } else {
+          price = item.unitPriceBase;
+        }
+      } else {
+        price = item.unitPriceBase;
+      }
+
+      // Adiciona o valor da personalização se houver
+      if (item.hasPersonalization && item.personalization && quantity > 0) {
+        const personalizationPrice = getPersonalizationUnitPrice(item.personalization.precos, quantity);
+        price += personalizationPrice;
+      }
+
+      // Adiciona o valor adicional da amostra se estiver marcado
+      if (item.isAmostra && item.valorAdicionalAmostraPro) {
+        price += parseFloat(item.valorAdicionalAmostraPro || "0");
+      }
+
+      return price;
+    },
+    [findPriceForQuantity, getPersonalizationUnitPrice]
+  );
+
+  // Calcula o preço unitário efetivo recalculado para cada item baseado na quantidade atual
+  const effectivePrices = useMemo(() => {
+    const prices: Record<string, number> = {};
+    cart.forEach((item) => {
+      const quantity = parseInt(quantities[item.id] || "0", 10);
+      if (!isNaN(quantity) && quantity > 0) {
+        prices[item.id] = recalculateEffectivePrice(item, quantity);
+      } else {
+        prices[item.id] = item.unitPriceEffective;
+      }
+    });
+    return prices;
+  }, [cart, quantities, recalculateEffectivePrice]);
+
   // -------- Totais do carrinho --------
   const totalValue = useMemo(() => {
     return cart.reduce((total, product) => {
       const q = parseInt(quantities[product.id] || "0", 10);
-      return total + (isNaN(q) ? 0 : q * product.unitPriceEffective);
+      if (isNaN(q) || q <= 0) return total;
+      // Usa o preço recalculado baseado na quantidade atual
+      const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
+      return total + q * effectivePrice;
     }, 0);
-  }, [cart, quantities]);
+  }, [cart, quantities, effectivePrices]);
 
   const delivery = useMemo(() => {
     const zipDigits = (addressShipping?.zipCodeShipping || "").replace(/\D/g, "");

@@ -39,18 +39,40 @@ function toFloat(val: string | number | undefined | null): number | undefined {
 }
 
 /**
- * Retorna o preço unitário da personalização.
- * Sempre retorna o preço da primeira faixa, independentemente da quantidade.
+ * Retorna o preço unitário da personalização baseado na quantidade.
+ * Encontra a faixa de preço correta que corresponde à quantidade fornecida.
  */
-export function getPersonalizationUnitPrice(
-  personalization: Personalizacao,
-  _quantity: number // eslint-disable-line
-): number {
-  // Retorna o preço da primeira faixa, se existir
-  if (!personalization?.precos?.length) return 0;
+export function getPersonalizationUnitPrice(personalization: Personalizacao, quantity: number): number {
+  if (!personalization?.precos?.length || !quantity || quantity <= 0) {
+    // Se não há faixas ou quantidade inválida, retorna 0
+    if (personalization?.precos?.length) {
+      // Se tem faixas mas quantidade inválida, retorna a primeira faixa como fallback
+      return toFloat(personalization.precos[0].vluPersonalPrc) ?? 0;
+    }
+    return 0;
+  }
 
-  const primeiraFaixa = personalization.precos[0];
-  return toFloat(primeiraFaixa.vluPersonalPrc) ?? 0;
+  // Encontra a faixa de preço que corresponde à quantidade
+  const faixaEncontrada = personalization.precos.find((faixa) => {
+    const qtdi = parseInt(faixa.qtdiPersonalPrc) || 0;
+    const qtdf = parseInt(faixa.qtdfPersonalPrc) || 0;
+
+    // Se qtdf é 0 ou muito grande, significa que é a última faixa (sem limite superior)
+    if (qtdf === 0 || qtdf >= 999999999) {
+      return quantity >= qtdi;
+    }
+
+    // Verifica se a quantidade está dentro da faixa
+    return quantity >= qtdi && quantity <= qtdf;
+  });
+
+  // Se encontrou uma faixa, retorna o preço dela
+  if (faixaEncontrada) {
+    return toFloat(faixaEncontrada.vluPersonalPrc) ?? 0;
+  }
+
+  // Se não encontrou, retorna a primeira faixa como fallback
+  return toFloat(personalization.precos[0].vluPersonalPrc) ?? 0;
 }
 
 /**
@@ -110,18 +132,71 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const hasQty = requestedQty > 0;
   const hasGravacao = hasAnyPersonalization(selectedPersonalizations);
 
+  // Função para encontrar o preço do produto baseado na quantidade
+  const findPriceForQuantity = useCallback(
+    (quantity: number) => {
+      if (!ProductData.precos || ProductData.precos.length === 0) {
+        //Retorna um objeto de preço padrão usando vluGrid quando não existem intervalos de preço.
+        return {
+          qtdiProPrc: "1",
+          qtdfProPrc: "0",
+          vluProPrc: ProductData.vluGridPro || "0",
+        };
+      }
+
+      // Se a quantidade for 0 ou não for fornecida, retorne a primeira faixa de preço.
+      if (!quantity || quantity === 0) {
+        return {
+          ...ProductData.precos[0],
+          vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc,
+        };
+      }
+
+      // Se encontrar faixa de preço
+      const foundPrice = ProductData.precos.find((price) => {
+        const qtdi = parseInt(price.qtdiProPrc) || 0;
+        const qtdf = parseInt(price.qtdfProPrc) || 0;
+
+        // Se qtdf é 0 ou muito grande (999999999), significa que é a última faixa (sem limite superior)
+        if (qtdf === 0 || qtdf >= 999999999) {
+          return quantity >= qtdi;
+        }
+
+        // Verifica se a quantidade está dentro da faixa
+        return quantity >= qtdi && quantity <= qtdf;
+      });
+
+      //Se nenhum intervalo correspondente for encontrado, retorne o primeiro intervalo de preços com vluGridPro como alternativa.
+      return (
+        foundPrice || {
+          ...ProductData.precos[0],
+          vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc,
+        }
+      );
+    },
+    [ProductData.precos, ProductData.vluGridPro]
+  );
+
   const personalizationUnit = React.useMemo(() => {
     if (!hasQty || !hasGravacao) return 0;
+    // Usa a quantidade atual para buscar o preço correto da personalização
     return sumSelectedPersonalizationsUnitPrice(selectedPersonalizations, requestedQty, isAmostra);
   }, [hasQty, hasGravacao, selectedPersonalizations, requestedQty, isAmostra]);
 
   const effectiveUnitPrice = React.useMemo(() => {
     let price = 0;
 
-    // Usa o preço da primeira faixa se for amostra, senão usa o preço normal
-    if (isAmostra && ProductData.precos && ProductData.precos.length > 0) {
-      price = parseFloat(ProductData.precos[0].vluProPrc) || 0;
+    // Busca o preço do produto baseado na quantidade atual
+    if (hasQty) {
+      const currentPrice = findPriceForQuantity(requestedQty);
+      if (currentPrice) {
+        price = parseFloat(currentPrice.vluProPrc) || 0;
+      } else {
+        // Fallback para o preço padrão se não encontrar faixa
+        price = ProductData.price;
+      }
     } else {
+      // Se não há quantidade, usa o preço padrão
       price = ProductData.price;
     }
 
@@ -138,12 +213,13 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     return price;
   }, [
     ProductData.price,
-    ProductData.precos,
+    ProductData.valorAdicionalAmostraPro,
     personalizationUnit,
     hasQty,
     hasGravacao,
     isAmostra,
-    ProductData.valorAdicionalAmostraPro,
+    requestedQty,
+    findPriceForQuantity,
   ]);
 
   const total = React.useMemo(() => {
@@ -403,8 +479,23 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               descricao: selectedFirst.descrWebPersonal || selectedFirst.descrPersonal || "Personalização",
               precoUnitario: personalizationUnit,
               precoTotal: personalizationUnit * requestedQty,
+              // Salva as faixas de preço da personalização para recálculo no carrinho
+              precos: selectedFirst.precos
+                ? selectedFirst.precos.map((p) => ({
+                    chavePersonalPrc: p.chavePersonalPrc,
+                    qtdiPersonalPrc: p.qtdiPersonalPrc,
+                    qtdfPersonalPrc: p.qtdfPersonalPrc,
+                    vluPersonalPrc: p.vluPersonalPrc,
+                  }))
+                : undefined,
             }
           : undefined,
+
+        // Salva informações de faixas de preço do produto para recálculo no carrinho
+        precos: ProductData.precos,
+        qtdMinPro: ProductData.qtdMinPro,
+        vluGridPro: ProductData.vluGridPro,
+        valorAdicionalAmostraPro: ProductData.valorAdicionalAmostraPro,
 
         // opcionais leves de logística (mantidos como number|string)
         peso: ProductData.peso,
@@ -436,6 +527,10 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     ProductData.peso,
     ProductData.price,
     ProductData.product,
+    ProductData.precos,
+    ProductData.qtdMinPro,
+    ProductData.vluGridPro,
+    ProductData.valorAdicionalAmostraPro,
     isAmostra,
     addProduct,
     effectiveUnitPrice,
@@ -488,39 +583,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       return newState;
     });
   }, []);
-
-  const findPriceForQuantity = (quantity: number) => {
-    if (!ProductData.precos || ProductData.precos.length === 0) {
-      //Retorna um objeto de preço padrão usando vluGrid quando não existem intervalos de preço.
-      return {
-        qtdiProPrc: "1",
-        qtdfProPrc: "0",
-        vluProPrc: ProductData.vluGridPro || "0",
-      };
-    }
-
-    // Se a quantidade for 0 ou não for fornecida, retorne a primeira faixa de preço.
-    if (!quantity || quantity === 0) {
-      return {
-        ...ProductData.precos[0],
-        vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc,
-      };
-    }
-
-    // Se encontrar faixa de preço
-    const foundPrice = ProductData.precos.find(
-      (price) =>
-        quantity >= parseInt(price.qtdiProPrc) && (price.qtdfProPrc === "0" || quantity <= parseInt(price.qtdfProPrc))
-    );
-
-    //Se nenhum intervalo correspondente for encontrado, retorne o primeiro intervalo de preços com vluGridPro como alternativa.
-    return (
-      foundPrice || {
-        ...ProductData.precos[0],
-        vluProPrc: ProductData.vluGridPro || ProductData.precos[0].vluProPrc,
-      }
-    );
-  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-40">

@@ -23,6 +23,18 @@ function normalize(item: CartItemInput): CartItemPersist {
     unitPriceEffective: unitEff,
     subtotal: quantity * unitEff,
     isAmostra: item.isAmostra || false, // Garante que isAmostra seja sempre booleano
+    // Preserva informações de faixas de preço para recálculo no carrinho
+    precos: item.precos,
+    qtdMinPro: item.qtdMinPro,
+    vluGridPro: item.vluGridPro,
+    valorAdicionalAmostraPro: item.valorAdicionalAmostraPro,
+    // Preserva faixas de preço da personalização
+    personalization: item.personalization
+      ? {
+          ...item.personalization,
+          precos: item.personalization.precos,
+        }
+      : undefined,
   };
 }
 
@@ -58,8 +70,14 @@ function parsePersist(raw: string | undefined): CartItemPersist[] {
                 descricao: x.personalization.descricao ?? "Personalização",
                 precoUnitario: Number(x.personalization.precoUnitario ?? 0),
                 precoTotal: Number(x.personalization.precoTotal ?? 0),
+                precos: x.personalization.precos, // Preserva faixas de preço da personalização
               }
             : undefined,
+          // Preserva informações de faixas de preço do produto
+          precos: x.precos,
+          qtdMinPro: x.qtdMinPro,
+          vluGridPro: x.vluGridPro,
+          valorAdicionalAmostraPro: x.valorAdicionalAmostraPro,
           peso: x.peso,
           altura: x.altura,
           largura: x.largura,
@@ -113,6 +131,11 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           hasPersonalization: incoming.hasPersonalization,
           isAmostra: incoming.isAmostra, // Mantém a flag de amostra
           personalization: incoming.personalization,
+          // Preserva informações de faixas de preço do produto
+          precos: incoming.precos ?? curr.precos,
+          qtdMinPro: incoming.qtdMinPro ?? curr.qtdMinPro,
+          vluGridPro: incoming.vluGridPro ?? curr.vluGridPro,
+          valorAdicionalAmostraPro: incoming.valorAdicionalAmostraPro ?? curr.valorAdicionalAmostraPro,
           peso: incoming.peso,
           altura: incoming.altura,
           largura: incoming.largura,

@@ -1,11 +1,17 @@
+import type { ComponentProps } from "react";
+import { twMerge } from "tailwind-merge";
+
 interface InputRootProps extends React.ComponentProps<"div"> {
   error?: boolean;
 }
 
-export function InputRoot({ error = false, ...props }: InputRootProps) {
+export function InputRoot({ error = false, className, ...props }: InputRootProps) {
   return (
     <div
-      className="group w-full flex bg-white h-10 rounded-lg px-4 items-center gap-2 border-2 border-slate-400 focus-within:border-sky-500 focus-within:border-2 data-[error=true]:border-red-500 data-[error=true]:border-2 overflow-hidden"
+      className={twMerge(
+        "group w-full flex bg-white h-10 rounded-lg px-4 items-center gap-2 border-2 border-slate-400 focus-within:border-sky-500 focus-within:border-2 data-[error=true]:border-red-500 data-[error=true]:border-2 overflow-hidden",
+        className
+      )}
       data-error={error}
       {...props}
     />
@@ -24,8 +30,7 @@ export function InputIcon(props: InputIconProps) {
     />
   );
 }
-import type { ComponentProps } from "react";
 
-export function InputField(props: ComponentProps<"input">) {
-  return <input className="flex-1 outline-none placeholder-gray-400 bg-transparent" {...props} />;
+export function InputField({ className, ...props }: ComponentProps<"input">) {
+  return <input className={twMerge("flex-1 outline-none placeholder-gray-400 bg-transparent", className)} {...props} />;
 }

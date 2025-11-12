@@ -2,10 +2,10 @@
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
-import type { CartItemPersist } from "../types/cart";
-import type { ProdutoEstoqueItem } from "../types/responseTypes";
+import type { CartItemPersist, PersonalizacaoPreco } from "../types/cart";
+import type { PrecoProduto, ProdutoEstoqueItem } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { TitleSection } from "./TitleSection";
@@ -40,6 +40,178 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     return Number(s);
   };
 
+  // Função auxiliar para converter string/number para float
+  const toFloat = (val: string | number | undefined | null): number | undefined => {
+    if (val === undefined || val === null) return undefined;
+    const s = String(val).trim();
+    const normalized =
+      s.includes(",") && s.includes(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(",", ".");
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  // Função para encontrar o preço do produto baseado na quantidade
+  const findPriceForQuantity = useCallback(
+    (precos: PrecoProduto[] | undefined, vluGridPro: string | undefined, quantity: number) => {
+      if (!precos || precos.length === 0) {
+        return {
+          qtdiProPrc: "1",
+          qtdfProPrc: "0",
+          vluProPrc: vluGridPro || "0",
+        };
+      }
+
+      if (!quantity || quantity === 0) {
+        return {
+          ...precos[0],
+          vluProPrc: vluGridPro || precos[0].vluProPrc,
+        };
+      }
+
+      const foundPrice = precos.find((price) => {
+        const qtdi = parseInt(price.qtdiProPrc) || 0;
+        const qtdf = parseInt(price.qtdfProPrc) || 0;
+
+        if (qtdf === 0 || qtdf >= 999999999) {
+          return quantity >= qtdi;
+        }
+
+        return quantity >= qtdi && quantity <= qtdf;
+      });
+
+      return (
+        foundPrice || {
+          ...precos[0],
+          vluProPrc: vluGridPro || precos[0].vluProPrc,
+        }
+      );
+    },
+    []
+  );
+
+  // Função para obter preço da personalização baseado na quantidade
+  const getPersonalizationUnitPrice = useCallback(
+    (personalization: PersonalizacaoPreco[] | undefined, quantity: number): number => {
+      if (!personalization?.length || !quantity || quantity <= 0) {
+        if (personalization?.length) {
+          return toFloat(personalization[0].vluPersonalPrc) ?? 0;
+        }
+        return 0;
+      }
+
+      const faixaEncontrada = personalization.find((faixa) => {
+        const qtdi = parseInt(faixa.qtdiPersonalPrc) || 0;
+        const qtdf = parseInt(faixa.qtdfPersonalPrc) || 0;
+
+        if (qtdf === 0 || qtdf >= 999999999) {
+          return quantity >= qtdi;
+        }
+
+        return quantity >= qtdi && quantity <= qtdf;
+      });
+
+      if (faixaEncontrada) {
+        return toFloat(faixaEncontrada.vluPersonalPrc) ?? 0;
+      }
+
+      return toFloat(personalization[0].vluPersonalPrc) ?? 0;
+    },
+    []
+  );
+
+  // Função para recalcular o preço unitário efetivo baseado na quantidade atual
+  const recalculateEffectivePrice = useCallback(
+    (item: CartItemPersist, quantity: number): number => {
+      let price = 0;
+
+      // Busca o preço do produto baseado na quantidade atual
+      if (quantity > 0) {
+        const currentPrice = findPriceForQuantity(item.precos, item.vluGridPro, quantity);
+        if (currentPrice) {
+          price = parseFloat(currentPrice.vluProPrc) || 0;
+        } else {
+          price = item.unitPriceBase;
+        }
+      } else {
+        price = item.unitPriceBase;
+      }
+
+      // Adiciona o valor da personalização se houver
+      if (item.hasPersonalization && item.personalization && quantity > 0) {
+        const personalizationPrice = getPersonalizationUnitPrice(item.personalization.precos, quantity);
+        price += personalizationPrice;
+      }
+
+      // Adiciona o valor adicional da amostra se estiver marcado
+      if (item.isAmostra && item.valorAdicionalAmostraPro) {
+        price += parseFloat(item.valorAdicionalAmostraPro || "0");
+      }
+
+      return price;
+    },
+    [findPriceForQuantity, getPersonalizationUnitPrice]
+  );
+
+  // Função para validar quantidade mínima (qtdi) das faixas de preço
+  const validateMinimumQuantity = useCallback(
+    (item: CartItemPersist, quantity: number): { valid: boolean; minQty: number; message?: string } => {
+      if (item.isAmostra) {
+        // Amostra sempre permite quantidade 1
+        return { valid: true, minQty: 1 };
+      }
+
+      // Se quantidade for 0 ou inválida, retorna inválido
+      if (!quantity || quantity <= 0) {
+        return { valid: false, minQty: 1, message: "Digite uma quantidade válida para prosseguir" };
+      }
+
+      // Verifica quantidade mínima do produto (qtdMinPro)
+      if (item.qtdMinPro) {
+        const qtdMin = parseInt(item.qtdMinPro) || 0;
+        if (qtdMin > 0 && quantity < qtdMin) {
+          return {
+            valid: false,
+            minQty: qtdMin,
+            message: `Esse produto é vendido na quantidade mínima de ${qtdMin}`,
+          };
+        }
+      }
+
+      // Verifica se a quantidade está dentro de alguma faixa de preço válida
+      if (item.precos && item.precos.length > 0) {
+        // Encontra a menor quantidade inicial (qtdi) entre todas as faixas
+        const qtdiValues = item.precos.map((price) => parseInt(price.qtdiProPrc) || 0).filter((qtdi) => qtdi > 0);
+        const minQtdi = qtdiValues.length > 0 ? Math.min(...qtdiValues) : 0;
+
+        // Verifica se a quantidade está dentro de alguma faixa válida
+        const isValidQuantity = item.precos.some((price) => {
+          const qtdi = parseInt(price.qtdiProPrc) || 0;
+          const qtdf = parseInt(price.qtdfProPrc) || 0;
+
+          // Se qtdf é 0 ou muito grande, significa que é a última faixa (sem limite superior)
+          if (qtdf === 0 || qtdf >= 999999999) {
+            return quantity >= qtdi;
+          }
+
+          // Verifica se a quantidade está dentro da faixa
+          return quantity >= qtdi && quantity <= qtdf;
+        });
+
+        // Se não está em nenhuma faixa válida e existe uma quantidade mínima definida
+        if (!isValidQuantity && minQtdi > 0) {
+          return {
+            valid: false,
+            minQty: minQtdi,
+            message: `Quantidade mínima para este produto é ${minQtdi} unidades`,
+          };
+        }
+      }
+
+      return { valid: true, minQty: 1 };
+    },
+    []
+  );
+
   const getAggregatedRequestedForPool = useCallback(
     (base: CartItemPersist) => {
       return cart.reduce((sum, it) => {
@@ -64,11 +236,42 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     setQuantities(initial);
   }, [cart]);
 
+  // Calcula o preço unitário efetivo recalculado para cada item baseado na quantidade atual
+  const effectivePrices = useMemo(() => {
+    const prices: Record<string, number> = {};
+    cart.forEach((item) => {
+      const quantity = parseInt(quantities[item.id] || "0", 10);
+      if (!isNaN(quantity) && quantity > 0) {
+        prices[item.id] = recalculateEffectivePrice(item, quantity);
+      } else {
+        prices[item.id] = item.unitPriceEffective;
+      }
+    });
+    return prices;
+  }, [cart, quantities, recalculateEffectivePrice]);
+
+  // Valida quantidades mínimas para todos os itens
+  const quantityValidations = useMemo(() => {
+    const validations: Record<string, { valid: boolean; minQty: number; message?: string }> = {};
+    cart.forEach((item) => {
+      const quantity = parseInt(quantities[item.id] || "0", 10);
+      validations[item.id] = validateMinimumQuantity(item, quantity);
+    });
+    return validations;
+  }, [cart, quantities, validateMinimumQuantity]);
+
+  // Verifica se há quantidades inválidas (menor que qtdi)
+  const hasInvalidMinimumQuantities = useMemo(() => {
+    return Object.values(quantityValidations).some((validation) => !validation.valid);
+  }, [quantityValidations]);
+
   const calculateSubtotal = (product: CartItemPersist) => {
     const quantityStr = quantities[product.id] ?? "0";
     const quantity = parseInt(quantityStr, 10);
     if (isNaN(quantity) || quantity <= 0) return formatPrice(0);
-    return formatPrice(quantity * product.unitPriceEffective);
+    // Usa o preço recalculado baseado na quantidade atual
+    const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
+    return formatPrice(quantity * effectivePrice);
   };
 
   const handleInputChange = (id: string, value: string) => {
@@ -91,11 +294,15 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     if (item) scheduleFetch(item);
   };
 
-  const totalValue = cart.reduce((total, product) => {
-    const quantity = parseInt(quantities[product.id] || "0", 10);
-    if (isNaN(quantity) || quantity <= 0) return total;
-    return total + quantity * product.unitPriceEffective;
-  }, 0);
+  const totalValue = useMemo(() => {
+    return cart.reduce((total, product) => {
+      const quantity = parseInt(quantities[product.id] || "0", 10);
+      if (isNaN(quantity) || quantity <= 0) return total;
+      // Usa o preço recalculado baseado na quantidade atual
+      const effectivePrice = effectivePrices[product.id] || product.unitPriceEffective;
+      return total + quantity * effectivePrice;
+    }, 0);
+  }, [cart, quantities, effectivePrices]);
 
   const hasInvalidQuantities = cart.some((item) => {
     const availableNum = toNumberBR(stockByItem[item.id]?.quantidadeSaldo);
@@ -362,7 +569,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                       <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-1">
                           <span>Unidade:</span>
-                          <span className="font-medium">{formatPrice(product.unitPriceEffective)}</span>
+                          <span className="font-medium">
+                            {formatPrice(effectivePrices[product.id] || product.unitPriceEffective)}
+                          </span>
                           {product.isAmostra && (
                             <span className="ml-1 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
                               Amostra
@@ -394,9 +603,25 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                         return null;
                       })()}
 
-                      {(!quantities[product.id] || parseInt(quantities[product.id]) <= 0) && (
-                        <span className="text-red-500 text-xs">Digite uma quantidade mínima para prosseguir</span>
-                      )}
+                      {/* Validação de quantidade mínima (qtdi) e quantidade válida */}
+                      {(() => {
+                        const validation = quantityValidations[product.id];
+                        const quantity = parseInt(quantities[product.id] || "0", 10);
+
+                        // Se não há quantidade ou é 0, mostra mensagem genérica
+                        if (!quantities[product.id] || quantity <= 0) {
+                          return (
+                            <span className="text-red-500 text-xs">Digite uma quantidade válida para prosseguir</span>
+                          );
+                        }
+
+                        // Se há validação e não é válida, mostra a mensagem de erro específica
+                        if (validation && !validation.valid) {
+                          return <span className="text-red-500 text-xs">{validation.message}</span>;
+                        }
+
+                        return null;
+                      })()}
 
                       <Trash2
                         size={20}
@@ -419,6 +644,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
           </p>
           <p className="text-xs">*Frete não incluso</p>
           {hasInvalidQuantities && <p className="text-xs text-red-500">Ajuste as quantidades para prosseguir</p>}
+          {hasInvalidMinimumQuantities && (
+            <p className="text-xs text-red-500">Ajuste as quantidades mínimas (qtdi) para prosseguir</p>
+          )}
 
           <div className="flex w-full flex-col-reverse sm:flex-row gap-2 mt-1 justify-center md:justify-end">
             <Button
@@ -431,9 +659,9 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
             <Link href={"/entrega"}>
               <Button
                 className="disabled:bg-gray-500 w-full sm:w-fit cursor-pointer text-xs md:text-sm bg-green-500 hover:bg-green-400 rounded-md text-Button-text px-4 py-2"
-                disabled={hasInvalidQuantities || cart.length === 0}
+                disabled={hasInvalidQuantities || hasInvalidMinimumQuantities || cart.length === 0}
                 onClick={(e) => {
-                  if (hasInvalidQuantities || cart.length === 0) {
+                  if (hasInvalidQuantities || hasInvalidMinimumQuantities || cart.length === 0) {
                     e.preventDefault();
                     e.stopPropagation();
                     return;
