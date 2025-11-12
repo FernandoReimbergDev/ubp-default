@@ -239,16 +239,16 @@ export function Resumo({ delivery }: ResumoProps) {
         const callFrete = async (): Promise<number | undefined> => {
           try {
             // Log para debug - verificar se os parâmetros estão corretos
-            console.log("Calculando frete com parâmetros:", {
-              purchaseAmount: norm.purchaseAmount,
-              stateCode: norm.uf,
-              city: norm.city,
-              zipCode: norm.zip,
-              weightGrams: norm.weightGrams, // Peso em gramas, sem ponto decimal
-              height: norm.altura,
-              width: norm.largura,
-              length: norm.comprimento,
-            });
+            // console.log("Calculando frete com parâmetros:", {
+            //   purchaseAmount: norm.purchaseAmount,
+            //   stateCode: norm.uf,
+            //   city: norm.city,
+            //   zipCode: norm.zip,
+            //   weightGrams: norm.weightGrams, // Peso em gramas, sem ponto decimal
+            //   height: norm.altura,
+            //   width: norm.largura,
+            //   length: norm.comprimento,
+            // });
 
             const result = await fetchProductFrete(
               norm.purchaseAmount,
@@ -260,10 +260,6 @@ export function Resumo({ delivery }: ResumoProps) {
               norm.largura,
               norm.comprimento
             );
-
-            console.log("Resultado do frete:", result);
-
-            // Valida o resultado
             if (result === undefined || result === null) {
               return undefined;
             }

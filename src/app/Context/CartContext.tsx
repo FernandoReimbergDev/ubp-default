@@ -270,16 +270,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const weightString = String(weightGramsNum); // Garante que é string sem ponto decimal
 
       // Log para debug - verificar se os parâmetros estão corretos
-      console.log("Enviando requisição de frete para API:", {
-        purchaseAmount,
-        stateCode: normalizedStateCode,
-        city: normalizedCity,
-        zipCode: normalizedZipCode,
-        weight: weightString, // Peso em gramas, sem ponto decimal
-        height,
-        width,
-        length,
-      });
+      // console.log("Enviando requisição de frete para API:", {
+      //   purchaseAmount,
+      //   stateCode: normalizedStateCode,
+      //   city: normalizedCity,
+      //   zipCode: normalizedZipCode,
+      //   weight: weightString, // Peso em gramas, sem ponto decimal
+      //   height,
+      //   width,
+      //   length,
+      // });
 
       // Faz a requisição com timeout
       const controller = new AbortController();
@@ -323,7 +323,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       let data: unknown;
       try {
         data = await response.json();
-        console.log("Resposta da API de frete:", data);
+        // console.log("Resposta da API de frete:", data);
       } catch (parseError) {
         console.error("Erro ao fazer parse da resposta do frete:", parseError);
         return undefined;
