@@ -90,7 +90,7 @@ export function FormDadosEntrega() {
       return novaData;
     }
     // Data atual + 7 dias úteis
-    const dataEntrega = adicionarDiasUteis(new Date(), 7);
+    const dataEntrega = adicionarDiasUteis(new Date(), 15);
 
     // Formata no padrão brasileiro
     return new Intl.DateTimeFormat("pt-BR", {

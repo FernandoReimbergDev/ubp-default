@@ -395,7 +395,7 @@ export function Resumo({ delivery }: ResumoProps) {
         <span>
           {(() => {
             if (!mounted || loadingFrete) {
-              return formatPrice(0);
+              return "Calculando frete...";
             }
 
             // Função segura para converter valor do frete

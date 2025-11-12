@@ -5,7 +5,7 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
 import { useToast } from "../Context/ToastProvider";
-import { ModalProps, stock } from "../types/responseTypes";
+import { ModalProps, ProdutoEstoqueItem } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { ZoomProduct } from "./ZoomProduct";
@@ -107,12 +107,13 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedPersonalizations, setSelectedPersonalizations] = useState<Record<string, Personalizacao | null>>({});
   const [zoomModal, setZoomModal] = useState(false);
+  const { cart } = useCart();
   const [quantity, setQuantity] = useState<string>(""); // manter string p/ input controlado
   const [QtdMsg, setQtdMsg] = useState(false);
   const [currentImage, setCurrentImage] = useState<string>(ProductData.srcFrontImage);
   const [descriFull, setDescriFull] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [, setProduct] = useState<stock | undefined>(undefined);
+  const [currentStock, setCurrentStock] = useState<ProdutoEstoqueItem | undefined>(undefined);
   const [isAmostra, setIsAmostra] = useState(false);
   // Personalização
   const [file, setFile] = useState<File | null>(null);
@@ -240,26 +241,28 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
   const isOutOfStock = isControlledStock && hasKnownStock && (parsedStock ?? 0) <= 0;
 
-  // ======= Efeito de inicialização/reset do produto =======
-  useEffect(() => {
-    // inicializa cor/tamanho com o primeiro disponível, se houver
-    setSelectedColor(ProductData.colors?.[0] ?? "");
-    setSelectedSize(ProductData.sizes?.[0] ?? "");
-    setCurrentImage(ProductData.srcFrontImage);
+  // Helper para converter string/number BR para número
+  const toNumberBR = useCallback((val: string | number | undefined): number | undefined => {
+    if (val === undefined || val === null) return undefined;
+    const s = String(val).trim();
+    if (s === "") return undefined;
+    if (s.includes(".") && s.includes(",")) return Number(s.replace(/\./g, "").replace(",", "."));
+    if (s.includes(",")) return Number(s.replace(",", "."));
+    return Number(s);
+  }, []);
 
-    // cleanup robusto (snapshot das refs p/ evitar warning)
-    const debounces = fetchDebounceRef.current;
-    const abortCtrl = fetchAbortRef.current;
-    const timeoutId = fetchTimeoutRef.current;
-    const oldPreview = filePreviewUrl;
-
-    return () => {
-      if (debounces) clearTimeout(debounces);
-      if (abortCtrl) abortCtrl.abort();
-      if (timeoutId) clearTimeout(timeoutId);
-      if (oldPreview) URL.revokeObjectURL(oldPreview);
-    };
-  }, [ProductData, filePreviewUrl]);
+  // Função para calcular quantidade agregada no carrinho para o mesmo produto (mesmo chavePro, color, size)
+  const getAggregatedQuantityFromCart = useCallback(
+    (chavePro: string, color: string, size: string): number => {
+      return cart.reduce((sum, item) => {
+        const samePool =
+          item.chavePro === chavePro && (item.color || "") === (color || "") && (item.size || "") === (size || "");
+        if (!samePool) return sum;
+        return sum + (item.quantity || 0);
+      }, 0);
+    },
+    [cart]
+  );
 
   // ======= Fetch estoque =======
   const fetchProductsStock = useCallback(
@@ -289,7 +292,11 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
         const result: {
           success: boolean;
-          data?: { success: boolean; message: string; result: { produtos: stock[] } | stock[] };
+          data?: {
+            success: boolean;
+            message: string;
+            result: { produtos: ProdutoEstoqueItem[] } | ProdutoEstoqueItem[];
+          };
           message?: string;
           details?: unknown;
         } = await res.json();
@@ -297,20 +304,22 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         if (!res.ok) {
           const detailsStr = typeof result.details === "string" ? result.details : undefined;
           if (detailsStr === "Estoque não encontrado com os parâmetro(s) fornecido(s).") {
-            toast.alert("Ops... Produto esgotado!");
+            if (reqId === requestIdRef.current) {
+              setCurrentStock(undefined);
+            }
             return;
           }
           throw new Error(result.message || "Erro ao buscar produtos");
         }
 
         const raw = result.data?.result as unknown;
-        const produtos: stock[] = Array.isArray(raw)
-          ? (raw as stock[])
-          : (raw as { produtos?: stock[] })?.produtos ?? [];
+        const produtos: ProdutoEstoqueItem[] = Array.isArray(raw)
+          ? (raw as ProdutoEstoqueItem[])
+          : (raw as { produtos?: ProdutoEstoqueItem[] })?.produtos ?? [];
         const first = produtos?.[0];
 
         if (reqId === requestIdRef.current) {
-          setProduct(first ?? undefined);
+          setCurrentStock(first ?? undefined);
         }
       } catch (error: unknown) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -318,6 +327,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
           return;
         }
         console.error("erro ao requisitar estoque", error);
+        if (reqId === requestIdRef.current) {
+          setCurrentStock(undefined);
+        }
       } finally {
         if (reqId === requestIdRef.current) {
           if (fetchTimeoutRef.current) {
@@ -328,7 +340,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
         }
       }
     },
-    [ProductData.chavePro, ProductData.codePro, selectedColor, selectedSize, toast]
+    [ProductData.chavePro, ProductData.codePro, selectedColor, selectedSize]
   );
 
   // dispara consulta com debounce quando há quantidade válida
@@ -337,8 +349,8 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       // ❌ não consulta nada quando NÃO é controlado
       if (!isControlledStock) return;
 
-      if (!(requestedQty > 0)) return;
-
+      // Consulta estoque sempre que houver quantidade (incluindo 0 para limpar estado)
+      // Se quantidade for 0 ou vazia, ainda consulta para obter estoque disponível
       if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
       fetchDebounceRef.current = setTimeout(() => {
         if (fetchAbortRef.current) fetchAbortRef.current.abort();
@@ -356,13 +368,62 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
           } catch {}
         }, 8000);
 
-        if (!isOutOfStock) {
-          fetchProductsStock(color, size, controller.signal, reqId);
-        }
+        // Consulta estoque mesmo se estiver "esgotado" inicialmente, pois pode mudar
+        fetchProductsStock(color, size, controller.signal, reqId);
       }, delayMs);
     },
-    [requestedQty, fetchProductsStock, isControlledStock, isOutOfStock]
+    [fetchProductsStock, isControlledStock]
   );
+
+  // Calcula quantidade agregada no carrinho para o mesmo produto
+  const quantityInCart = useMemo(() => {
+    return getAggregatedQuantityFromCart(ProductData.chavePro, selectedColor, selectedSize);
+  }, [getAggregatedQuantityFromCart, ProductData.chavePro, selectedColor, selectedSize]);
+
+  // Verifica se a quantidade solicitada excede o estoque disponível
+  const hasInvalidStock = useMemo(() => {
+    if (!isControlledStock) return false;
+    if (!requestedQty || requestedQty <= 0) return false;
+
+    const availableNum = toNumberBR(currentStock?.quantidadeSaldo);
+    const available = typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
+
+    if (typeof available !== "number") return false;
+
+    // Quantidade total solicitada = quantidade digitada + quantidade no carrinho
+    const totalRequested = requestedQty + quantityInCart;
+
+    return totalRequested > available;
+  }, [isControlledStock, requestedQty, currentStock, quantityInCart, toNumberBR]);
+
+  // ======= Efeito de inicialização/reset do produto =======
+  useEffect(() => {
+    // inicializa cor/tamanho com o primeiro disponível, se houver
+    setSelectedColor(ProductData.colors?.[0] ?? "");
+    setSelectedSize(ProductData.sizes?.[0] ?? "");
+    setCurrentImage(ProductData.srcFrontImage);
+    setCurrentStock(undefined);
+
+    // cleanup robusto (snapshot das refs p/ evitar warning)
+    const debounces = fetchDebounceRef.current;
+    const abortCtrl = fetchAbortRef.current;
+    const timeoutId = fetchTimeoutRef.current;
+    const oldPreview = filePreviewUrl;
+
+    return () => {
+      if (debounces) clearTimeout(debounces);
+      if (abortCtrl) abortCtrl.abort();
+      if (timeoutId) clearTimeout(timeoutId);
+      if (oldPreview) URL.revokeObjectURL(oldPreview);
+    };
+  }, [ProductData, filePreviewUrl]);
+
+  // ======= Efeito para consultar estoque quando quantidade, cor ou tamanho mudar =======
+  useEffect(() => {
+    if (!isControlledStock) return;
+    // Consulta estoque sempre que quantidade, cor ou tamanho mudar
+    scheduleFetch(selectedColor, selectedSize);
+  }, [quantity, selectedColor, selectedSize, isControlledStock, scheduleFetch]);
 
   // ======= Handlers =======
   const handleDescriFull = useCallback(() => setDescriFull((v) => !v), []);
@@ -391,9 +452,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
       const newQty = qty - 1;
       setQuantity(String(newQty));
       setQtdMsg(false);
-      scheduleFetch(selectedColor, selectedSize);
+      // scheduleFetch será chamado automaticamente pelo useEffect quando quantity mudar
     }
-  }, [loading, quantity, scheduleFetch, selectedColor, selectedSize]);
+  }, [loading, quantity]);
 
   const incQty = useCallback(() => {
     if (loading) return;
@@ -401,8 +462,8 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
     const newQty = qty + 1;
     setQuantity(String(newQty));
     setQtdMsg(false);
-    scheduleFetch(selectedColor, selectedSize);
-  }, [loading, quantity, scheduleFetch, selectedColor, selectedSize]);
+    // scheduleFetch será chamado automaticamente pelo useEffect quando quantity mudar
+  }, [loading, quantity]);
 
   const handleAddToCart = useCallback(() => {
     try {
@@ -877,7 +938,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                             group.personalizacoes.find((p) => p.chavePersonal === selectedKey) || null;
                           handlePersonalizationSelect(group.chaveContPersonal, selectedPersonalization);
                         }}
-                        required
+                        required={group.requeridoContPersonal === "1"}
                       >
                         <option value="">Selecione</option>
                         {group.personalizacoes.map((personalization) => (
@@ -911,6 +972,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               />
               <label className="font-Roboto text-sm">Produto para amostra (1 unidade)</label>
             </div>
+            <p className="font-Roboto text-sm text-gray-700">Prazo previsto de entrega: 15 dias após a aprovação</p>
 
             <div className="flex flex-col">
               <label className="font-bold font-Roboto" htmlFor="quantity">
@@ -930,11 +992,21 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
                 <input
                   className="border-2 pl-2 w-20 h-9 rounded-md outline-modalProduct-border"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   id="quantity"
-                  min="1"
                   value={isAmostra ? "1" : quantity}
-                  onChange={(e) => !isAmostra && setQuantity(e.target.value)}
+                  onChange={(e) => {
+                    if (!isAmostra) {
+                      const value = e.target.value;
+                      // Permite string vazia ou apenas dígitos (incluindo zero)
+                      if (value === "" || /^\d+$/.test(value)) {
+                        setQuantity(value);
+                        setQtdMsg(false);
+                      }
+                    }
+                  }}
                   readOnly={isAmostra}
                   disabled={isAmostra}
                 />
@@ -992,6 +1064,27 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               </div>
             </div>
 
+            {loading && isControlledStock && (
+              <span className="text-xs opacity-70 select-none pointer-events-none">Consultando estoque...</span>
+            )}
+            {(() => {
+              if (!isControlledStock || !currentStock) return null;
+              const availableNum = toNumberBR(currentStock.quantidadeSaldo);
+              const available =
+                typeof availableNum === "number" && isFinite(availableNum) ? Math.trunc(availableNum) : undefined;
+              if (typeof available !== "number") return null;
+
+              const totalRequested = requestedQty + quantityInCart;
+              if (totalRequested > available) {
+                return (
+                  <span className="text-red-500 text-xs">
+                    Quantidade disponível (compartilhado): {available}. No carrinho: {quantityInCart}. Solicitado:{" "}
+                    {requestedQty}
+                  </span>
+                );
+              }
+              return null;
+            })()}
             {QtdMsg && <span className="text-red-500 text-sm">Digite uma quantidade válida para prosseguir</span>}
             {!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro) && Number(quantity) !== 0 && (
               <span className="text-red-500 text-sm">
@@ -1017,7 +1110,8 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                   (!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro)) ||
                   (ProductData.gruposPersonalizacoes &&
                     ProductData.gruposPersonalizacoes.length > 0 &&
-                    !hasAnyPersonalization(selectedPersonalizations))
+                    !hasAnyPersonalization(selectedPersonalizations)) ||
+                  hasInvalidStock
                 }
                 className="disabled:bg-gray-500 flex gap-2 items-center justify-center cursor-pointer select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
               >

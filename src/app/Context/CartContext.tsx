@@ -265,9 +265,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const normalizedCity = city.trim();
       const normalizedZipCode = zipDigits;
 
-      // Peso deve ser enviado em gramas, sem ponto decimal
-      // Exemplo: "6000" (não "6.00" ou "6000.00")
-      const weightString = String(weightGramsNum); // Garante que é string sem ponto decimal
+      const weightString = String(weightGramsNum);
 
       // Log para debug - verificar se os parâmetros estão corretos
       // console.log("Enviando requisição de frete para API:", {
@@ -283,7 +281,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Faz a requisição com timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       let response: Response;
       try {
@@ -299,7 +297,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
               stateCode: normalizedStateCode,
               city: normalizedCity,
               zipCode: normalizedZipCode,
-              weight: weightString, // Peso em gramas, sem ponto decimal (ex: "6000")
+              weight: weightString,
               height,
               width,
               length,
@@ -311,7 +309,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         clearTimeout(timeoutId);
       }
 
-      // Verifica se a resposta foi bem-sucedida
       if (!response || !response.ok) {
         const statusText = response?.statusText || "Unknown error";
         const status = response?.status || 0;
