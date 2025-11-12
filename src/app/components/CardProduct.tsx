@@ -16,14 +16,10 @@ export function CardProduto({
   percent_discont = 0,
 }: CardProdutoProps) {
   const hasDiscount = promotion && percent_discont > 0;
-  const discountedPrice = hasDiscount
-    ? priceProduct * (1 - percent_discont / 100)
-    : priceProduct;
+  const discountedPrice = hasDiscount ? priceProduct * (1 - percent_discont / 100) : priceProduct;
 
   const hasKnownStock = typeof stock === "string" && stock.trim() !== "";
-  const parsedStock = hasKnownStock
-    ? Math.trunc(Number(stock.replace(",", ".")))
-    : undefined;
+  const parsedStock = hasKnownStock ? Math.trunc(Number(stock.replace(",", "."))) : undefined;
 
   const isOutOfStock = estControl === "1" && hasKnownStock && (parsedStock ?? 0) <= 0;
 
@@ -57,21 +53,22 @@ export function CardProduto({
         />
       </div>
 
-      <p className="line-clamp-2 h-[2.5rem] sm:h-[2.5rem] md:h-[3.1rem] md:max-h-[3.1rem] sm:w-full font-Roboto font-semibold text-sm md:text-base my-1 leading-snug overflow-hidden text-blackReference">
+      <p className="line-clamp-2 h-10 md:h-[3.1rem] md:max-h-[3.1rem] sm:w-full font-Roboto font-semibold text-sm md:text-base my-1 leading-snug overflow-hidden text-blackReference">
         {nameProduct}
       </p>
 
       <div className="flex items-center justify-between w-full mt-2">
         <div className="flex flex-col">
-
           {hasDiscount && (
             <p className="font-bold text-xs md:text-sm text-gray-600 font-Roboto line-through">
               {formatPrice(priceProduct)}
             </p>
           )}
-          {!hasDiscount && <p className="font-bold text-sm md:text-lg text-blackReference font-Roboto">
-            {formatPrice(discountedPrice)}
-          </p>}
+          {!hasDiscount && (
+            <p className="font-bold text-sm md:text-lg text-blackReference font-Roboto">
+              {formatPrice(discountedPrice)}
+            </p>
+          )}
         </div>
         {btn}
       </div>

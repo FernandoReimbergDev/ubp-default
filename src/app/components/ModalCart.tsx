@@ -323,9 +323,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
     const currentValue = current === "" ? undefined : current;
     const parsed = currentValue === undefined ? undefined : parseInt(currentValue, 10);
     // Se não conseguiu parsear, usa o valor do produto do carrinho
-    const baseValue = isNaN(parsed!) || parsed === undefined 
-      ? cart.find((p) => p.id === id)?.quantity ?? 1 
-      : parsed;
+    const baseValue = isNaN(parsed!) || parsed === undefined ? cart.find((p) => p.id === id)?.quantity ?? 1 : parsed;
     const newQty = Math.max(baseValue + delta, 0); // Permite ir até 0
     setQuantities((prev) => ({ ...prev, [id]: String(newQty) }));
     // Só atualiza o carrinho se for maior que 0
@@ -575,7 +573,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                       )}
                     </div>
 
-                    <div className="flex items-end gap-4 flex-wrap">
+                    <div className="flex items-start justify-start flex-col gap-2">
                       <div className="flex flex-col items-start gap-2 mt-2">
                         <div className="flex items-center gap-2">
                           <button

@@ -40,7 +40,6 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
     openModal(product);
   };
 
-
   // 🔎 Pega personalizações + faixas de preço
   // Update the function signature to accept Produto instead of ProdutosGrid
   // const processPersonalizations = (product: Produto) => {
@@ -75,20 +74,13 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
   const produtosAdaptados = useMemo(() => {
     return products.map((pro, index) => {
       const imagensValidas =
-        pro.imagens
-          ?.map((img) => img.urlProImgSuper || img.urlProImg || "")
-          .filter((url) => url !== "") || [];
+        pro.imagens?.map((img) => img.urlProImgSuper || img.urlProImg || "").filter((url) => url !== "") || [];
       return {
         id: index,
         codePro: pro.codPro,
         chavePro: pro.chavePro,
         product: pro.descrWeb,
-        description:
-          pro.descr2 ||
-          pro.descrWeb ||
-          pro.descrWeb2 ||
-          pro.descrCompilada ||
-          "",
+        description: pro.descr2 || pro.descrWeb || pro.descrWeb2 || pro.descrCompilada || "",
         price: Number(pro.precos?.[0]?.vluProPrc || 0), // preço base do produto
         srcFrontImage: imagensValidas[0] || "/placeholder.jpg",
         srcBackImage: imagensValidas[1] || imagensValidas[0] || "/placeholder.jpg",
@@ -110,9 +102,6 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
       };
     });
   }, [products]);
-
-
-
 
   const num = (v: unknown): number => {
     if (v == null) return NaN;
@@ -217,35 +206,40 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
     );
   }
   if (error)
-    return <p>Ops! Desculpe, Não conseguimos carregar os produtos no momento. Por favor, atualize a página e tente novamente</p>;
-
+    return (
+      <p>
+        Ops! Desculpe, Não conseguimos carregar os produtos no momento. Por favor, atualize a página e tente novamente
+      </p>
+    );
 
   return (
     <main className="p-1 md:p-4 min-w-[320px] w-full min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
       <div className="mx-auto w-full max-w-7xl space-y-6">
-
         <section className="grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]">
-
           <AsideFilter
             value={filters}
             onChange={setFilters}
-            onClear={() => setFilters({
-              priceRange: null,
-              priceMin: null,
-              priceMax: null,
-              qtyRange: null,
-              qtyMin: null,
-              qtyMax: null,
-              categories: [],
-              types: { personalizaveis: false, preGravados: false },
-              inStock: false,
-            })}
+            onClear={() =>
+              setFilters({
+                priceRange: null,
+                priceMin: null,
+                priceMax: null,
+                qtyRange: null,
+                qtyMin: null,
+                qtyMax: null,
+                categories: [],
+                types: { personalizaveis: false, preGravados: false },
+                inStock: false,
+              })
+            }
             onApply={() => void 0}
           />
 
           <div className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-              <p className="text-sm text-gray-600">Mostrando {filtered.length} de {produtosAdaptados.length} itens</p>
+              <p className="text-sm text-gray-600">
+                Mostrando {filtered.length} de {produtosAdaptados.length} itens
+              </p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Ordenar por</span>
                 <select className="rounded-md border border-gray-300 px-2 py-1 text-sm">
@@ -274,7 +268,7 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
                     btn={
                       <Button
                         onClick={() => handleButtonBuy(produto)}
-                        className="flex items-center justify-center w-[50px] xl:w-[50px] min-h-8 md:min-h-[35px] cursor-pointer bg-Button-bg hover:bg-Slider-bgDegrade rounded-md text-white text-sm"
+                        className="flex items-center justify-center w-[50px] xl:w-[50px] min-h-8 md:min-h-[35px] cursor-pointer bg-Button-bg hover:bg-secondary rounded-md text-white text-sm"
                         name="buttonBuy"
                       >
                         <ShoppingCart size={18} />
@@ -284,7 +278,6 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
                 </div>
               ))}
             </div>
-
 
             <div className="flex items-center justify-center gap-2">
               <button className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">
@@ -303,12 +296,11 @@ export const GridProducts = ({ searchTerm }: { searchTerm?: string }) => {
           <ModalProduto
             ProductData={{
               ...selectedProduct,
-              precos: selectedProduct.precos || [] // Add default empty array if precos is undefined
+              precos: selectedProduct.precos || [], // Add default empty array if precos is undefined
             }}
             onClose={closeModal}
           />
         )}
-
       </div>
     </main>
   );

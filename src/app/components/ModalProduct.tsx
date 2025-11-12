@@ -972,7 +972,9 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               />
               <label className="font-Roboto text-sm">Produto para amostra (1 unidade)</label>
             </div>
-            <p className="font-Roboto text-sm text-gray-700">Prazo previsto de entrega: 15 dias após a aprovação</p>
+            <p className="font-Roboto text-sm text-gray-700 text-wrap max-w-96">
+              Prazo previsto de entrega: 15 dias após a aprovação do pedido e aprovação da amostra virtual
+            </p>
 
             <div className="flex flex-col">
               <label className="font-bold font-Roboto" htmlFor="quantity">
