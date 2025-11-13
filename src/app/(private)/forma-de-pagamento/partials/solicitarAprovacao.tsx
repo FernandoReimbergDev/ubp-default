@@ -18,6 +18,11 @@ export function SolicitarAprovacao() {
   const [status, setStatus] = useState<"idle" | "confirm" | "approved" | "rejected" | "requested" | "cancelled">(
     "idle"
   );
+  const emailAprovadores = [
+    "giovanna.silva@caixavidaeprevidencia.com.br",
+    "caroline.batista@caixavidaeprevidencia.com.br",
+  ];
+  const emailAprovadoresUnity = ["ti@unitybrindes.com.br"];
   const [cancelReason, setCancelReason] = useState("");
   const [user, setUser] = useState<UserShape | null>(null);
   const [freteValido, setFreteValido] = useState(false);
@@ -311,6 +316,8 @@ export function SolicitarAprovacao() {
 
       // Envia email de pedido aprovado em background (não bloqueia o redirecionamento)
       // Se falhar, apenas loga o erro, mas o pedido já foi cadastrado
+      //giovanna.silva@caixavidaeprevidencia.com.br
+      //caroline.batista@caixavidaeprevidencia.com.br
       fetch("/api/send-mail-aproved", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -319,9 +326,9 @@ export function SolicitarAprovacao() {
           products: cart,
           orderNumber: currentOrderId,
           emailConfig: {
-            to: [payload.emailShipping || payload.email].filter(Boolean),
-            cc: ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"],
-            cco: ["carloseds@outlook.com", "fernandoreimberg14@hotmail.com"],
+            to: [payload.email || payload.emailShipping].filter(Boolean),
+            cc: [],
+            cco: ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"],
             replyTo: "ti@unitybrindes.com.br",
           },
         }),
@@ -385,6 +392,13 @@ export function SolicitarAprovacao() {
 
       // Tenta enviar email em background (não bloqueia o redirecionamento)
       // Se falhar, apenas loga o erro, mas o pedido já foi cadastrado
+      const emailTo = payload.email || payload.emailShipping;
+      let ccMail: string[] = [];
+      if (emailTo === "ti@unitybrindes.com.br") {
+        ccMail = [...emailAprovadoresUnity];
+      } else {
+        ccMail = [...emailAprovadores];
+      }
       fetch("/api/send-mail-aproves", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -393,9 +407,9 @@ export function SolicitarAprovacao() {
           products: cart,
           orderNumber: currentOrderId,
           emailConfig: {
-            to: [payload.emailShipping || payload.email].filter(Boolean),
-            cc: ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"],
-            cco: ["carloseds@outlook.com", "fernandoreimberg14@hotmail.com"],
+            to: emailTo,
+            cc: ccMail,
+            cco: ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"],
             replyTo: "ti@unitybrindes.com.br",
           },
         }),

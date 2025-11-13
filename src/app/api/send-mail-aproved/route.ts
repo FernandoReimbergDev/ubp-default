@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                 .map(
                   (p: { descricao: string; precoTotal: number }) => `
                   <div style="margin-left: 20px; margin-top: 5px; font-size: 12px; color: #666;">
-                    • ${p.descricao} - ${formatPrice(p.precoTotal)}
+                    • ${p.descricao}
                   </div>
                 `
                 )
@@ -275,15 +275,15 @@ export async function POST(req: NextRequest) {
                 <p style="margin: 10px 0 0 0; font-size: 16px;">Seu pedido #${orderId} foi aprovado com sucesso!</p>
               </div>
 
-              <p>Olá, <strong>${orderPayload.contactNameShipping || orderPayload.legalName || "Cliente"}</strong>!</p>
+              <p>Olá, <strong>${orderPayload.contactNameShipping || orderPayload.legalName}</strong>!</p>
               <p>
                 Temos o prazer de informar que seu pedido na <strong>${NOME_LOJA}</strong> foi <strong>aprovado</strong> e está em processo de preparação.
               </p>
 
               <div class="info-section" style="margin-top: 20px; margin-bottom: 20px; background-color: #ecfdf5; border: 2px solid #10b981;">
                 <div class="info-row" style="border-bottom: none;">
-                  <span class="info-label" style="font-size: 16px; font-weight: 700;">Número do Pedido:</span>
-                  <span class="info-value" style="font-size: 16px; font-weight: 700; color: #059669;">#${orderId}</span>
+                  <span class="info-label" style="font-size: 16px; font-weight: 700;">Número do Pedido: </span>
+                  <span class="info-value" style="font-size: 16px; font-weight: 700; color: #059669;"> #${orderId}</span>
                 </div>
               </div>
 
@@ -303,7 +303,7 @@ export async function POST(req: NextRequest) {
                 </div>
                 <div class="info-row">
                   <span class="info-label">Telefone:</span>
-                  <span class="info-value">${
+                  <span class="info-value"> ${
                     maskPhone(
                       orderPayload.phoneShipping || orderPayload.phone,
                       orderPayload.areaCodeShipping || orderPayload.areaCode
@@ -311,15 +311,70 @@ export async function POST(req: NextRequest) {
                   }</span>
                 </div>
               </div>
+              <h2>Dados de Faturamento</h2>
+              <div class="info-section">
+                <div class="info-row">
+                  <span class="info-label">Razão Social: </span>
+                  <span class="info-value"> ${orderPayload.legalNameBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">CPF/CNPJ: </span>
+                  <span class="info-value"> ${orderPayload.cpfCnpjBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">IE: </span>
+                  <span class="info-value"> ${orderPayload.ieBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Logradouro: </span>
+                  <span class="info-value"> ${orderPayload.streetNameBilling || ""} ${
+      orderPayload.streetNumberBilling || ""
+    }
+                    ${orderPayload.addressLine2Billing ? `- ${orderPayload.addressLine2Billing}` : ""}
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Bairro: </span>
+                  <span class="info-value">${orderPayload.addressNeighborhoodBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Cidade/UF: </span>
+                  <span class="info-value">${orderPayload.addressCityBilling || ""} / ${
+      orderPayload.addressStateCodeBilling || ""
+    }</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">CEP: </span>
+                  <span class="info-value">${orderPayload.zipCodeBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Complemento: </span>
+                  <span class="info-value">${orderPayload.addressLine2Billing || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Cidade/UF: </span>
+                  <span class="info-value"> ${orderPayload.addressCityBilling || ""} / ${
+      orderPayload.addressStateCodeBilling || ""
+    }</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">CEP: </span>
+                  <span class="info-value">${orderPayload.zipCodeBilling || ""}</span>
+                </div>  
+              </div>
 
               <h2>Endereço de Entrega</h2>
               <div class="info-section">
                 <div class="info-row">
-                  <span class="info-label">Nome:</span>
+                  <span class="info-label">Nome: </span>
                   <span class="info-value">${orderPayload.contactNameShipping || "-"}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Endereço:</span>
+                  <span class="info-label">Razão Social: </span>
+                  <span class="info-value">${orderPayload.legalNameShipping || "-"}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Logradouro: </span>
                   <span class="info-value">
                     ${orderPayload.streetNameShipping || ""} ${orderPayload.streetNumberShipping || ""}
                     ${orderPayload.addressLine2Shipping ? `- ${orderPayload.addressLine2Shipping}` : ""}
@@ -330,13 +385,13 @@ export async function POST(req: NextRequest) {
                   <span class="info-value">${orderPayload.addressNeighborhoodShipping || "-"}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Cidade/UF:</span>
+                  <span class="info-label">Cidade/UF: </span>
                   <span class="info-value">${orderPayload.addressCityShipping || "-"} / ${
       orderPayload.addressStateCodeShipping || "-"
     }</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">CEP:</span>
+                  <span class="info-label">CEP: </span>
                   <span class="info-value">${orderPayload.zipCodeShipping || "-"}</span>
                 </div>
               </div>
@@ -398,16 +453,18 @@ export async function POST(req: NextRequest) {
                   📦 Próximos Passos:
                 </p>
                 <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1e3a8a;">
-                  <li>Seu pedido será enviado para produção</li>
-                  <li>Você receberá atualizações sobre o status do pedido</li>
-                  <li>O prazo previsto para entrega é de 15 dias uteis após aprovação do layout</li>
+- Aprovação da amostra virtual
+<br/>
+- Previsão de prazo de entrega, 15 dias após aprovação da amostra virtual
+<br/>
+
                 </ul>
               </div>
 
               <p style="margin-top: 30px;">
                 Agradecemos sua confiança em nossos produtos e serviços!
               </p>
-              <p>Atenciosamente,<br />Equipe ${NOME_LOJA}</p>
+              <p>Atenciosamente,<br /></p>
               <img src="https://www2.unitycorp.com.br/teste/rodape-email.png" alt="assinatura e-mail ${NOME_LOJA}" style="max-width: 100%; margin-top: 20px;" />
             </div>
             <div class="footer">
@@ -422,7 +479,7 @@ export async function POST(req: NextRequest) {
     const textVersion = `
 Pedido Aprovado #${orderId} - ${NOME_LOJA}
 
-Olá, ${orderPayload.contactNameShipping || orderPayload.legalName || "Cliente"}!
+Olá, ${orderPayload.contactNameShipping || orderPayload.legalName}!
 
 Temos o prazer de informar que seu pedido foi APROVADO e está em processo de preparação.
 
@@ -463,10 +520,6 @@ Total: ${formatPrice(totalOrder)}
 
 Método de Pagamento: ${orderPayload.paymentMethod || "-"}
 
-PRÓXIMOS PASSOS:
-- Produção da amostra virtual
-- Previsão de prazo de entrega, 15 dias após aprovação da amostra virtual
-- Você receberá atualizações sobre o status do pedido
 
 Agradecemos sua confiança em nossos produtos e serviços!
     `.trim();

@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                 .map(
                   (p: { descricao: string; precoTotal: number }) => `
                   <div style="margin-left: 20px; margin-top: 5px; font-size: 12px; color: #666;">
-                    • ${p.descricao} - ${formatPrice(p.precoTotal)}
+                    • ${p.descricao} 
                   </div>
                 `
                 )
@@ -254,16 +254,16 @@ export async function POST(req: NextRequest) {
               <img src="https://www2.unitycorp.com.br/teste/logo-header.png" alt="logo ${NOME_LOJA}" />
             </div>
             <div class="content">
-              <h1>Solicitação de Aprovação de Pedido #${orderId}</h1>
+              <h1>Solicitação de aprovação do pedido #${orderId}</h1>
               <p>Olá!</p>
               <p>
-                Um novo pedido foi solicitado na plataforma da <strong>${NOME_LOJA}</strong> e está aguardando aprovação.
+                Um novo pedido foi solicitado na plataforma <strong>${NOME_LOJA}</strong> e está aguardando aprovação.
               </p>
 
               <div class="info-section" style="margin-top: 20px; margin-bottom: 20px;">
                 <div class="info-row" style="border-bottom: none;">
-                  <span class="info-label" style="font-size: 16px; font-weight: 700;">Número do Pedido:</span>
-                  <span class="info-value" style="font-size: 16px; font-weight: 700; color: ${
+                  <span class="info-label" style="font-size: 16px; font-weight: 700;">Número do Pedido: </span>
+                  <span class="info-value" style="font-size: 16px; font-weight: 700; color:
                     colors.TemplateEmail.codeColor
                   };">#${orderId}</span>
                 </div>
@@ -275,19 +275,19 @@ export async function POST(req: NextRequest) {
                 Status: ${orderPayload.orderStatus}
               </div>
 
-              <h2>Dados do Cliente</h2>
+              <h2>Dados do solicitante</h2>
               <div class="info-section">
                 <div class="info-row">
-                  <span class="info-label">Nome:</span>
+                  <span class="info-label">Nome: </span>
                   <span class="info-value">${orderPayload.contactNameShipping || "-"}</span>
                 </div>
                 
                 <div class="info-row">
-                  <span class="info-label">E-mail:</span>
+                  <span class="info-label">E-mail: </span>
                   <span class="info-value">${maskEmail(orderPayload.email) || "-"}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Telefone:</span>
+                  <span class="info-label">Telefone: </span>
                   <span class="info-value">${maskPhone(orderPayload.phone, orderPayload.areaCode) || "-"}</span>
                 </div>
               </div>
@@ -295,32 +295,83 @@ export async function POST(req: NextRequest) {
               <h2>Endereço de Entrega</h2>
               <div class="info-section">
                 <div class="info-row">
-                  <span class="info-label">Nome:</span>
+                  <span class="info-label">Contato: </span>
                   <span class="info-value">${orderPayload.contactNameShipping || "-"}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Endereço:</span>
+                  <span class="info-label">Telefone do contato: </span>
+                  <span class="info-value">${orderPayload.areaCodeShipping || orderPayload.areaCode} ${
+      orderPayload.phoneShipping || "-"
+    }</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Logradouro: </span>
                   <span class="info-value">
                     ${orderPayload.streetNameShipping || ""} ${orderPayload.streetNumberShipping || ""}
                     ${orderPayload.addressLine2Shipping ? `- ${orderPayload.addressLine2Shipping}` : ""}
                   </span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Bairro:</span>
+                  <span class="info-label">Bairro: </span>
                   <span class="info-value">${orderPayload.addressNeighborhoodShipping || "-"}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Cidade/UF:</span>
+                  <span class="info-label">Cidade/UF: </span>
                   <span class="info-value">${orderPayload.addressCityShipping || "-"} / ${
       orderPayload.addressStateCodeShipping || "-"
     }</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">CEP:</span>
+                  <span class="info-label">CEP: </span>
                   <span class="info-value">${orderPayload.zipCodeShipping || "-"}</span>
                 </div>
               </div>
 
+               <h2>Dados de Faturamento</h2>
+              <div class="info-section">
+                <div class="info-row">
+                  <span class="info-label">Contato: </span>
+                  <span class="info-value"> ${orderPayload.contactNameShipping || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Razão Social: </span>
+                  <span class="info-value"> ${orderPayload.legalNameBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">CPF/CNPJ: </span>
+                  <span class="info-value"> ${orderPayload.cpfCnpjBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">IE: </span>
+                  <span class="info-value"> ${orderPayload.ieBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Logradouro: </span>
+                  <span class="info-value"> ${orderPayload.streetNameBilling || ""} ${
+      orderPayload.streetNumberBilling || ""
+    }
+                    ${orderPayload.addressLine2Billing ? `- ${orderPayload.addressLine2Billing}` : ""}
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Bairro: </span>
+                  <span class="info-value">${orderPayload.addressNeighborhoodBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Cidade/UF: </span>
+                  <span class="info-value">${orderPayload.addressCityBilling || ""} / ${
+      orderPayload.addressStateCodeBilling || ""
+    }</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">CEP: </span>
+                  <span class="info-value"> ${orderPayload.zipCodeBilling || ""}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Complemento: </span>
+                  <span class="info-value"> ${orderPayload.addressLine2Billing || ""}</span>
+                </div>
+          
               <h2>Produtos do Pedido</h2>
               <table class="products-table">
                 <thead>
@@ -335,6 +386,7 @@ export async function POST(req: NextRequest) {
                   ${productsHtml}
                 </tbody>
               </table>
+              
 
               <h2>Resumo Financeiro</h2>
               <div class="total-section">
@@ -373,10 +425,8 @@ export async function POST(req: NextRequest) {
                 </div>
               </div>
 
-              <p style="margin-top: 30px;">
-                Por favor, revise os detalhes do pedido e realize a aprovação ou reprovação através da plataforma.
-              </p>
-              <p>Atenciosamente,<br />Equipe ${NOME_LOJA}</p>
+            
+              <p>Atenciosamente,<br /></p>
               <img src="https://www2.unitycorp.com.br/teste/rodape-email.png" alt="assinatura e-mail ${NOME_LOJA}" style="max-width: 100%; margin-top: 20px;" />
             </div>
             <div class="footer">
