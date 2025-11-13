@@ -534,23 +534,29 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
 
         hasPersonalization: !!selectedFirst,
         isAmostra: isAmostra, // Add isAmostra flag
-        personalization: selectedFirst
-          ? {
-              chavePersonal: selectedFirst.chavePersonal,
-              descricao: selectedFirst.descrWebPersonal || selectedFirst.descrPersonal || "Personalização",
-              precoUnitario: personalizationUnit,
-              precoTotal: personalizationUnit * requestedQty,
-              // Salva as faixas de preço da personalização para recálculo no carrinho
-              precos: selectedFirst.precos
-                ? selectedFirst.precos.map((p) => ({
-                    chavePersonalPrc: p.chavePersonalPrc,
-                    qtdiPersonalPrc: p.qtdiPersonalPrc,
-                    qtdfPersonalPrc: p.qtdfPersonalPrc,
-                    vluPersonalPrc: p.vluPersonalPrc,
-                  }))
-                : undefined,
-            }
-          : undefined,
+        // Salva todas as personalizações selecionadas
+        personalizations: (() => {
+          const allPersonalizations = Object.values(selectedPersonalizations)
+            .filter((p): p is Personalizacao => p !== null)
+            .map((p) => {
+              const personalizationPrice = getPersonalizationUnitPrice(p, requestedQty);
+              return {
+                chavePersonal: p.chavePersonal,
+                descricao: p.descrWebPersonal || p.descrPersonal || "Personalização",
+                precoUnitario: personalizationPrice,
+                precoTotal: personalizationPrice * requestedQty,
+                precos: p.precos
+                  ? p.precos.map((preco) => ({
+                      chavePersonalPrc: preco.chavePersonalPrc,
+                      qtdiPersonalPrc: preco.qtdiPersonalPrc,
+                      qtdfPersonalPrc: preco.qtdfPersonalPrc,
+                      vluPersonalPrc: preco.vluPersonalPrc,
+                    }))
+                  : undefined,
+              };
+            });
+          return allPersonalizations.length > 0 ? allPersonalizations : undefined;
+        })(),
 
         // Salva informações de faixas de preço do produto para recálculo no carrinho
         precos: ProductData.precos,

@@ -136,10 +136,13 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
         price = item.unitPriceBase;
       }
 
-      // Adiciona o valor da personalização se houver
-      if (item.hasPersonalization && item.personalization && quantity > 0) {
-        const personalizationPrice = getPersonalizationUnitPrice(item.personalization.precos, quantity);
-        price += personalizationPrice;
+      // Adiciona o valor das personalizações se houver
+      if (item.hasPersonalization && item.personalizations && item.personalizations.length > 0 && quantity > 0) {
+        const totalPersonalizationPrice = item.personalizations.reduce((sum, p) => {
+          const personalizationPrice = getPersonalizationUnitPrice(p.precos, quantity);
+          return sum + personalizationPrice;
+        }, 0);
+        price += totalPersonalizationPrice;
       }
 
       // Adiciona o valor adicional da amostra se estiver marcado
@@ -553,7 +556,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                   <div className="flex flex-col gap-2 px-4">
                     <p className="text-sm 2xl:text-lg font-Roboto text-blackReference">{product.productName}</p>
 
-                    {product.hasPersonalization && product.personalization && (
+                    {product.hasPersonalization && product.personalizations && product.personalizations.length > 0 && (
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
                           Personalização

@@ -58,13 +58,13 @@ export interface CartItemInput {
   subtotal: number;
   hasPersonalization: boolean;
   isAmostra?: boolean;
-  personalization?: {
+  personalizations?: Array<{
     chavePersonal: string;
     descricao: string;
     precoUnitario: number;
     precoTotal: number;
     precos?: PersonalizacaoPreco[]; // Faixas de preço da personalização
-  };
+  }>;
   // Informações de faixas de preço do produto para recálculo no carrinho
   precos?: PrecoProduto[]; // Faixas de preço do produto
   qtdMinPro?: string; // Quantidade mínima do produto

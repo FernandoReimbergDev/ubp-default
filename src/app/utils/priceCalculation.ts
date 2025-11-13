@@ -104,10 +104,16 @@ export function recalculateEffectivePrice(item: CartItemPersist, quantity: numbe
     price = item.unitPriceBase;
   }
 
-  // Adiciona o valor da personalização se houver
-  if (item.hasPersonalization && item.personalization && quantity > 0) {
-    const personalizationPrice = getPersonalizationUnitPrice(item.personalization.precos, quantity);
-    price += personalizationPrice;
+  // Adiciona o valor das personalizações se houver
+  if (item.hasPersonalization && quantity > 0) {
+    if (item.personalizations && item.personalizations.length > 0) {
+      // Soma o preço de todas as personalizações baseado na quantidade atual
+      const totalPersonalizationPrice = item.personalizations.reduce((sum, p) => {
+        const personalizationPrice = getPersonalizationUnitPrice(p.precos, quantity);
+        return sum + personalizationPrice;
+      }, 0);
+      price += totalPersonalizationPrice;
+    }
   }
 
   // Adiciona o valor adicional da amostra se estiver marcado

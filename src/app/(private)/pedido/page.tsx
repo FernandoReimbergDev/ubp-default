@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { Container } from "../../components/Container";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import Link from "next/link";
 import { SkeletonPedido } from "./partials/skeleton";
@@ -81,7 +81,7 @@ export default function PedidoSucesso() {
     return { pedidoPayload, ready };
   }
 
-  const { pedidoPayload, ready: payloadReady } = usePedidoPayload();
+  const { pedidoPayload } = usePedidoPayload();
 
   // Define o número do pedido primeiro
   useEffect(() => {
@@ -98,46 +98,6 @@ export default function PedidoSucesso() {
   useEffect(() => {
     if (!pedidoPayload) return;
   }, [pedidoPayload]);
-
-  // Callback que só dispara quando tudo estiver pronto
-  const fetchCadastroPedido = useCallback(
-    async (signal?: AbortSignal) => {
-      if (!pedidoPayload || !orderId) return; // guarda
-      try {
-        const res = await fetch("/api/send-request", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reqMethod: "POST",
-            reqEndpoint: `/order/${orderId}`,
-            reqHeaders: {
-              "X-Environment": "HOMOLOGACAO",
-              ...pedidoPayload,
-            },
-          }),
-          signal,
-        });
-
-        const result = await res.json();
-        if (!res.ok) throw new Error(result?.message || "Erro ao cadastrar pedido");
-        console.log(result);
-      } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error("Erro ao cadastrar pedido do usuário na API externa:", err);
-      }
-    },
-    [pedidoPayload, orderId]
-  );
-
-  // Só chama quando: cookie lido (payloadReady), payload existe e orderId definido
-  useEffect(() => {
-    if (!payloadReady) return;
-    if (!pedidoPayload || !orderId) return;
-
-    const ac = new AbortController();
-    fetchCadastroPedido(ac.signal);
-    return () => ac.abort();
-  }, [payloadReady, pedidoPayload, orderId, fetchCadastroPedido]);
 
   // Carrega dados de entrega com fallbacks
   useEffect(() => {

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Address, UserShape } from "@/app/types/payloadPedido";
 
 export function SolicitarAprovacao() {
-  const { hasAnyRole, fetchOrderNumber } = useAuth();
+  const { hasAnyRole, fetchOrderNumber, orderNumber } = useAuth();
   const { cart, clearCart } = useCart();
   const isAdmin = hasAnyRole(["Administrador"]);
   const router = useRouter();
@@ -22,6 +22,10 @@ export function SolicitarAprovacao() {
   const [user, setUser] = useState<UserShape | null>(null);
   const [freteValido, setFreteValido] = useState(false);
   const [addressShipping, setAddressShipping] = useState<Address | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [cadastrandoPedido, setCadastrandoPedido] = useState(false);
+  const [cadastroError, setCadastroError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -144,93 +148,279 @@ export function SolicitarAprovacao() {
   }, [addressShipping]);
 
   const frete = Number(Cookies.get("valorFrete") || "0") || 0;
-  const payload: any = {
-    storeId: "32",
-    userId: Number(getUserIdFromCookie()),
-    entityType: user?.entityType || "PF",
-    legalName: user?.legalName || user?.fullName || "",
-    cpfCnpj: user?.cpfCnpj || addressShipping?.cpfCnpjShipping || "",
-    ie: user?.ie || "",
-    email: user?.email || addressShipping?.emailShipping || "",
-    areaCode: user?.phone?.areaCode || addressShipping?.areaCodeShipping || "",
-    phone: user?.phone?.number || addressShipping?.phoneShipping || "",
+  const payload: any = useMemo(
+    () => ({
+      storeId: "32",
+      userId: Number(getUserIdFromCookie()),
+      entityType: user?.entityType || "PF",
+      legalName: user?.legalName || user?.fullName || "",
+      cpfCnpj: user?.cpfCnpj || addressShipping?.cpfCnpjShipping || "",
+      ie: user?.ie || "",
+      email: user?.email || addressShipping?.emailShipping || "",
+      areaCode: user?.phone?.areaCode || addressShipping?.areaCodeShipping || "",
+      phone: user?.phone?.number || addressShipping?.phoneShipping || "",
 
-    entityTypeBilling: "PJ",
-    legalNameBilling: "Caixa Vida e Previdencia S/A",
-    contactNameBilling: user?.fullName || "",
-    cpfCnpjBilling: "03730204000176",
-    ieBilling: user?.ie || "",
-    emailBilling: user?.email || addressShipping?.emailShipping || "",
-    areaCodeBilling: user?.phone?.areaCode || addressShipping?.areaCodeShipping || "",
-    phoneBilling: user?.phone?.number || addressShipping?.phoneShipping || "",
-    addressIbgeCodeBilling: "",
-    zipCodeBilling: "04583110",
-    streetNameBilling: "Av. Doutor Chucri Zaidan",
-    streetNumberBilling: "246",
-    addressLine2Billing: "12º andar",
-    addressNeighborhoodBilling: "Vila Cordeiro",
-    addressCityBilling: "São Paulo",
-    addressStateCodeBilling: "SP",
+      entityTypeBilling: "PJ",
+      legalNameBilling: "Caixa Vida e Previdencia S/A",
+      contactNameBilling: user?.fullName || "",
+      cpfCnpjBilling: "03730204000176",
+      ieBilling: user?.ie || "",
+      emailBilling: user?.email || addressShipping?.emailShipping || "",
+      areaCodeBilling: user?.phone?.areaCode || addressShipping?.areaCodeShipping || "",
+      phoneBilling: user?.phone?.number || addressShipping?.phoneShipping || "",
+      addressIbgeCodeBilling: "",
+      zipCodeBilling: "04583110",
+      streetNameBilling: "Av. Doutor Chucri Zaidan",
+      streetNumberBilling: "246",
+      addressLine2Billing: "12º andar",
+      addressNeighborhoodBilling: "Vila Cordeiro",
+      addressCityBilling: "São Paulo",
+      addressStateCodeBilling: "SP",
 
-    entityTypeShipping: addressShipping?.entityTypeShipping || "PJ",
-    legalNameShipping: addressShipping?.legalNameShipping || "",
-    contactNameShipping: addressShipping?.contactNameShipping || user?.fullName || "",
-    cpfCnpjShipping: addressShipping?.cpfCnpjShipping || "",
-    ieShipping: addressShipping?.ieShipping || user?.ie || "",
-    emailShipping: addressShipping?.emailShipping || user?.email || "",
-    areaCodeShipping: addressShipping?.areaCodeShipping || user?.phone?.areaCode || "",
-    phoneShipping: addressShipping?.phoneShipping || user?.phone?.number || "",
-    addressIbgeCodeShipping: addressShipping?.addressIbgeCodeShipping || "",
-    zipCodeShipping: addressShipping?.zipCodeShipping || "",
-    streetNameShipping: addressShipping?.streetNameShipping || "",
-    streetNumberShipping: addressShipping?.streetNumberShipping || "",
-    addressLine2Shipping: addressShipping?.addressLine2Shipping || "",
-    addressNeighborhoodShipping: addressShipping?.addressNeighborhoodShipping || "",
-    addressCityShipping: addressShipping?.addressCityShipping || "",
-    addressStateCodeShipping: addressShipping?.addressStateCodeShipping || "",
+      entityTypeShipping: addressShipping?.entityTypeShipping || "PJ",
+      legalNameShipping: addressShipping?.legalNameShipping || "",
+      contactNameShipping: addressShipping?.contactNameShipping || user?.fullName || "",
+      cpfCnpjShipping: addressShipping?.cpfCnpjShipping || "",
+      ieShipping: addressShipping?.ieShipping || user?.ie || "",
+      emailShipping: addressShipping?.emailShipping || user?.email || "",
+      areaCodeShipping: addressShipping?.areaCodeShipping || user?.phone?.areaCode || "",
+      phoneShipping: addressShipping?.phoneShipping || user?.phone?.number || "",
+      addressIbgeCodeShipping: addressShipping?.addressIbgeCodeShipping || "",
+      zipCodeShipping: addressShipping?.zipCodeShipping || "",
+      streetNameShipping: addressShipping?.streetNameShipping || "",
+      streetNumberShipping: addressShipping?.streetNumberShipping || "",
+      addressLine2Shipping: addressShipping?.addressLine2Shipping || "",
+      addressNeighborhoodShipping: addressShipping?.addressNeighborhoodShipping || "",
+      addressCityShipping: addressShipping?.addressCityShipping || "",
+      addressStateCodeShipping: addressShipping?.addressStateCodeShipping || "",
 
-    paymentMethod: "Boleto",
-    numberOfInstallments: "1",
-    totalProductsAmount: totalValue.toFixed(2),
-    totalDiscountAmount: "0.00",
-    totalShippingAmount: frete.toFixed(2),
-    totalInterestAmount: "0.00",
-    orderTotalAmount: (totalValue + frete).toFixed(2),
-    totalTaxAmount: "0",
-    paymentStatus: "PENDENTE",
-    orderStatus: isAdmin ? "Aprovado" : "Aguardando aprovação",
-    expectedDeliveryDate: "",
-    deliveryDate: "",
-    paymentDate: "",
-  };
+      products: cart.map((product) => ({
+        chavePro: product.chavePro,
+        codPro: product.codPro,
+        descrPro: product.productName,
+        descrProCor: product.color,
+        descrProTam: product.size || "",
+        quantityPro: product.quantity,
+        unitPriceTablePro: product.unitPriceBase,
+        unitPricePro: product.unitPriceEffective,
+        totalServiceAmount:
+          product.personalizations?.reduce(
+            (total, personalization) => total + personalization.precoUnitario * product.quantity,
+            0
+          ) || 0,
+        totalProductAmount: product.subtotal,
+        personals: product.personalizations?.map((personalization) => ({
+          chavePersonal: personalization.chavePersonal,
+          descrWebPersonal: personalization.descricao,
+          quantityPersonal: product.quantity,
+          unitPricePersonal: Number(personalization.precoUnitario).toFixed(2),
+          totalPersonalAmount: personalization.precoUnitario * product.quantity,
+        })),
+      })),
+
+      paymentMethod: "Boleto",
+      numberOfInstallments: "1",
+      totalProductsAmount: totalValue.toFixed(2),
+      totalDiscountAmount: "0.00",
+      totalShippingAmount: frete.toFixed(2),
+      totalInterestAmount: "0.00",
+      orderTotalAmount: (totalValue + frete).toFixed(2),
+      totalTaxAmount: "0",
+      paymentStatus: "PENDENTE",
+      orderStatus: isAdmin ? "Aprovado" : "Aguardando aprovação",
+      expectedDeliveryDate: "",
+      deliveryDate: "",
+      paymentDate: "",
+    }),
+    [getUserIdFromCookie, user, addressShipping, totalValue, frete, isAdmin, cart]
+  );
+
+  // -------- Função para cadastrar pedido na API --------
+  const fetchCadastroPedido = useCallback(
+    async (signal?: AbortSignal) => {
+      const currentOrderId = orderNumber || Cookies.get("orderNumber") || undefined;
+      if (!payload || !currentOrderId) {
+        throw new Error("Dados do pedido ou número do pedido não encontrados");
+      }
+
+      try {
+        const res = await fetch("/api/send-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reqMethod: "POST",
+            reqEndpoint: `/order/${currentOrderId}`,
+            reqHeaders: {
+              "X-Environment": "HOMOLOGACAO",
+              ...payload,
+            },
+          }),
+          signal,
+        });
+
+        const result = await res.json();
+        if (!res.ok) {
+          throw new Error(result?.message || "Erro ao cadastrar pedido na base de dados");
+        }
+
+        // Usa sempre o número do pedido que foi recebido do fetchOrderNumber
+        // Não atualiza o cookie, mantém o número original
+        return result;
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          throw new Error("Operação cancelada");
+        }
+        throw err;
+      }
+    },
+    [payload, orderNumber]
+  );
 
   // -------- Ações --------
   const handleAproved = async () => {
     setStatus("approved");
+    setCadastrandoPedido(true);
+    setCadastroError(null);
+
     try {
+      // Salva payload no localStorage
       try {
         localStorage.setItem("pedidoPayload", JSON.stringify(payload));
       } catch {}
       try {
         Cookies.remove("pedidoPayload", { path: "/" });
       } catch {}
+
+      // Busca o número do pedido
       await fetchOrderNumber();
-    } finally {
+
+      // Aguarda um pouco para garantir que o orderNumber foi atualizado
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Tenta obter o orderNumber novamente
+      const currentOrderId = orderNumber || Cookies.get("orderNumber");
+      if (!currentOrderId) {
+        throw new Error("Não foi possível obter o número do pedido");
+      }
+
+      // Cadastra o pedido na API
+      await fetchCadastroPedido();
+
+      // Se chegou aqui, tudo deu certo - redireciona
       router.push("/pedido");
+
+      // Envia email de pedido aprovado em background (não bloqueia o redirecionamento)
+      // Se falhar, apenas loga o erro, mas o pedido já foi cadastrado
+      fetch("/api/send-mail-aproved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payload,
+          products: cart,
+          orderNumber: currentOrderId,
+          emailConfig: {
+            to: [payload.emailShipping || payload.email].filter(Boolean),
+            cc: ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"],
+            cco: ["carloseds@outlook.com", "fernandoreimberg14@hotmail.com"],
+            replyTo: "ti@unitybrindes.com.br",
+          },
+        }),
+      })
+        .then(async (emailResponse) => {
+          const emailResult = await emailResponse.json();
+          if (!emailResponse.ok || !emailResult.success) {
+            console.error("Erro ao enviar e-mail de pedido aprovado:", emailResult.message);
+          }
+        })
+        .catch((err) => {
+          console.error("Erro ao enviar e-mail de pedido aprovado:", err);
+          // Não bloqueia o fluxo, apenas loga o erro
+        });
+    } catch (err: unknown) {
+      console.error("Erro ao finalizar pedido:", err);
+      setCadastroError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível cadastrar o pedido. Por favor, tente novamente ou entre em contato com o suporte."
+      );
+      setStatus("idle"); // Volta ao estado inicial em caso de erro
+    } finally {
+      setCadastrandoPedido(false);
     }
   };
   const handleRequested = async () => {
     setStatus("requested");
+    setCadastrandoPedido(true);
+    setCadastroError(null);
+    setSendingEmail(true);
+    setEmailError(null);
+
     try {
+      // Salva payload no localStorage primeiro
       try {
         localStorage.setItem("pedidoPayload", JSON.stringify(payload));
       } catch {}
       try {
         Cookies.remove("pedidoPayload", { path: "/" });
       } catch {}
+
+      // Busca o número do pedido
       await fetchOrderNumber();
-    } finally {
+
+      // Aguarda um pouco para garantir que o orderNumber foi atualizado
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Tenta obter o orderNumber novamente
+      const currentOrderId = orderNumber || Cookies.get("orderNumber");
+      if (!currentOrderId) {
+        throw new Error("Não foi possível obter o número do pedido");
+      }
+
+      // SEMPRE cadastra o pedido primeiro (isso é o mais importante)
+      await fetchCadastroPedido();
+
+      // Se o cadastro foi bem-sucedido, redireciona imediatamente
+      // O envio de email pode acontecer em background, mas não bloqueia o redirecionamento
       router.push("/pedido");
+
+      // Tenta enviar email em background (não bloqueia o redirecionamento)
+      // Se falhar, apenas loga o erro, mas o pedido já foi cadastrado
+      fetch("/api/send-mail-aproves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payload,
+          products: cart,
+          orderNumber: currentOrderId,
+          emailConfig: {
+            to: [payload.emailShipping || payload.email].filter(Boolean),
+            cc: ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"],
+            cco: ["carloseds@outlook.com", "fernandoreimberg14@hotmail.com"],
+            replyTo: "ti@unitybrindes.com.br",
+          },
+        }),
+      })
+        .then(async (emailResponse) => {
+          const emailResult = await emailResponse.json();
+          if (!emailResponse.ok || !emailResult.success) {
+            console.error("Erro ao enviar e-mail de aprovação:", emailResult.message);
+          }
+        })
+        .catch((err) => {
+          console.error("Erro ao enviar e-mail de aprovação:", err);
+          // Não bloqueia o fluxo, apenas loga o erro
+        });
+    } catch (err: unknown) {
+      console.error("Erro ao cadastrar pedido:", err);
+      setCadastroError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível cadastrar o pedido. Por favor, tente novamente ou entre em contato com o suporte."
+      );
+      setStatus("idle"); // Volta ao estado inicial em caso de erro
+    } finally {
+      setCadastrandoPedido(false);
+      setSendingEmail(false);
     }
   };
   const handleCancelConfirm = () => {
@@ -261,13 +451,35 @@ export function SolicitarAprovacao() {
                 <div className="flex flex-col justify-center gap-4">
                   <button
                     onClick={handleAproved}
-                    disabled={!freteValido}
+                    disabled={!freteValido || cadastrandoPedido}
                     className={`w-full px-4 py-2 rounded-md text-white text-sm ${
-                      !freteValido ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-500 cursor-pointer"
+                      !freteValido || cadastrandoPedido
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-500 cursor-pointer"
                     }`}
                   >
-                    {freteValido ? "Finalizar Compra" : "Aguardando cálculo do frete..."}
+                    {cadastrandoPedido
+                      ? "Cadastrando pedido..."
+                      : freteValido
+                      ? "Finalizar Compra"
+                      : "Aguardando cálculo do frete..."}
                   </button>
+
+                  {cadastroError && (
+                    <div className="rounded-md border border-red-300 bg-red-50 p-3 text-red-800 text-sm">
+                      <p className="font-medium mb-1">Erro ao cadastrar pedido:</p>
+                      <p>{cadastroError}</p>
+                      <button
+                        onClick={() => {
+                          setCadastroError(null);
+                          setStatus("idle");
+                        }}
+                        className="mt-2 text-xs underline hover:no-underline"
+                      >
+                        Tentar novamente
+                      </button>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => setStatus("rejected")}
@@ -319,14 +531,55 @@ export function SolicitarAprovacao() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleRequested}
-                  className="px-4 py-2 rounded-md text-white text-sm bg-blue-600 hover:bg-blue-500 cursor-pointer"
+                  disabled={sendingEmail || cadastrandoPedido || cart.length === 0}
+                  className={`px-4 py-2 rounded-md text-white text-sm ${
+                    sendingEmail || cadastrandoPedido || cart.length === 0
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-500 cursor-pointer"
+                  }`}
                 >
-                  Solicitar Aprovação
+                  {cadastrandoPedido
+                    ? "Cadastrando pedido..."
+                    : sendingEmail
+                    ? "Enviando e-mail..."
+                    : "Solicitar Aprovação"}
                 </button>
               </div>
 
-              {status === "requested" && (
-                <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-blue-800 text-sm">
+              {emailError && (
+                <div className="rounded-md border border-red-300 bg-red-50 p-3 text-red-800 text-sm mt-2">
+                  <p className="font-medium mb-1">Erro ao enviar e-mail:</p>
+                  <p>{emailError}</p>
+                  <button
+                    onClick={() => {
+                      setEmailError(null);
+                      setStatus("idle");
+                    }}
+                    className="mt-2 text-xs underline hover:no-underline"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              )}
+
+              {cadastroError && (
+                <div className="rounded-md border border-orange-300 bg-orange-50 p-3 text-orange-800 text-sm mt-2">
+                  <p className="font-medium mb-1">Aviso sobre o cadastro do pedido:</p>
+                  <p>{cadastroError}</p>
+                  <button
+                    onClick={() => {
+                      setCadastroError(null);
+                      setStatus("idle");
+                    }}
+                    className="mt-2 text-xs underline hover:no-underline"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
+
+              {status === "requested" && !emailError && (
+                <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-blue-800 text-sm mt-2">
                   Obrigado por sua compra! Seu pedido está em processo de aprovação. Assim que tudo estiver pronto, você
                   receberá uma mensagem com o status do seu pedido.
                 </div>

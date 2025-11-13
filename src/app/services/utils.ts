@@ -7,10 +7,10 @@ import { HandleMaskParams } from "../types/responseTypes";
  * @returns CEP formatado (XXXXX-XXX) ou string vazia se inválido
  */
 export const formatCep = (cep: string | undefined | null): string => {
-  if (!cep) return '';
+  if (!cep) return "";
 
   // Remove tudo que não for dígito
-  const digits = cep.replace(/\D/g, '');
+  const digits = cep.replace(/\D/g, "");
 
   // Retorna vazio se não tiver 8 dígitos
   if (digits.length !== 8) return cep;
@@ -242,6 +242,39 @@ export function maskEmail(email: string): string {
   const maskedDom =
     dom.length <= 2 ? dom[0] + "*".repeat(dom.length - 1) : dom.slice(0, 2) + "*".repeat(dom.length - 2);
   return `${maskedUser}@${maskedDom}.${rest.join(".")}`;
+}
+
+/**
+ * Mascara um telefone mostrando apenas o DDD e os 4 últimos dígitos
+ * @param phone - Telefone a ser mascarado (com ou sem formatação)
+ * @param areaCode - DDD do telefone (opcional, será extraído do phone se não fornecido)
+ * @returns Telefone mascarado no formato (XX) ****-XXXX ou string vazia se inválido
+ */
+export function maskPhone(phone: string | undefined | null, areaCode?: string | undefined | null): string {
+  if (!phone && !areaCode) return "";
+
+  // Remove tudo que não for dígito
+  const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
+  const areaCodeDigits = areaCode ? areaCode.replace(/\D/g, "") : "";
+
+  // Combina DDD e telefone
+  let fullNumber = "";
+  if (areaCodeDigits) {
+    fullNumber = areaCodeDigits + phoneDigits;
+  } else if (phoneDigits.length >= 10) {
+    // Se o telefone tem 10 ou 11 dígitos, assume que os 2 primeiros são o DDD
+    fullNumber = phoneDigits;
+  } else {
+    // Se não tem DDD e o telefone é muito curto, retorna como está
+    return phone || "";
+  }
+
+  // Extrai DDD (2 primeiros dígitos) e últimos 4 dígitos
+  const ddd = fullNumber.slice(0, 2);
+  const lastFour = fullNumber.slice(-4);
+
+  // Retorna no formato (XX) ****-XXXX
+  return `(${ddd}) ****-${lastFour}`;
 }
 
 // Função para validar número do cartão usando algoritmo de Luhn

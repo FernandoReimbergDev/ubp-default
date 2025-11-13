@@ -14,7 +14,12 @@ const keyFor = (id: string | number | null) => (id ? `cart_${id}` : "cart_guest"
 function normalize(item: CartItemInput): CartItemPersist {
   const quantity = Number.isFinite(item.quantity) ? Math.max(1, Math.trunc(item.quantity)) : 1;
   const unitBase = Number(item.unitPriceBase) || 0;
-  const unitPers = Number(item.unitPricePersonalization) || 0;
+
+  // Calcula o preço unitário total das personalizações somando todas elas
+  const unitPers =
+    item.personalizations && item.personalizations.length > 0
+      ? item.personalizations.reduce((sum, p) => sum + (Number(p.precoUnitario) || 0), 0)
+      : Number(item.unitPricePersonalization) || 0;
 
   // Prepara o item para cálculo (preserva informações de faixas de preço)
   const itemForCalculation: CartItemPersist = {
@@ -29,11 +34,11 @@ function normalize(item: CartItemInput): CartItemPersist {
     qtdMinPro: item.qtdMinPro,
     vluGridPro: item.vluGridPro,
     valorAdicionalAmostraPro: item.valorAdicionalAmostraPro,
-    personalization: item.personalization
-      ? {
-          ...item.personalization,
-          precos: item.personalization.precos,
-        }
+    personalizations: item.personalizations
+      ? item.personalizations.map((p) => ({
+          ...p,
+          precos: p.precos,
+        }))
       : undefined,
   };
 
@@ -67,20 +72,35 @@ function parsePersist(raw: string | undefined): CartItemPersist[] {
           color: x.color ?? "",
           size: x.size,
           unitPriceBase: x.unitPriceBase ?? 0,
-          unitPricePersonalization: x.unitPricePersonalization ?? 0,
-          unitPriceEffective: x.unitPriceEffective ?? (x.unitPriceBase ?? 0) + (x.unitPricePersonalization ?? 0),
+          unitPricePersonalization: (() => {
+            // Calcula o preço unitário total das personalizações somando todas elas
+            if (x.personalizations && x.personalizations.length > 0) {
+              return x.personalizations.reduce((sum, p) => sum + (Number(p.precoUnitario) ?? 0), 0);
+            }
+            return x.unitPricePersonalization ?? 0;
+          })(),
+          unitPriceEffective: (() => {
+            const base = x.unitPriceBase ?? 0;
+            const pers = (() => {
+              if (x.personalizations && x.personalizations.length > 0) {
+                return x.personalizations.reduce((sum, p) => sum + (Number(p.precoUnitario) ?? 0), 0);
+              }
+              return x.unitPricePersonalization ?? 0;
+            })();
+            return x.unitPriceEffective ?? base + pers;
+          })(),
           quantity: Number.isFinite(x.quantity) ? (x.quantity as number) : 1,
           subtotal: x.subtotal ?? 0, // será recalculado em normalize
           hasPersonalization: x.hasPersonalization ?? false,
           isAmostra: x.isAmostra ?? false, // Garante que isAmostra seja mantido
-          personalization: x.personalization
-            ? {
-                chavePersonal: x.personalization.chavePersonal ?? "",
-                descricao: x.personalization.descricao ?? "Personalização",
-                precoUnitario: Number(x.personalization.precoUnitario ?? 0),
-                precoTotal: Number(x.personalization.precoTotal ?? 0),
-                precos: x.personalization.precos, // Preserva faixas de preço da personalização
-              }
+          personalizations: x.personalizations
+            ? x.personalizations.map((p) => ({
+                chavePersonal: p.chavePersonal ?? "",
+                descricao: p.descricao ?? "Personalização",
+                precoUnitario: Number(p.precoUnitario ?? 0),
+                precoTotal: Number(p.precoTotal ?? 0),
+                precos: p.precos, // Preserva faixas de preço da personalização
+              }))
             : undefined,
           // Preserva informações de faixas de preço do produto
           precos: x.precos,
@@ -125,36 +145,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const addProduct = (product: CartItemInput) => {
     const incoming = normalize(product);
     setCart((prev) => {
-      const index = prev.findIndex((p) => p.id === incoming.id);
-      let next: CartItemPersist[];
-      if (index >= 0) {
-        const curr = prev[index];
-        const quantity = curr.quantity + incoming.quantity;
-        const updated: CartItemPersist = normalize({
-          ...curr,
-          quantity,
-          // mantém preços do item "novo" (recálculo mais atual)
-          unitPriceBase: incoming.unitPriceBase,
-          unitPricePersonalization: incoming.unitPricePersonalization,
-          unitPriceEffective: incoming.unitPriceEffective,
-          hasPersonalization: incoming.hasPersonalization,
-          isAmostra: incoming.isAmostra, // Mantém a flag de amostra
-          personalization: incoming.personalization,
-          // Preserva informações de faixas de preço do produto
-          precos: incoming.precos ?? curr.precos,
-          qtdMinPro: incoming.qtdMinPro ?? curr.qtdMinPro,
-          vluGridPro: incoming.vluGridPro ?? curr.vluGridPro,
-          valorAdicionalAmostraPro: incoming.valorAdicionalAmostraPro ?? curr.valorAdicionalAmostraPro,
-          peso: incoming.peso,
-          altura: incoming.altura,
-          largura: incoming.largura,
-          comprimento: incoming.comprimento,
-        });
-        next = prev.slice();
-        next[index] = updated;
-      } else {
-        next = prev.concat(incoming);
-      }
+      // Sempre cria um novo item no carrinho, gerando um ID único para cada adição
+      // Gera um ID único usando timestamp + random para garantir unicidade
+      const uniqueId = `${incoming.id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const newItem: CartItemPersist = {
+        ...incoming,
+        id: uniqueId,
+      };
+      const next = prev.concat(newItem);
       persist(next);
       return next;
     });
@@ -187,9 +185,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const idx = prev.findIndex((p) => p.id === id);
       if (idx < 0) return prev;
       const old = prev[idx];
-      const newId = `${old.codPro}_${newColor ?? old.color}_${newSize ?? old.size ?? "nosize"}_${
-        old.personalization?.chavePersonal ?? "std"
-      }`;
+      const newId = `${old.codPro}_${newColor ?? old.color}_${newSize ?? old.size ?? "nosize"}`;
       if (prev.some((p) => p.id === newId)) return prev;
       const updated: CartItemPersist = { ...old, id: newId, color: newColor ?? old.color, size: newSize ?? old.size };
       const next = prev.slice();
