@@ -11,7 +11,21 @@ type Props = {
 export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
   if (!isOpen) return null;
 
-  const { numero, status, solicitante, entrega, pagamento, produtos, compra, previsaoEntrega } = order;
+  const {
+    orderId,
+    status,
+    buyer,
+    billing,
+    delivery,
+    payment,
+    products,
+    totalProductsAmount,
+    totalShippingAmount,
+    totalInterestAmount,
+    orderTotalAmount,
+    purchaseDate,
+    expectedDeliveryDate,
+  } = order;
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
@@ -38,7 +52,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
         <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
           <div>
             <h2 className="text-base md:text-lg font-semibold">Detalhes do Pedido</h2>
-            <p className="text-xs md:text-sm text-gray-500">Order #{numero}</p>
+            <p className="text-xs md:text-sm text-gray-500">Order #{orderId}</p>
           </div>
           <button
             type="button"
@@ -58,11 +72,11 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
               <div className="space-y-2">
                 <div>
                   <span className="font-medium text-gray-700">Data do Pedido:</span>
-                  <span className="ml-2">{compra || "-"}</span>
+                  <span className="ml-2">{purchaseDate || "-"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Previsão de Entrega:</span>
-                  <span className="ml-2">{previsaoEntrega || "-"}</span>
+                  <span className="ml-2">{expectedDeliveryDate || "-"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-gray-700">Status:</span>
@@ -77,17 +91,17 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
               <div className="grid grid-cols-1 gap-2">
                 <div>
                   <span className="font-medium text-gray-700">Método:</span>
-                  <span className="ml-2">{pagamento.method}</span>
+                  <span className="ml-2">{payment.method}</span>
                 </div>
-                {pagamento.installments && (
+                {payment.installments && (
                   <div>
                     <span className="font-medium text-gray-700">Parcelas:</span>
-                    <span className="ml-2">{pagamento.installments}x de {formatPrice(pagamento.totalAmount / pagamento.installments)}</span>
+                    <span className="ml-2">{payment.installments}x de {formatPrice(payment.totalAmount / payment.installments)}</span>
                   </div>
                 )}
                 <div>
                   <span className="font-medium text-gray-700">Status:</span>
-                  <span className={statusBadgeClasses(pagamento.status)}>{pagamento.status || "-"}</span>
+                  <span className={statusBadgeClasses(payment.status)}>{payment.status || "-"}</span>
                 </div>
               </div>
             </section>
@@ -98,19 +112,19 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
               <div className="grid grid-cols-1 gap-2">
                 <div>
                   <span className="font-medium text-gray-700">Nome:</span>
-                  <span className="ml-2">{solicitante.fullName}</span>
+                  <span className="ml-2">{buyer.legalName}</span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Email:</span>
-                  <span className="ml-2">{solicitante.email}</span>
+                  <span className="ml-2">{buyer.email}</span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Telefone:</span>
-                  <span className="ml-2">{solicitante.phone}</span>
+                  <span className="ml-2">({buyer.areaCode}) {buyer.phone}</span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Documento:</span>
-                  <span className="ml-2">{solicitante.document || "-"}</span>
+                  <span className="ml-2">{buyer.cpfCnpf || "-"}</span>
                 </div>
               </div>
             </section>
@@ -122,21 +136,20 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
                 <div>
                   <span className="font-medium text-gray-700">Endereço:</span>
                   <span className="ml-2">
-                    {entrega.address.street}, {entrega.address.number}
-                    {entrega.address.complement ? `, ${entrega.address.complement}` : ""}, {entrega.address.neighborhood},
-                    {" "}{entrega.address.city}, {entrega.address.state} - {entrega.address.zipCode}
+                    {delivery.address.name}, {delivery.address.number}
+                    {delivery.address.line2 ? `, ${delivery.address.line2}` : ""}, {delivery.address.neighborhood}, {delivery.address.city}, {delivery.address.stateCode} - {delivery.address.zipCode}
                   </span>
                 </div>
-                {entrega.method && (
+                {delivery.method && (
                   <div>
                     <span className="font-medium text-gray-700">Método:</span>
-                    <span className="ml-2">{entrega.method}</span>
+                    <span className="ml-2">{delivery.method}</span>
                   </div>
                 )}
-                {entrega.trackingCode && (
+                {delivery.trackingCode && (
                   <div>
                     <span className="font-medium text-gray-700">Rastreio:</span>
-                    <span className="ml-2">{entrega.trackingCode}</span>
+                    <span className="ml-2">{delivery.trackingCode}</span>
                   </div>
                 )}
               </div>
@@ -149,23 +162,10 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
                 <div>
                   <span className="font-medium text-gray-700">Endereço:</span>
                   <span className="ml-2">
-                    {entrega.address.street}, {entrega.address.number}
-                    {entrega.address.complement ? `, ${entrega.address.complement}` : ""}, {entrega.address.neighborhood},
-                    {" "}{entrega.address.city}, {entrega.address.state} - {entrega.address.zipCode}
+                    {billing.address.name}, {billing.address.number}
+                    {billing.address.line2 ? `, ${billing.address.line2}` : ""}, {billing.address.neighborhood}, {billing.address.city}, {billing.address.stateCode} - {billing.address.zipCode}
                   </span>
                 </div>
-                {entrega.method && (
-                  <div>
-                    <span className="font-medium text-gray-700">Método:</span>
-                    <span className="ml-2">{entrega.method}</span>
-                  </div>
-                )}
-                {entrega.trackingCode && (
-                  <div>
-                    <span className="font-medium text-gray-700">Rastreio:</span>
-                    <span className="ml-2">{entrega.trackingCode}</span>
-                  </div>
-                )}
               </div>
             </section>
 
@@ -175,17 +175,17 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
               <div className="grid grid-cols-1 gap-2">
                 <div>
                   <span className="font-medium text-gray-700">Método:</span>
-                  <span className="ml-2">{pagamento.method}</span>
+                  <span className="ml-2">{payment.method}</span>
                 </div>
-                {pagamento.installments && (
+                {payment.installments && (
                   <div>
                     <span className="font-medium text-gray-700">Parcelas:</span>
-                    <span className="ml-2">{pagamento.installments}x de {formatPrice(pagamento.totalAmount / pagamento.installments)}</span>
+                    <span className="ml-2">{payment.installments}x de {formatPrice(payment.totalAmount / payment.installments)}</span>
                   </div>
                 )}
                 <div>
                   <span className="font-medium text-gray-700">Status:</span>
-                  <span className={statusBadgeClasses(pagamento.status)}>{pagamento.status || "-"}</span>
+                  <span className={statusBadgeClasses(payment.status)}>{payment.status || "-"}</span>
                 </div>
               </div>
             </section>
@@ -198,7 +198,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
           <section>
             <h3 className="text-sm md:text-base font-semibold text-blue-600 mb-2">Itens do Pedido</h3>
             <div className="space-y-3">
-              {produtos.map((p, idx) => (
+              {products.map((p, idx) => (
                 <div key={idx} className="rounded-lg border border-gray-200 bg-white px-4 py-3 flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     {p.imageUrl && (

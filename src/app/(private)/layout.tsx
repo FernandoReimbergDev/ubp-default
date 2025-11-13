@@ -4,6 +4,7 @@ import { Header } from "../components/Header";
 import { ProductsProvider } from "../Context/ProductsContext";
 import { CartProvider } from "../Context/CartContext";
 import { ToastProvider } from "../Context/ToastProvider";
+import { OrdersProvider } from "../Context/OrderContext";
 
 export const metadata: Metadata = {
   title: "Caixa Vida e Previdência Store | Unity Brindes",
@@ -17,13 +18,15 @@ export default async function PublicLayout({
 }>) {
   return (
     <ToastProvider>
-      <ProductsProvider>
-        <CartProvider>
-          <Header />
-          {children}
-          <Footer />
-        </CartProvider>
-      </ProductsProvider>
+      <OrdersProvider>
+        <ProductsProvider>
+          <CartProvider>
+            <Header />
+            {children}
+            <Footer />
+          </CartProvider>
+        </ProductsProvider>
+      </OrdersProvider>
     </ToastProvider>
   );
 }

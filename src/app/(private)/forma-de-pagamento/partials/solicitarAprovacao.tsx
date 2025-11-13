@@ -311,6 +311,9 @@ export function SolicitarAprovacao() {
       // Cadastra o pedido na API
       await fetchCadastroPedido();
 
+      // Lê o orderNumber atualizado do cookie novamente antes de enviar o email
+      const orderIdForEmail = Cookies.get("orderNumber") || currentOrderId;
+
       // Se chegou aqui, tudo deu certo - redireciona
       router.push("/pedido");
 
@@ -324,7 +327,7 @@ export function SolicitarAprovacao() {
         body: JSON.stringify({
           payload,
           products: cart,
-          orderNumber: currentOrderId,
+          orderNumber: orderIdForEmail,
           emailConfig: {
             to: [payload.email || payload.emailShipping].filter(Boolean),
             cc: [],
@@ -386,6 +389,9 @@ export function SolicitarAprovacao() {
       // SEMPRE cadastra o pedido primeiro (isso é o mais importante)
       await fetchCadastroPedido();
 
+      // Lê o orderNumber atualizado do cookie novamente antes de enviar o email
+      const orderIdForEmail = Cookies.get("orderNumber") || currentOrderId;
+
       // Se o cadastro foi bem-sucedido, redireciona imediatamente
       // O envio de email pode acontecer em background, mas não bloqueia o redirecionamento
       router.push("/pedido");
@@ -405,7 +411,7 @@ export function SolicitarAprovacao() {
         body: JSON.stringify({
           payload,
           products: cart,
-          orderNumber: currentOrderId,
+          orderNumber: orderIdForEmail,
           emailConfig: {
             to: emailTo,
             cc: ccMail,
