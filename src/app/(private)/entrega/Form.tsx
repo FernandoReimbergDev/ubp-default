@@ -10,9 +10,11 @@ import { UsuarioResponse } from "@/app/types/responseTypes";
 import { Resumo } from "@/app/components/Resumo";
 import Cookies from "js-cookie";
 import { useCart } from "@/app/Context/CartContext";
+import { SkeletonEntrega } from "./partials/SkeletonEntrega";
 
 export function FormDadosEntrega() {
   const { fetchSendAddress } = useCart();
+  const [loading, setLoading] = useState(true);
 
   const [adressShipping, setAdressShipping] = useState({
     cep: "04583-110",
@@ -126,6 +128,7 @@ export function FormDadosEntrega() {
 
   const fetchUserData = useCallback(async (signal?: AbortSignal) => {
     try {
+      setLoading(true);
       const res = await fetch("/api/list-user", {
         method: "GET",
         headers: {
@@ -147,6 +150,8 @@ export function FormDadosEntrega() {
         return;
       }
       console.error("error ao requisitar Id do usuário para api externa", error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -298,6 +303,10 @@ export function FormDadosEntrega() {
     }
     setSubmitting(false);
     router.push("/forma-de-pagamento");
+  }
+
+  if (loading) {
+    return <SkeletonEntrega />;
   }
 
   return (
