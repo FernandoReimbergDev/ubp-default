@@ -14,7 +14,9 @@ const agent = new https.Agent({
 
 async function withTimeout<T>(p: Promise<T>, ms: number, name = "operation"): Promise<T> {
   let to: NodeJS.Timeout;
-  const timeout = new Promise<never>((_, reject) => (to = setTimeout(() => reject(new Error(`${name} timeout after ${ms}ms`)), ms)));
+  const timeout = new Promise<never>(
+    (_, reject) => (to = setTimeout(() => reject(new Error(`${name} timeout after ${ms}ms`)), ms))
+  );
   try {
     return await Promise.race([p, timeout]);
   } finally {
@@ -30,7 +32,7 @@ function buildTargetUrl(id: string, req: Request): URL {
   return target;
 }
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const storeId = STORE_ID;
     if (!storeId) {
@@ -42,7 +44,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ success: false, message: "Erro ao obter token de autenticação." }, { status: 500 });
     }
 
-    const target = buildTargetUrl(params.id, req);
+    const { id } = await params;
+    const target = buildTargetUrl(id, req);
 
     const responseData = await withTimeout<any>(
       new Promise((resolve, reject) => {
