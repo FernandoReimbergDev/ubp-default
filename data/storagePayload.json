@@ -1,21 +1,21 @@
 {
   "storeId": "32",
-  "userId": 2,
+  "userId": 3,
   "entityType": "PF",
-  "legalName": "Luiz Fernando Reimberg Borba",
+  "legalName": "Ti Unity",
   "cpfCnpj": "03730204000176",
   "ie": "",
-  "email": "fernando.reimberg@unitybrindes.com.br",
+  "email": "ti@unitybrindes.com.br",
   "areaCode": "11",
-  "phone": "984037218",
+  "phone": "20391713",
   "entityTypeBilling": "PJ",
   "legalNameBilling": "Caixa Vida e Previdencia S/A",
-  "contactNameBilling": "Luiz Fernando Reimberg Borba",
+  "contactNameBilling": "Ti Unity",
   "cpfCnpjBilling": "03730204000176",
   "ieBilling": "",
-  "emailBilling": "fernando.reimberg@unitybrindes.com.br",
+  "emailBilling": "ti@unitybrindes.com.br",
   "areaCodeBilling": "11",
-  "phoneBilling": "984037218",
+  "phoneBilling": "20391713",
   "addressIbgeCodeBilling": "",
   "zipCodeBilling": "04583110",
   "streetNameBilling": "Av. Doutor Chucri Zaidan",
@@ -26,10 +26,10 @@
   "addressStateCodeBilling": "SP",
   "entityTypeShipping": "PJ",
   "legalNameShipping": "Caixa Vida e Previdencia S/A",
-  "contactNameShipping": "Luiz Fernando Reimberg Borba",
+  "contactNameShipping": "Ti Unity",
   "cpfCnpjShipping": "03730204000176",
   "ieShipping": "",
-  "emailShipping": "fernando.reimberg@unitybrindes.com.br",
+  "emailShipping": "ti@unitybrindes.com.br",
   "areaCodeShipping": "11",
   "phoneShipping": "20391713",
   "addressIbgeCodeShipping": "",
@@ -42,55 +42,55 @@
   "addressStateCodeShipping": "SP",
   "products": [
     {
-      "chavePro": "010897",
-      "codPro": "873N-CXP-PRE",
-      "descrPro": "Chaveiro abridor de garrafa ",
-      "descrProCor": "AZUL",
-      "descrProTam": "",
-      "quantityPro": 50,
-      "unitPriceTablePro": 2.29,
-      "unitPricePro": 3.98,
-      "totalServiceAmount": 84.5,
-      "totalProductAmount": 199,
-      "personals": [
-        {
-          "chavePersonal": "1125",
-          "descrWebPersonal": "Personalização laser",
-          "quantityPersonal": 50,
-          "unitPricePersonal": "1.69",
-          "totalPersonalAmount": 84.5
-        }
-      ]
-    },
-    {
       "chavePro": "010898",
       "codPro": "2427-CXP-PRE",
       "descrPro": "Espelho de bolsa redondo com escova",
       "descrProCor": "PRATA",
       "descrProTam": "",
-      "quantityPro": 50,
+      "quantityPro": 1,
       "unitPriceTablePro": 5.44,
-      "unitPricePro": 7.24,
-      "totalServiceAmount": 90,
-      "totalProductAmount": 362,
+      "unitPricePro": 78.36,
+      "totalServiceAmount": 2.92,
+      "totalProductAmount": 78.36,
       "personals": [
         {
           "chavePersonal": "1099",
           "descrWebPersonal": "Personalização Silk Screen 1 cor",
-          "quantityPersonal": 50,
-          "unitPricePersonal": "1.80",
-          "totalPersonalAmount": 90
+          "quantityPersonal": 1,
+          "unitPricePersonal": "2.92",
+          "totalPersonalAmount": 2.92
+        }
+      ]
+    },
+    {
+      "chavePro": "010900",
+      "codPro": "92715-CXP-PRE",
+      "descrPro": "Bolsa de cosmeticos",
+      "descrProCor": "AZUL",
+      "descrProTam": "",
+      "quantityPro": 30,
+      "unitPriceTablePro": 21.26,
+      "unitPricePro": 24.860000000000003,
+      "totalServiceAmount": 108,
+      "totalProductAmount": 745.8000000000001,
+      "personals": [
+        {
+          "chavePersonal": "1108",
+          "descrWebPersonal": "Gravação silk screen 1 cor.",
+          "quantityPersonal": 30,
+          "unitPricePersonal": "3.60",
+          "totalPersonalAmount": 108
         }
       ]
     }
   ],
   "paymentMethod": "Boleto",
   "numberOfInstallments": "1",
-  "totalProductsAmount": "561.00",
+  "totalProductsAmount": "824.16",
   "totalDiscountAmount": "0.00",
   "totalShippingAmount": "18.24",
   "totalInterestAmount": "0.00",
-  "orderTotalAmount": "579.24",
+  "orderTotalAmount": "842.40",
   "totalTaxAmount": "0",
   "paymentStatus": "PENDENTE",
   "orderStatus": "Aguardando aprovação",

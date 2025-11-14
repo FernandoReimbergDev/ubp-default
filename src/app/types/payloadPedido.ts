@@ -20,7 +20,7 @@ export type Address = {
 
 export type UserShape = {
   id?: string | number;
-  userId?: string | number;
+  userId?: string | number | undefined;
   entityType?: "PF" | "PJ" | string;
   legalName?: string;
   fullName?: string;
@@ -38,7 +38,7 @@ export type UserShape = {
 export interface OrderPayload {
   // Basic info
   storeId: string;
-  userId: number;
+  userId: string | number | undefined;
 
   // User info
   entityType: string;
@@ -49,6 +49,27 @@ export interface OrderPayload {
   email: string;
   areaCode: string;
   phone: string;
+
+  // Products info
+  products: {
+    chavePro: string;
+    codPro: string;
+    descrPro: string;
+    descrProCor: string;
+    descrProTam: string;
+    quantityPro: string;
+    unitPriceTablePro: string;
+    unitPricePro: string;
+    totalServiceAmount: string;
+    totalProductAmount: string;
+    personals: {
+      chavePersonal: string;
+      descrWebPersonal: string;
+      quantityPersonal: string;
+      unitPricePersonal: string;
+      totalPersonalAmount: string;
+    }[];
+  }[];
 
   // Billing info
   entityTypeBilling: string;

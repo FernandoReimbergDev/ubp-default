@@ -32,9 +32,27 @@ export function CartGuard({ children, allowEmptyWithPayload = false }: CartGuard
       return;
     }
 
+    // Se allowEmptyWithPayload está ativo, SEMPRE verifica orderNumber primeiro
+    // Isso garante que mesmo se o carrinho foi limpo, ainda permite acesso se houver orderNumber
+    if (allowEmptyWithPayload) {
+      try {
+        const hasOrderNumber = Cookies.get("orderNumber");
+        if (hasOrderNumber) {
+          // Tem orderNumber, permite acesso mesmo com carrinho vazio
+          // Reseta os flags para evitar redirecionamento
+          hadItemsBefore.current = false;
+          hasRedirected.current = false;
+          return;
+        }
+      } catch (error) {
+        console.error("Erro ao verificar orderNumber:", error);
+      }
+    }
+
     // Primeira verificação após carrinho estar pronto
     if (!initialCheckComplete.current) {
       initialCheckComplete.current = true;
+
       // Marca se tinha itens na primeira verificação
       hadItemsBefore.current = cart.length > 0;
       // NÃO redireciona na primeira verificação, mesmo se vazio
@@ -57,22 +75,7 @@ export function CartGuard({ children, allowEmptyWithPayload = false }: CartGuard
       return;
     }
 
-    // Tinha itens antes e agora está vazio (foi limpo)
-    // Verifica se pode permitir acesso com orderNumber (pedido já cadastrado)
-    if (allowEmptyWithPayload) {
-      try {
-        const hasOrderNumber = Cookies.get("orderNumber");
-
-        if (hasOrderNumber) {
-          // Tem orderNumber, permite acesso mesmo com carrinho vazio (pedido já foi cadastrado)
-          return;
-        }
-      } catch (error) {
-        console.error("Erro ao verificar orderNumber:", error);
-      }
-    }
-
-    // Tinha itens, agora está vazio, e não tem payload (se necessário)
+    // Tinha itens, agora está vazio, e não tem orderNumber (se allowEmptyWithPayload)
     // Redireciona apenas uma vez
     if (!hasRedirected.current) {
       hasRedirected.current = true;

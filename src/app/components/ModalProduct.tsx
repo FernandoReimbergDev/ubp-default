@@ -10,6 +10,7 @@ import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { ZoomProduct } from "./ZoomProduct";
 import type { CartItemInput } from "../types/cart";
+import { Spinner } from "./Spinner";
 
 // ===== Tipos utilitários (ajuste os imports conforme seu projeto) =====
 export type PersonalizacaoPreco = {
@@ -865,7 +866,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
           </button>
 
           <form
-            className="flex flex-col items-start w-full gap-2 py-2"
+            className="flex flex-col items-start w-full gap-2 py-2 relative"
             onSubmit={(e) => {
               e.preventDefault();
               handleAddToCart();
@@ -1029,6 +1030,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 >
                   <Plus size={18} />
                 </button>
+                {loading && isControlledStock && <Spinner />}
               </div>
             </div>
 
@@ -1072,9 +1074,6 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               </div>
             </div>
 
-            {loading && isControlledStock && (
-              <span className="text-xs opacity-70 select-none pointer-events-none">Consultando estoque...</span>
-            )}
             {(() => {
               if (!isControlledStock || !currentStock) return null;
               const availableNum = toNumberBR(currentStock.quantidadeSaldo);
@@ -1086,7 +1085,7 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
               if (totalRequested > available) {
                 return (
                   <span className="text-red-500 text-xs">
-                    Quantidade disponível (compartilhado): {available}. No carrinho: {quantityInCart}. Solicitado:{" "}
+                    Quantidade disponível: {available}. <br /> No carrinho: {quantityInCart}. <br /> Solicitado:{" "}
                     {requestedQty}
                   </span>
                 );
@@ -1095,9 +1094,13 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
             })()}
             {QtdMsg && <span className="text-red-500 text-sm">Digite uma quantidade válida para prosseguir</span>}
             {!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro) && Number(quantity) !== 0 && (
-              <span className="text-red-500 text-sm">
+              <span className="text-orange-500 text-xs italic">
                 Esse produto é vendido na quantidade mínima de {Number(ProductData.qtdMinPro).toFixed(0)}
               </span>
+            )}
+
+            {!hasGravacao && (
+              <span className="text-orange-500 text-xs italic">Selecione uma personalização para prosseguir</span>
             )}
 
             {isOutOfStock ? (
@@ -1109,22 +1112,24 @@ export function ModalProduto({ ProductData, onClose }: ModalProps) {
                 Avise-me quando chegar!
               </Button>
             ) : (
-              <Button
-                type="submit"
-                disabled={
-                  loading ||
-                  !quantity ||
-                  Number(quantity) === 0 ||
-                  (!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro)) ||
-                  (ProductData.gruposPersonalizacoes &&
-                    ProductData.gruposPersonalizacoes.length > 0 &&
-                    !hasAnyPersonalization(selectedPersonalizations)) ||
-                  hasInvalidStock
-                }
-                className="disabled:bg-gray-500 flex gap-2 items-center justify-center cursor-pointer select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
-              >
-                <ShoppingCart size={18} /> Comprar
-              </Button>
+              <>
+                <Button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    !quantity ||
+                    Number(quantity) === 0 ||
+                    (!isAmostra && Number(quantity) < Number(ProductData.qtdMinPro)) ||
+                    (ProductData.gruposPersonalizacoes &&
+                      ProductData.gruposPersonalizacoes.length > 0 &&
+                      !hasAnyPersonalization(selectedPersonalizations)) ||
+                    hasInvalidStock
+                  }
+                  className="disabled:bg-gray-500 flex gap-2 items-center justify-center cursor-pointer select-none bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm lg:text-base px-2 py-2 lg:px-4"
+                >
+                  <ShoppingCart size={18} /> Comprar
+                </Button>
+              </>
             )}
           </form>
 

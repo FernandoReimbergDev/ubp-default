@@ -9,6 +9,7 @@ import type { PrecoProduto, ProdutoEstoqueItem } from "../types/responseTypes";
 import { formatPrice } from "../utils/formatter";
 import { Button } from "./Button";
 import { TitleSection } from "./TitleSection";
+import { Spinner } from "./Spinner";
 
 interface ModalProps {
   handleClick?: (event: React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>) => void;
@@ -624,12 +625,8 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                           >
                             <Plus size={16} />
                           </button>
+                          {loadingByItem[product.id] && <Spinner />}
                         </div>
-                        {loadingByItem[product.id] && (
-                          <span className="text-xs opacity-70 select-none pointer-events-none">
-                            Consultando estoque...
-                          </span>
-                        )}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm">
@@ -679,7 +676,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                         if (aggregatedRequested > available) {
                           return (
                             <span className="text-red-500 text-xs">
-                              Quantidade disponível (compartilhado): {available}. No carrinho: {aggregatedRequested}
+                              Quantidade disponível: {available}. <br /> No carrinho: {aggregatedRequested}
                             </span>
                           );
                         }
