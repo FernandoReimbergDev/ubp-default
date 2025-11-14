@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRouter } from "next/navigation";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { AuthContextType, UsuarioContext, UsuarioResponse } from "../types/responseTypes";
@@ -486,79 +486,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const fetchOrderNumber = useCallback(
-    async (signal?: AbortSignal): Promise<string | null> => {
-      setLoading(true);
-      try {
-        cleanOrderNumber();
+  const fetchOrderNumber = useCallback(async (signal?: AbortSignal): Promise<string | null> => {
+    setLoading(true);
+    try {
+      cleanOrderNumber();
 
-        const userIdFromCookie = getUserIdFromCookie();
+      const userIdFromCookie = getUserIdFromCookie();
 
-        if (!userIdFromCookie) {
-          throw new Error("Usuário não encontrado");
-        }
-
-        const res = await fetch("/api/send-request", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            reqMethod: "POST",
-            reqEndpoint: "/order",
-            reqHeaders: {
-              "X-Environment": "HOMOLOGACAO",
-              userId: userIdFromCookie,
-            },
-          }),
-          signal,
-        });
-
-        const result = await res.json();
-
-        if (!res.ok) {
-          throw new Error(result.message || "Erro ao buscar orderNumber");
-        }
-        if (!result?.data?.success) {
-          throw new Error(result?.data?.message || "Erro ao solicitar um novo orderNumber");
-        }
-
-        // Extrai o número do pedido diretamente da resposta
-        const orderId = result?.data?.result?.orderId;
-        if (!orderId) {
-          throw new Error("Número do pedido não retornado pela API");
-        }
-
-        // Normaliza e converte para string
-        let orderNumberStr: string | null = null;
-        if (typeof orderId === "string" || typeof orderId === "number") {
-          orderNumberStr = String(orderId);
-        } else if (orderId && typeof orderId === "object") {
-          // Tenta extrair orderId do objeto
-          orderNumberStr = (orderId as any).orderId || String(orderId);
-        }
-
-        if (!orderNumberStr) {
-          throw new Error("Não foi possível derivar o número do pedido");
-        }
-
-        // Atualiza estado e cookie com o número obtido
-        normatizeOrderNumber(orderNumberStr);
-        setOrderNumberInCookie(orderNumberStr);
-
-        return orderNumberStr;
-      } catch (error: unknown) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return null;
-        }
-        console.error("error ao requisitar numero de pedido para api externa", error);
-        throw error; // Re-lança o erro para que o chamador possa tratá-lo
-      } finally {
-        setLoading(false);
+      if (!userIdFromCookie) {
+        throw new Error("Usuário não encontrado");
       }
-    },
-    []
-  );
+
+      const res = await fetch("/api/send-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reqMethod: "POST",
+          reqEndpoint: "/order",
+          reqHeaders: {
+            "X-Environment": "HOMOLOGACAO",
+            userId: userIdFromCookie,
+          },
+        }),
+        signal,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.message || "Erro ao buscar orderNumber");
+      }
+      if (!result?.data?.success) {
+        throw new Error(result?.data?.message || "Erro ao solicitar um novo orderNumber");
+      }
+
+      // Extrai o número do pedido diretamente da resposta
+      const orderId = result?.data?.result?.orderId;
+      if (!orderId) {
+        throw new Error("Número do pedido não retornado pela API");
+      }
+
+      // Normaliza e converte para string
+      let orderNumberStr: string | null = null;
+      if (typeof orderId === "string" || typeof orderId === "number") {
+        orderNumberStr = String(orderId);
+      } else if (orderId && typeof orderId === "object") {
+        // Tenta extrair orderId do objeto
+        orderNumberStr = (orderId as any).orderId || String(orderId);
+      }
+
+      if (!orderNumberStr) {
+        throw new Error("Não foi possível derivar o número do pedido");
+      }
+
+      // Atualiza estado e cookie com o número obtido
+      normatizeOrderNumber(orderNumberStr);
+      setOrderNumberInCookie(orderNumberStr);
+
+      return orderNumberStr;
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return null;
+      }
+      console.error("error ao requisitar numero de pedido para api externa", error);
+      throw error; // Re-lança o erro para que o chamador possa tratá-lo
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const fetchPayloadStorage = useCallback(
     async (payload: unknown, method: string) => {
