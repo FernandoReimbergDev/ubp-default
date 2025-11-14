@@ -7,11 +7,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import Link from "next/link";
 import { SkeletonPedido } from "./partials/skeleton";
-import { Resumo } from "@/app/components/Resumo";
 import { useCart } from "@/app/Context/CartContext";
 import { formatCep } from "@/app/services/utils";
+import { formatPrice } from "@/app/utils/formatter";
 import { useAuth } from "@/app/Context/AuthContext";
 import { CartGuard } from "@/app/components/CartGuard";
+import { FileSearch2, ShoppingCart } from "lucide-react";
 
 type EnderecoEntrega = {
   contato_entrega: string;
@@ -41,7 +42,7 @@ export default function PedidoSucesso() {
   const [orderId, setOrderId] = useState<string>("");
   const [pedidoPayload, setPedidoPayload] = useState<PedidoPayload | null>(null);
 
-  // -------- Busca o payload do temp-storage usando jti --------
+  // -------- Busca os dados do payload do temp-storage usando jti --------
   useEffect(() => {
     async function fetchPedido() {
       try {
@@ -51,13 +52,12 @@ export default function PedidoSucesso() {
           setOrderId(savedOrderId);
         }
 
-        // Obtém o jti do token
+        // PRIORIDADE: Busca os dados do temp-storage usando jti
         const jti = await getJti();
         if (!jti) {
           throw new Error("Não foi possível obter o JTI do token");
         }
 
-        // Busca os dados do temp-storage usando send-request
         const response = await fetch("/api/send-request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -87,14 +87,31 @@ export default function PedidoSucesso() {
         }
       } catch (error) {
         console.error("[PedidoSucesso] Erro ao buscar payload do storage:", error);
-        // Não usa localStorage para evitar expor dados sensíveis
-        // Se a API falhar, a página não mostrará os dados do pedido
+        // Se falhar, tenta buscar da API como fallback (se a rota existir)
+        if (orderId) {
+          try {
+            const fallbackResponse = await fetch(`/api/order/${orderId}`);
+            if (fallbackResponse.ok) {
+              const fallbackResult = await fallbackResponse.json();
+              if (fallbackResult.success && fallbackResult.data) {
+                const orderData =
+                  fallbackResult.data?.result?.[0] || fallbackResult.data?.result || fallbackResult.data;
+                if (orderData) {
+                  setPedidoPayload(orderData);
+                }
+              }
+            }
+          } catch (fallbackError) {
+            console.error("[PedidoSucesso] Erro ao buscar da API como fallback:", fallbackError);
+          }
+        }
       } finally {
         setLoading(false);
       }
     }
 
     fetchPedido();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getJti]);
 
   // Logs só quando existir payload
@@ -165,6 +182,114 @@ export default function PedidoSucesso() {
     window.print();
   }
 
+  // Componente ResumoPedido que usa dados fixos do payload
+  function ResumoPedido({ pedidoPayload }: { pedidoPayload: PedidoPayload }) {
+    const totalProducts = Number(pedidoPayload.totalProductsAmount || 0);
+    const totalShipping = Number(pedidoPayload.totalShippingAmount || 0);
+    const totalOrder = Number(pedidoPayload.orderTotalAmount || 0);
+    const products = Array.isArray(pedidoPayload.products) ? pedidoPayload.products : [];
+
+    return (
+      <div className="space-y-4 w-full">
+        <h2 className="flex gap-1 items-center text-lg font-semibold text-primary mt-2 lg:mt-0">
+          <FileSearch2 size={18} />
+          Resumo
+        </h2>
+
+        <div className="w-full flex justify-between items-center">
+          <p>Valor dos Produtos:</p>
+          <span>{formatPrice(totalProducts)}</span>
+        </div>
+
+        <div className="w-full flex justify-between items-center">
+          <p>Valor do Frete:</p>
+          <span>{formatPrice(totalShipping)}</span>
+        </div>
+
+        {totalShipping === 0 && (
+          <p className="text-[11px] text-green-700">* Frete gratuito para compras acima de R$ 1.500,00</p>
+        )}
+
+        <hr className="text-gray-300" />
+
+        <div>
+          <div className="bg-green-300 flex justify-between items-center px-2 py-4">
+            <p className="text-sm">Valor Total:</p>
+            <span>{formatPrice(totalOrder)}</span>
+          </div>
+        </div>
+
+        <hr className="text-gray-300" />
+
+        <h2 className="flex gap-1 items-center text-lg font-semibold text-primary">
+          <ShoppingCart size={18} />
+          Produtos
+        </h2>
+
+        <div className="w-full h-[310px] scrollbar overflow-x-hidden overflow-y-auto flex flex-col justify-start">
+          {products.length > 0 ? (
+            products.map((product: any, index: number) => (
+              <div key={product.chavePro || product.codPro || index} className="w-full">
+                <div className="flex bg-white py-3 px-1 rounded-xl w-full items-start gap-2 relative bg-whiteReference">
+                  <div className="w-16 h-16 overflow-hidden rounded-lg min-w-16 shadow-lg flex justify-center items-center">
+                    <div className="w-[70px] h-[70px] flex items-center justify-center text-[10px] bg-gray-100 text-gray-500">
+                      {product.descrPro || "Produto"}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1 px-2">
+                    <p className="text-xs 2xl:text-sm font-Roboto text-blackReference line-clamp-2 overflow-hidden w-full">
+                      {product.descrPro || "Produto"}
+                    </p>
+
+                    {product.personals && Array.isArray(product.personals) && product.personals.length > 0 && (
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] uppercase bg-blue-600 text-white px-2 py-0.5 rounded">
+                          Personalizado
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-2 text-xs">
+                      <p className="text-gray-500">Quantidade:</p>
+                      <p>{product.quantityPro || product.quantity || 1}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      valor produto: {formatPrice(Number(product.unitPricePro || product.unitPriceEffective || 0))}
+                    </div>
+
+                    {product.descrProCor && (
+                      <div className="flex items-start gap-2 text-xs">
+                        <p className="text-gray-500">Cor:</p>
+                        <p>{product.descrProCor}</p>
+                      </div>
+                    )}
+
+                    {product.descrProTam && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <p className="text-gray-500">Tamanho:</p>
+                        <p>{product.descrProTam}</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 text-xs">
+                      Subtotal: {formatPrice(Number(product.totalProductAmount || product.subtotal || 0))}
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="border w-full text-gray-300" />
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-8">Nenhum produto encontrado</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (loading) return <SkeletonPedido />;
 
   return (
@@ -223,8 +348,10 @@ export default function PedidoSucesso() {
             <div className="grid md:grid-cols-12 gap-6">
               <section className="md:col-span-7">
                 <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 h-full">
-                  {entrega && (
-                    <Resumo delivery={{ stateCode: entrega.uf, city: entrega.municipio, zipCode: entrega.cep }} />
+                  {pedidoPayload ? (
+                    <ResumoPedido pedidoPayload={pedidoPayload} />
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">Carregando dados do pedido...</div>
                   )}
                 </div>
               </section>
