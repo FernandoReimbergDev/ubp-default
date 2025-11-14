@@ -33,83 +33,79 @@ type PedidoPayload = {
 } & Record<string, any>;
 
 export default function PedidoSucesso() {
-  const { hasAnyRole } = useAuth();
+  const { hasAnyRole, getJti } = useAuth();
   const router = useRouter();
   const { clearCart } = useCart();
   const [entrega, setEntrega] = useState<EnderecoEntrega | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState<string>("");
+  const [pedidoPayload, setPedidoPayload] = useState<PedidoPayload | null>(null);
 
-  // -------- Hook seguro para restaurar o payload --------
-  function usePedidoPayload() {
-    const [pedidoPayload, setPedidoPayload] = useState<PedidoPayload | null>(null);
-    const [ready, setReady] = useState(false);
-
-    useEffect(() => {
-      (function restore() {
-        try {
-          // 1) Fonte da verdade: localStorage
-          const ls = typeof window !== "undefined" ? localStorage.getItem("pedidoPayload") : null;
-          if (ls) {
-            try {
-              setPedidoPayload(JSON.parse(ls));
-            } catch {}
-            return;
-          }
-          // 2) Fallback: se existir cookie legado, migra para LS e remove cookie
-          const raw = Cookies.get("pedidoPayload");
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw);
-              setPedidoPayload(parsed);
-              try {
-                localStorage.setItem("pedidoPayload", JSON.stringify(parsed));
-              } catch {}
-              try {
-                Cookies.remove("pedidoPayload", { path: "/" });
-              } catch {}
-            } catch (e) {
-              console.error("Falha ao parsear cookie pedidoPayload:", e);
-            }
-          }
-        } finally {
-          setReady(true);
-        }
-      })();
-    }, []);
-
-    return { pedidoPayload, ready };
-  }
-
-  const { pedidoPayload } = usePedidoPayload();
-
-  // Define o número do pedido primeiro
+  // -------- Busca o payload do temp-storage usando jti --------
   useEffect(() => {
-    try {
-      const saved = Cookies.get("orderNumber");
-      if (saved) setOrderId(saved);
-      else setOrderId(typeof window !== "undefined" ? `CT-${Date.now().toString(36).toUpperCase()}` : "CT-XXXXXX");
-    } catch {
-      setOrderId(typeof window !== "undefined" ? `CT-${Date.now().toString(36).toUpperCase()}` : "CT-XXXXXX");
+    async function fetchPedido() {
+      try {
+        // Busca o orderNumber do cookie para exibir na página
+        const savedOrderId = Cookies.get("orderNumber");
+        if (savedOrderId) {
+          setOrderId(savedOrderId);
+        }
+
+        // Obtém o jti do token
+        const jti = await getJti();
+        if (!jti) {
+          throw new Error("Não foi possível obter o JTI do token");
+        }
+
+        // Busca os dados do temp-storage usando send-request
+        const response = await fetch("/api/send-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reqMethod: "GET",
+            reqEndpoint: "/temp-storage",
+            reqHeaders: {
+              "X-Environment": "HOMOLOGACAO",
+              storageId: jti,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Falha ao buscar dados do temp-storage interno");
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.data?.success) {
+          throw new Error(data.data?.message || "Erro ao buscar dados do temp-storage externo");
+        }
+
+        // Extrai o conteúdo do payload
+        const payloadContent = data.data.result?.content;
+        if (payloadContent) {
+          setPedidoPayload(payloadContent);
+        }
+      } catch (error) {
+        console.error("[PedidoSucesso] Erro ao buscar payload do storage:", error);
+        // Não usa localStorage para evitar expor dados sensíveis
+        // Se a API falhar, a página não mostrará os dados do pedido
+      } finally {
+        setLoading(false);
+      }
     }
-  }, []);
+
+    fetchPedido();
+  }, [getJti]);
 
   // Logs só quando existir payload
   useEffect(() => {
     if (!pedidoPayload) return;
   }, [pedidoPayload]);
 
-  // Carrega dados de entrega com fallbacks
+  // Carrega dados de entrega do pedidoPayload
   useEffect(() => {
     try {
-      // 1) Fonte principal: localStorage
-      const entregaStorage = typeof window !== "undefined" ? localStorage.getItem("dadosEntrega") : null;
-      if (entregaStorage) {
-        setEntrega(JSON.parse(entregaStorage));
-        return;
-      }
-
-      // 2) Fallback: derivar do pedidoPayload (shipping > billing)
+      // Deriva do pedidoPayload (shipping > billing)
       if (pedidoPayload) {
         const pick = (...vals: any[]) => {
           for (const v of vals) if (v != null && String(v).trim() !== "") return String(v);
@@ -138,46 +134,10 @@ export default function PedidoSucesso() {
         const cityOk = Boolean(entregaDerivada.municipio);
         if (zipOk && ufOk && cityOk) {
           setEntrega(entregaDerivada);
-          return;
         }
-      }
-
-      // 3) Último fallback: cookie 'cliente'
-      try {
-        const raw = Cookies.get("cliente");
-        if (raw) {
-          const c = JSON.parse(raw);
-          const pick = (...vals: any[]) => {
-            for (const v of vals) if (v != null && String(v).trim() !== "") return String(v);
-            return "";
-          };
-          const digits = (s: string) => s.replace(/\D+/g, "");
-          const upper = (s: string) => s.toUpperCase();
-
-          const entregaCookie: EnderecoEntrega = {
-            contato_entrega: pick(c.legalName, c.contactName, c.legalNameBilling, c.fullName),
-            logradouro: pick(c.addressStreet, c.streetNameBilling, c.logradouro),
-            numero: pick(c.addressNumber, c.streetNumberBilling, c.numero),
-            bairro: pick(c.addressNeighborhood, c.addressNeighborhoodBilling, c.bairro),
-            municipio: pick(c.addressCity, c.addressCityBilling, c.municipio, c.city),
-            uf: upper(pick(c.addressState, c.addressStateCodeBilling, c.uf, c.stateCode)),
-            cep: digits(pick(c.addressZip, c.zipCodeBilling, c.cep, c.zipcode)),
-          };
-          const zipOk = entregaCookie.cep?.length === 8;
-          const ufOk = Boolean(entregaCookie.uf);
-          const cityOk = Boolean(entregaCookie.municipio);
-          if (zipOk && ufOk && cityOk) {
-            setEntrega(entregaCookie);
-            return;
-          }
-        }
-      } catch {
-        /* ignore */
       }
     } catch (e) {
       console.error("Falha ao preparar dados de entrega:", e);
-    } finally {
-      setLoading(false);
     }
   }, [pedidoPayload]);
 

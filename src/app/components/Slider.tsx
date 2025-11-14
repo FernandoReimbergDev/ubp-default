@@ -207,6 +207,7 @@ export const Slider = () => {
               <button
                 className="flex items-center justify-center w-[120px] lg:[150px] min-h-8 md:min-h-[40px] gap-2 mt-4 text-xs  bg-green-500 hover:bg-green-400 rounded-md text-white cursor-pointer"
                 name={String(currentProduct.id)}
+                disabled
                 onClick={() => handleButtonBuySlider(currentProduct)}
               >
                 <ShoppingCart size={20} />

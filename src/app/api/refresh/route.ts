@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify, SignJWT } from "jose";
 import { JWT_SECRET, JWT_REFRESH_SECRET } from "../../utils/env";
 import { decrypt } from "../../services/cryptoCookie";
+import { randomUUID } from "crypto";
 
 export async function GET(req: NextRequest) {
   const encryptedToken = req.cookies.get("refreshToken")?.value;
@@ -18,6 +19,22 @@ export async function GET(req: NextRequest) {
     const refreshSecret = new TextEncoder().encode(JWT_REFRESH_SECRET);
     const { payload } = await jwtVerify(decrypted, refreshSecret);
 
+    // Tenta extrair o jti do token atual para manter o mesmo durante a sessão
+    let jti: string;
+    try {
+      const currentToken = req.cookies.get("auth")?.value;
+      if (currentToken) {
+        const secret = new TextEncoder().encode(JWT_SECRET);
+        const { payload: currentPayload } = await jwtVerify(currentToken, secret);
+        jti = (currentPayload.jti as string) || randomUUID();
+      } else {
+        jti = randomUUID();
+      }
+    } catch {
+      // Se não conseguir extrair do token atual, gera um novo
+      jti = randomUUID();
+    }
+
     // Gera novo accessToken leve para o middleware
     const secret = new TextEncoder().encode(JWT_SECRET);
     const newAccessToken = await new SignJWT({
@@ -25,6 +42,7 @@ export async function GET(req: NextRequest) {
       name: typeof payload.firstName === "string" ? payload.firstName : "Usuário",
       iss: "unitybrindes.com.br",
       role: payload.role || [], // Incluir roles do refresh token
+      jti, // Reutiliza o mesmo JTI da sessão atual
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime("15m")

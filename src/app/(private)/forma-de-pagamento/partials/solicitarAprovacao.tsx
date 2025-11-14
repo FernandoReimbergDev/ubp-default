@@ -7,31 +7,32 @@ import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Address, UserShape } from "@/app/types/payloadPedido";
 
 export function SolicitarAprovacao() {
-  const { hasAnyRole, fetchOrderNumber, orderNumber } = useAuth();
+  const { hasAnyRole, fetchOrderNumber, getJti } = useAuth();
   const { cart, clearCart } = useCart();
   const isAdmin = hasAnyRole(["Administrador"]);
   const router = useRouter();
-  const { fetchGetAddress } = useCart();
   const [status, setStatus] = useState<"idle" | "confirm" | "approved" | "rejected" | "requested" | "cancelled">(
     "idle"
   );
+  const [storedPayload, setStoredPayload] = useState<any>(null);
+
   const emailAprovadores = [
     "giovanna.silva@caixavidaeprevidencia.com.br",
     "caroline.batista@caixavidaeprevidencia.com.br",
   ];
+  // const emailAprovadores = ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"];
+
   const emailAprovadoresUnity = ["ti@unitybrindes.com.br"];
   const [cancelReason, setCancelReason] = useState("");
-  const [user, setUser] = useState<UserShape | null>(null);
   const [freteValido, setFreteValido] = useState(false);
-  const [addressShipping, setAddressShipping] = useState<Address | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [cadastrandoPedido, setCadastrandoPedido] = useState(false);
   const [cadastroError, setCadastroError] = useState<string | null>(null);
 
+  //aguarda o valor do frete ser calculado
   useEffect(() => {
     const id = setInterval(() => {
       try {
@@ -43,208 +44,114 @@ export function SolicitarAprovacao() {
     return () => clearInterval(id);
   }, []);
 
-  // -------- Helpers de cookie --------
-  const getClienteCookie = useCallback((): any | null => {
-    try {
-      const raw = Cookies.get("cliente");
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const getUserIdFromCookie = useCallback((): string => {
-    const parsed = getClienteCookie();
-    const id = parsed?.id ?? parsed?.userId;
-    return id ? String(id) : "";
-  }, [getClienteCookie]);
-
-  useEffect(() => {
-    fetchGetAddress(Number(getUserIdFromCookie()));
-  }, [fetchGetAddress, getUserIdFromCookie]);
-
-  const fetchUser = useCallback(
-    async (signal?: AbortSignal) => {
-      const userIdFromCookie = getUserIdFromCookie();
-      if (!userIdFromCookie) return;
-
-      try {
-        const res = await fetch("/api/send-request", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reqMethod: "GET",
-            reqEndpoint: "/list-users",
-            reqHeaders: {
-              "X-Environment": "HOMOLOGACAO",
-              userIsActive: "1",
-              userIsDeleted: "0",
-              userId: userIdFromCookie,
-            },
-          }),
-          signal,
-        });
-
-        const result = await res.json();
-        if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados do usuário");
-        setUser(result?.data?.result?.[0]);
-      } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error("Erro ao requisitar dados do usuário para API externa:", err);
-      }
-    },
-    [getUserIdFromCookie]
-  );
-
-  const fetchShippingTemp = useCallback(
-    async (signal?: AbortSignal) => {
-      const userIdFromCookie = getUserIdFromCookie();
-      if (!userIdFromCookie) return;
-      try {
-        const res = await fetch("/api/send-request", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reqMethod: "GET",
-            reqEndpoint: "/temp-address-shipping",
-            reqHeaders: {
-              "X-Environment": "HOMOLOGACAO",
-              userId: userIdFromCookie,
-            },
-          }),
-          signal,
-        });
-
-        const result = await res.json();
-        if (!res.ok) throw new Error(result?.message || "Erro ao buscar dados de entrega temp");
-        setAddressShipping(result?.data?.result);
-      } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error("Erro ao requisitar dados de entrega temp para API externa:", err);
-      }
-    },
-    [getUserIdFromCookie]
-  );
-
-  useEffect(() => {
-    const ac = new AbortController();
-    fetchUser(ac.signal);
-    fetchShippingTemp(ac.signal);
-    return () => ac.abort();
-  }, [fetchUser, fetchShippingTemp]);
-
-  // -------- Totais do carrinho --------
-  // Os preços já estão recalculados no carrinho quando a quantidade muda
-  // Basta somar os subtotais de cada item
-  const totalValue = useMemo(() => {
-    return cart.reduce((total, product) => {
-      return total + (product.subtotal || 0);
-    }, 0);
-  }, [cart]);
-
+  // Pega o endereço de entrega do storage para consultar o frete no resumo
   const delivery = useMemo(() => {
-    const zipDigits = (addressShipping?.zipCodeShipping || "").replace(/\D/g, "");
+    if (!storedPayload) {
+      return { stateCode: "", city: "", zipCode: "" };
+    }
+    const zipDigits = (storedPayload.zipCodeShipping || "").replace(/\D/g, "");
     return {
-      stateCode: (addressShipping?.addressStateCodeShipping || "").toUpperCase(),
-      city: addressShipping?.addressCityShipping || "",
+      stateCode: (storedPayload.addressStateCodeShipping || "").toUpperCase(),
+      city: storedPayload.addressCityShipping || "",
       zipCode: zipDigits,
     };
-  }, [addressShipping]);
+  }, [storedPayload]);
 
+  // Pega o valor do frete do cookie
   const frete = Number(Cookies.get("valorFrete") || "0") || 0;
-  const payload: any = useMemo(
-    () => ({
-      storeId: "32",
-      userId: Number(getUserIdFromCookie()),
-      entityType: user?.entityType || "PF",
-      legalName: user?.legalName || user?.fullName || "",
-      cpfCnpj: user?.cpfCnpj || addressShipping?.cpfCnpjShipping || "",
-      ie: user?.ie || "",
-      email: user?.email || addressShipping?.emailShipping || "",
-      areaCode: user?.phone?.areaCode || addressShipping?.areaCodeShipping || "",
-      phone: user?.phone?.number || addressShipping?.phoneShipping || "",
 
-      entityTypeBilling: "PJ",
-      legalNameBilling: "Caixa Vida e Previdencia S/A",
-      contactNameBilling: user?.fullName || "",
-      cpfCnpjBilling: "03730204000176",
-      ieBilling: user?.ie || "",
-      emailBilling: user?.email || addressShipping?.emailShipping || "",
-      areaCodeBilling: user?.phone?.areaCode || addressShipping?.areaCodeShipping || "",
-      phoneBilling: user?.phone?.number || addressShipping?.phoneShipping || "",
-      addressIbgeCodeBilling: "",
-      zipCodeBilling: "04583110",
-      streetNameBilling: "Av. Doutor Chucri Zaidan",
-      streetNumberBilling: "246",
-      addressLine2Billing: "12º andar",
-      addressNeighborhoodBilling: "Vila Cordeiro",
-      addressCityBilling: "São Paulo",
-      addressStateCodeBilling: "SP",
+  // Busca os dados do temp-storage
+  const fetchPayloadFromStorage = useCallback(async () => {
+    try {
+      const jti = await getJti();
+      if (!jti) {
+        throw new Error("Não foi possível obter o JTI do token");
+      }
 
-      entityTypeShipping: addressShipping?.entityTypeShipping || "PJ",
-      legalNameShipping: addressShipping?.legalNameShipping || "",
-      contactNameShipping: addressShipping?.contactNameShipping || user?.fullName || "",
-      cpfCnpjShipping: addressShipping?.cpfCnpjShipping || "",
-      ieShipping: addressShipping?.ieShipping || user?.ie || "",
-      emailShipping: addressShipping?.emailShipping || user?.email || "",
-      areaCodeShipping: addressShipping?.areaCodeShipping || user?.phone?.areaCode || "",
-      phoneShipping: addressShipping?.phoneShipping || user?.phone?.number || "",
-      addressIbgeCodeShipping: addressShipping?.addressIbgeCodeShipping || "",
-      zipCodeShipping: addressShipping?.zipCodeShipping || "",
-      streetNameShipping: addressShipping?.streetNameShipping || "",
-      streetNumberShipping: addressShipping?.streetNumberShipping || "",
-      addressLine2Shipping: addressShipping?.addressLine2Shipping || "",
-      addressNeighborhoodShipping: addressShipping?.addressNeighborhoodShipping || "",
-      addressCityShipping: addressShipping?.addressCityShipping || "",
-      addressStateCodeShipping: addressShipping?.addressStateCodeShipping || "",
+      const response = await fetch("/api/send-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reqMethod: "GET",
+          reqEndpoint: "/temp-storage",
+          reqHeaders: {
+            "X-Environment": "HOMOLOGACAO",
+            storageId: jti,
+          },
+        }),
+      });
 
-      products: cart.map((product) => ({
-        chavePro: product.chavePro,
-        codPro: product.codPro,
-        descrPro: product.productName,
-        descrProCor: product.color,
-        descrProTam: product.size || "",
-        quantityPro: product.quantity,
-        unitPriceTablePro: product.unitPriceBase,
-        unitPricePro: product.unitPriceEffective,
-        totalServiceAmount:
-          product.personalizations?.reduce(
-            (total, personalization) => total + personalization.precoUnitario * product.quantity,
-            0
-          ) || 0,
-        totalProductAmount: product.subtotal,
-        personals: product.personalizations?.map((personalization) => ({
-          chavePersonal: personalization.chavePersonal,
-          descrWebPersonal: personalization.descricao,
-          quantityPersonal: product.quantity,
-          unitPricePersonal: Number(personalization.precoUnitario).toFixed(2),
-          totalPersonalAmount: personalization.precoUnitario * product.quantity,
-        })),
+      if (!response.ok) {
+        throw new Error("Falha ao buscar dados do temp-storage");
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.data?.success) {
+        throw new Error(data.data?.message || "Erro ao buscar dados do temp-storage");
+      }
+
+      setStoredPayload(data.data.result.content);
+    } catch (error) {
+      console.error("[SolicitarAprovacao] Erro ao buscar payload do storage:", error);
+      setStoredPayload(null);
+    }
+  }, [getJti]);
+
+  useEffect(() => {
+    fetchPayloadFromStorage();
+  }, [fetchPayloadFromStorage]);
+
+  // Monta o payload usando os dados do storage, atualizando apenas produtos do carrinho
+  const payload: any = useMemo(() => {
+    // Se não há dados do storage, retorna null (aguarda carregamento)
+    if (!storedPayload) {
+      return null;
+    }
+
+    // Atualiza os produtos do carrinho (podem ter mudado)
+    const updatedProducts = cart.map((product) => ({
+      chavePro: product.chavePro,
+      codPro: product.codPro,
+      descrPro: product.productName,
+      descrProCor: product.color,
+      descrProTam: product.size || "",
+      quantityPro: product.quantity,
+      unitPriceTablePro: product.unitPriceBase,
+      unitPricePro: product.unitPriceEffective,
+      totalServiceAmount:
+        product.personalizations?.reduce(
+          (total, personalization) => total + personalization.precoUnitario * product.quantity,
+          0
+        ) || 0,
+      totalProductAmount: product.subtotal,
+      personals: product.personalizations?.map((personalization) => ({
+        chavePersonal: personalization.chavePersonal,
+        descrWebPersonal: personalization.descricao,
+        quantityPersonal: product.quantity,
+        unitPricePersonal: Number(personalization.precoUnitario).toFixed(2),
+        totalPersonalAmount: personalization.precoUnitario * product.quantity,
       })),
+    }));
 
-      paymentMethod: "Boleto",
-      numberOfInstallments: "1",
-      totalProductsAmount: totalValue.toFixed(2),
-      totalDiscountAmount: "0.00",
-      totalShippingAmount: frete.toFixed(2),
-      totalInterestAmount: "0.00",
-      orderTotalAmount: (totalValue + frete).toFixed(2),
-      totalTaxAmount: "0",
-      paymentStatus: "PENDENTE",
+    // Recalcula totais baseado nos produtos atualizados
+    const newTotalValue = updatedProducts.reduce((sum, p) => sum + (p.totalProductAmount || 0), 0);
+    const newFrete = frete || Number(storedPayload.totalShippingAmount || "0") || 0;
+
+    // Retorna o payload do storage com produtos e totais atualizados
+    return {
+      ...storedPayload,
+      products: updatedProducts,
+      totalProductsAmount: newTotalValue.toFixed(2),
+      totalShippingAmount: newFrete.toFixed(2),
+      orderTotalAmount: (newTotalValue + newFrete).toFixed(2),
       orderStatus: isAdmin ? "Aprovado" : "Aguardando aprovação",
-      expectedDeliveryDate: "",
-      deliveryDate: "",
-      paymentDate: "",
-    }),
-    [getUserIdFromCookie, user, addressShipping, totalValue, frete, isAdmin, cart]
-  );
+    };
+  }, [storedPayload, cart, frete, isAdmin]);
 
   // -------- Função para cadastrar pedido na API --------
   const fetchCadastroPedido = useCallback(
-    async (signal?: AbortSignal) => {
-      const currentOrderId = orderNumber || Cookies.get("orderNumber") || undefined;
-      if (!payload || !currentOrderId) {
+    async (orderId: string, signal?: AbortSignal) => {
+      if (!payload || !orderId) {
         throw new Error("Dados do pedido ou número do pedido não encontrados");
       }
 
@@ -254,7 +161,7 @@ export function SolicitarAprovacao() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             reqMethod: "POST",
-            reqEndpoint: `/order/${currentOrderId}`,
+            reqEndpoint: `/order/${orderId}`,
             reqHeaders: {
               "X-Environment": "HOMOLOGACAO",
               ...payload,
@@ -264,12 +171,15 @@ export function SolicitarAprovacao() {
         });
 
         const result = await res.json();
+
+        console.log("result", result);
         if (!res.ok) {
           throw new Error(result?.message || "Erro ao cadastrar pedido na base de dados");
         }
+        if (!result?.data?.success) {
+          throw new Error(result?.data?.message || "Erro ao cadastrar pedido na base de dados");
+        }
 
-        // Usa sempre o número do pedido que foi recebido do fetchOrderNumber
-        // Não atualiza o cookie, mantém o número original
         return result;
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -278,7 +188,7 @@ export function SolicitarAprovacao() {
         throw err;
       }
     },
-    [payload, orderNumber]
+    [payload]
   );
 
   // -------- Ações --------
@@ -288,31 +198,17 @@ export function SolicitarAprovacao() {
     setCadastroError(null);
 
     try {
-      // Salva payload no localStorage
-      try {
-        localStorage.setItem("pedidoPayload", JSON.stringify(payload));
-      } catch {}
-      try {
-        Cookies.remove("pedidoPayload", { path: "/" });
-      } catch {}
-
-      // Busca o número do pedido
-      await fetchOrderNumber();
-
-      // Aguarda um pouco para garantir que o orderNumber foi atualizado
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Tenta obter o orderNumber novamente
-      const currentOrderId = orderNumber || Cookies.get("orderNumber");
+      // Busca o número do pedido e aguarda o resultado diretamente
+      const currentOrderId = await fetchOrderNumber();
       if (!currentOrderId) {
         throw new Error("Não foi possível obter o número do pedido");
       }
 
-      // Cadastra o pedido na API
-      await fetchCadastroPedido();
+      // Cadastra o pedido na API usando o número obtido diretamente
+      await fetchCadastroPedido(currentOrderId);
 
-      // Lê o orderNumber atualizado do cookie novamente antes de enviar o email
-      const orderIdForEmail = Cookies.get("orderNumber") || currentOrderId;
+      // Usa o número do pedido obtido (já está salvo no cookie)
+      const orderIdForEmail = currentOrderId;
 
       // Se chegou aqui, tudo deu certo - redireciona
       router.push("/pedido");
@@ -366,31 +262,17 @@ export function SolicitarAprovacao() {
     setEmailError(null);
 
     try {
-      // Salva payload no localStorage primeiro
-      try {
-        localStorage.setItem("pedidoPayload", JSON.stringify(payload));
-      } catch {}
-      try {
-        Cookies.remove("pedidoPayload", { path: "/" });
-      } catch {}
-
-      // Busca o número do pedido
-      await fetchOrderNumber();
-
-      // Aguarda um pouco para garantir que o orderNumber foi atualizado
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Tenta obter o orderNumber novamente
-      const currentOrderId = orderNumber || Cookies.get("orderNumber");
+      // Busca o número do pedido e aguarda o resultado diretamente
+      const currentOrderId = await fetchOrderNumber();
       if (!currentOrderId) {
         throw new Error("Não foi possível obter o número do pedido");
       }
 
       // SEMPRE cadastra o pedido primeiro (isso é o mais importante)
-      await fetchCadastroPedido();
+      await fetchCadastroPedido(currentOrderId);
 
-      // Lê o orderNumber atualizado do cookie novamente antes de enviar o email
-      const orderIdForEmail = Cookies.get("orderNumber") || currentOrderId;
+      // Usa o número do pedido obtido (já está salvo no cookie)
+      const orderIdForEmail = currentOrderId;
 
       // Se o cadastro foi bem-sucedido, redireciona imediatamente
       // O envio de email pode acontecer em background, mas não bloqueia o redirecionamento

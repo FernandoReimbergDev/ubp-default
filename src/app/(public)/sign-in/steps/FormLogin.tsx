@@ -36,7 +36,7 @@ export function LoginForm() {
     if (!success) {
       setError("password", {
         type: "manual",
-        message: "Username ou Senha inválido",
+        message: "Usuário ou Senha inválido",
       });
     }
   }
@@ -51,7 +51,6 @@ export function LoginForm() {
     await requestCodePassword();
     setIsLoading(false);
     setStep("code");
-
   }
 
   return (
@@ -63,7 +62,12 @@ export function LoginForm() {
           <InputIcon>
             <UserRound className={errors.userName || errors.password ? "text-red-500" : ""} />
           </InputIcon>
-          <InputField {...register("userName")} type="text" placeholder="Digite seu nome de usuario" autoComplete="current-username" />
+          <InputField
+            {...register("userName")}
+            type="text"
+            placeholder="Digite seu nome de usuario"
+            autoComplete="current-username"
+          />
         </InputRoot>
         {errors.userName && <p className="text-red-500 text-xs font-semibold">{errors.userName.message}</p>}
 
@@ -81,7 +85,6 @@ export function LoginForm() {
         </Button>
 
         <div className="h-6 ">{isSubmitting && <span className="loader"></span>}</div>
-
       </form>
       <button
         type="button"

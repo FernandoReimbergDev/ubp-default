@@ -6,8 +6,8 @@ import { STORE_ID, BASE_URL } from "../../utils/env";
 
 interface DynamicRequestBody {
   reqMethod: "GET" | "POST" | "PUT" | "DELETE";
-  reqEndpoint: string;                  // ex: "/products" ou "products"
-  reqHeaders?: Record<string, string>;  // headers extras a enviar
+  reqEndpoint: string; // ex: "/products" ou "products"
+  reqHeaders?: Record<string, string>; // headers extras a enviar
 }
 
 // ========= Agent keep-alive (reuso de TLS/conexões) =========
@@ -49,6 +49,20 @@ export async function POST(request: Request) {
     if (!storeId) {
       return NextResponse.json({ success: false, message: "STORE_ID inválido." }, { status: 400 });
     }
+
+    // Proteção: só permite POST em /order se tiver userId nos headers (checkout)
+    if (reqMethod === "POST" && reqEndpoint === "/order") {
+      const userId = reqHeaders?.userId;
+      if (!userId) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Não é permitido criar pedido sem userId. Esta operação só pode ser feita no checkout.",
+          },
+          { status: 403 }
+        );
+      }
+    }
     if (!reqMethod || !reqEndpoint) {
       return NextResponse.json({ success: false, message: "Método ou endpoint ausente." }, { status: 400 });
     }
@@ -69,7 +83,7 @@ export async function POST(request: Request) {
     // Parse do BASE_URL para extrair host/porta/caminho base
     const u = new URL(baseUrl);
     const hostname = u.hostname;
-    const port = u.port ? Number(u.port) : (u.protocol === "http:" ? 80 : 443);
+    const port = u.port ? Number(u.port) : u.protocol === "http:" ? 80 : 443;
     const path = joinPath(u.pathname || "", reqEndpoint);
 
     const responseData = await withTimeout<any>(
@@ -114,7 +128,13 @@ export async function POST(request: Request) {
             if (!looksJson || (ct && !ct.includes("application/json"))) {
               const snippet = trimmed.slice(0, 200);
               const status = res.statusCode;
-              return reject(new Error(`Resposta não-JSON da API externa (status=${status}, content-type=${ct || "desconhecido"}): ${snippet}`));
+              return reject(
+                new Error(
+                  `Resposta não-JSON da API externa (status=${status}, content-type=${
+                    ct || "desconhecido"
+                  }): ${snippet}`
+                )
+              );
             }
 
             try {

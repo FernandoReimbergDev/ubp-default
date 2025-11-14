@@ -23,6 +23,15 @@ export async function POST() {
       expires: new Date(0),
     });
 
+    // Remove cookie orderNumber ao fazer logout
+    response.cookies.set("orderNumber", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: new Date(0),
+    });
+
     return response;
   } catch (error) {
     console.error("Erro ao deslogar:", error);

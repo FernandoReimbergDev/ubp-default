@@ -46,14 +46,14 @@ export async function POST(req: NextRequest) {
     const rawRoles: unknown = (result as any)?.role ?? (result as any)?.roles ?? (result as any)?.rules ?? [];
     const rolesFromApi: string[] = Array.isArray(rawRoles)
       ? rawRoles
-        .map((r: unknown) => {
-          if (typeof r === "string") return r;
-          if (r && typeof r === "object" && "name" in (r as any) && typeof (r as any).name === "string") {
-            return (r as any).name as string;
-          }
-          return undefined;
-        })
-        .filter((v: unknown): v is string => typeof v === "string")
+          .map((r: unknown) => {
+            if (typeof r === "string") return r;
+            if (r && typeof r === "object" && "name" in (r as any) && typeof (r as any).name === "string") {
+              return (r as any).name as string;
+            }
+            return undefined;
+          })
+          .filter((v: unknown): v is string => typeof v === "string")
       : [];
 
     const user = {
@@ -63,7 +63,12 @@ export async function POST(req: NextRequest) {
     };
     // Token leve para o middleware (não criptografado)
     const secret = new TextEncoder().encode(JWT_SECRET);
-    const accessToken = await new SignJWT({ sub: user.id, iss: "unitybrindes", role: rolesFromApi })
+    const accessToken = await new SignJWT({
+      sub: user.id,
+      iss: "unitybrindes",
+      role: rolesFromApi,
+      jti: crypto.randomUUID(),
+    })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime("15m")
       .sign(secret);
@@ -95,6 +100,15 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
+      sameSite: "lax",
+    });
+
+    // Remove cookie orderNumber antigo ao fazer login (sempre gerar novo)
+    res.cookies.set("orderNumber", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: new Date(0),
       sameSite: "lax",
     });
 

@@ -18,7 +18,7 @@ export default async function PublicLayout({
 }>) {
   return (
     <ToastProvider>
-      <OrdersProvider>
+      <OrdersProvider autoFetch={false}>
         <ProductsProvider>
           <CartProvider>
             <Header />

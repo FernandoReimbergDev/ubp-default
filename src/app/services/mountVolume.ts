@@ -64,11 +64,11 @@ export function getPackageVolumeAndWeight(
     const pesoGramas = pesoKg * 1000;
 
     // Log para debug
-    if (pesoKg > 0) {
-      console.log(
-        `Produto ${item.id}: peso="${item.peso}" (${pesoKg}kg = ${pesoGramas}g), qty=${qty}, total=${pesoGramas * qty}g`
-      );
-    }
+    // if (pesoKg > 0) {
+    //   console.log(
+    //     `Produto ${item.id}: peso="${item.peso}" (${pesoKg}kg = ${pesoGramas}g), qty=${qty}, total=${pesoGramas * qty}g`
+    //   );
+    // }
 
     // volume de 1 peça (cm³)
     const productVolume = h * w * l;
@@ -95,9 +95,6 @@ export function getPackageVolumeAndWeight(
   // Arredonda para garantir número inteiro (sem ponto decimal)
   // PHP: $pesoTotal = round($pesoTotalTemp * 1000);
   const pesoTotal = Math.round(pesoTotalGramas);
-
-  // Log para debug
-  console.log(`mountVolume: pesoTotal=${pesoTotal}g, volumeTotal=${volumeTotal}cm³`);
 
   return { volumeTotal, pesoTotal, altura, largura, comprimento };
 }

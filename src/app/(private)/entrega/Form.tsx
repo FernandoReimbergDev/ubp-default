@@ -8,13 +8,13 @@ import { DadosEntregaFormData, DadosEntregaSchema } from "./schema";
 import { useRouter } from "next/navigation";
 import { UsuarioResponse } from "@/app/types/responseTypes";
 import { Resumo } from "@/app/components/Resumo";
-import Cookies from "js-cookie";
 import { useCart } from "@/app/Context/CartContext";
-import { SkeletonEntrega } from "./partials/SkeletonEntrega";
+import { useAuth } from "@/app/Context/AuthContext";
+import Cookies from "js-cookie";
 
 export function FormDadosEntrega() {
-  const { fetchSendAddress } = useCart();
-  const [loading, setLoading] = useState(true);
+  const { cart } = useCart();
+  const { fetchUserDetails, cliente, fetchPayloadStorage } = useAuth();
 
   const [adressShipping, setAdressShipping] = useState({
     cep: "04583-110",
@@ -27,6 +27,7 @@ export function FormDadosEntrega() {
     razao_social: "Caixa Vida e Previdencia S/A",
     cnpj: "03.730.204/0001-76",
   });
+
   const enderecos = useMemo(
     () => [
       {
@@ -68,12 +69,15 @@ export function FormDadosEntrega() {
     ],
     []
   );
+
   const router = useRouter();
+
   const [clientData, setClientData] = useState<UsuarioResponse>({
     success: false,
     message: "",
     result: [],
   });
+
   const dataPedido = useMemo(() => {
     // Função auxiliar para adicionar dias úteis
     function adicionarDiasUteis(data: Date, diasUteis: number): Date {
@@ -99,7 +103,9 @@ export function FormDadosEntrega() {
       dateStyle: "long",
     }).format(dataEntrega);
   }, []);
+
   const [submitting, setSubmitting] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -113,6 +119,7 @@ export function FormDadosEntrega() {
     resolver: yupResolver(DadosEntregaSchema),
     mode: "onChange",
   });
+
   const cep = watch("cep");
   const uf = watch("uf");
   const municipio = watch("municipio");
@@ -126,42 +133,25 @@ export function FormDadosEntrega() {
     };
   }, [cep, uf, municipio]);
 
-  const fetchUserData = useCallback(async (signal?: AbortSignal) => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/list-user", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        signal,
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.message || "Erro ao buscar Id do usuário");
+  const fetchUserData = useCallback(
+    async (signal?: AbortSignal) => {
+      const userData = await fetchUserDetails(signal);
+      if (userData) {
+        setClientData(userData);
+        return userData.result;
       }
-
-      setClientData(result);
-    } catch (error: unknown) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-      console.error("error ao requisitar Id do usuário para api externa", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+      return undefined;
+    },
+    [fetchUserDetails]
+  );
+  // Preenche os campos do form com os dados do usuário (email, telefone, etc)
   useEffect(() => {
     if (!clientData) return;
 
     const { result } = clientData;
     if (!Array.isArray(result) || result.length === 0) return;
 
-    const { email, cnpj, phones, addresses, ie } = result[0];
+    const { email, cnpj, phones, ie } = result[0];
 
     if (Array.isArray(phones) && phones.length > 0) {
       phones.map((tel) => {
@@ -173,37 +163,26 @@ export function FormDadosEntrega() {
     }
     if (email) setValue("email", email);
     if (cnpj) handleCnpjCpfMask(cnpj, setValue, trigger, setError, clearErrors);
-    if (Array.isArray(addresses) && addresses.length > 0) {
-      handleCEPMask(adressShipping.cep, setValue, trigger, setError, clearErrors);
-      setValue("cep", adressShipping.cep);
-      setValue("logradouro", adressShipping.logradouro);
-      setValue("numero", adressShipping.numero);
-      setValue("complemento", adressShipping.complemento);
-      setValue("bairro", adressShipping.bairro);
-      setValue("municipio", adressShipping.municipio);
-      setValue("uf", adressShipping.uf);
-      setValue("razao_social", adressShipping.razao_social);
-      setValue("cnpj_cpf", adressShipping.cnpj);
-      setValue("inscricao_estadual", ie ?? "");
-      setValue("ddd", phones[0].areaCode ?? "11");
-      setValue("contato_entrega", clientData.result[0].fullName);
-    }
-  }, [
-    clientData,
-    setValue,
-    trigger,
-    setError,
-    clearErrors,
-    adressShipping.complemento,
-    adressShipping.cep,
-    adressShipping.logradouro,
-    adressShipping.numero,
-    adressShipping.bairro,
-    adressShipping.municipio,
-    adressShipping.uf,
-    adressShipping.razao_social,
-    adressShipping.cnpj,
-  ]);
+    if (ie) setValue("inscricao_estadual", ie);
+    if (phones?.[0]?.areaCode) setValue("ddd", phones[0].areaCode);
+    if (result[0]?.fullName) setValue("contato_entrega", result[0].fullName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientData]);
+
+  // Preenche os campos de endereço quando adressShipping muda
+  useEffect(() => {
+    handleCEPMask(adressShipping.cep, setValue, trigger, setError, clearErrors);
+    setValue("cep", adressShipping.cep);
+    setValue("logradouro", adressShipping.logradouro);
+    setValue("numero", adressShipping.numero);
+    setValue("complemento", adressShipping.complemento);
+    setValue("bairro", adressShipping.bairro);
+    setValue("municipio", adressShipping.municipio);
+    setValue("uf", adressShipping.uf);
+    setValue("razao_social", adressShipping.razao_social);
+    setValue("cnpj_cpf", adressShipping.cnpj);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adressShipping]);
 
   const handleAddressChange = useCallback(
     (endereco: (typeof enderecos)[number]) => {
@@ -232,81 +211,130 @@ export function FormDadosEntrega() {
     },
     [setValue] // setAdressShipping é estável, não precisa entrar
   );
-
+  //requisita os dados no load da pagina para preencher os campos do form com os dados do usuário
   useEffect(() => {
-    fetchUserData();
-    handleAddressChange(enderecos[0]);
-  }, [fetchUserData, handleAddressChange, enderecos]);
+    let mounted = true;
+    const loadData = async () => {
+      await fetchUserData();
+      if (mounted) {
+        handleAddressChange(enderecos[0]);
+      }
+    };
+    loadData();
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Executa apenas uma vez no mount
 
-  useEffect(() => {
-    try {
-      const raw = Cookies.get("cliente");
-      if (!raw) return;
-      const c = JSON.parse(raw);
-
-      const cookieDDD = c?.areaCode || c?.ddd || c?.phone?.areaCode || c?.phones?.[0]?.areaCode || "";
-      const cookiePhone = c?.telefone || c?.phone || c?.phone?.number || c?.phones?.[0]?.number || "";
-      const cookieCEP =
-        c?.zipCodeBilling ||
-        c?.addressZip ||
-        c?.zipcode ||
-        c?.cep ||
-        c?.address?.zipcode ||
-        c?.addresses?.[0]?.zipcode ||
-        "";
-      const cookieUF = (
-        c?.uf ||
-        c?.addressState ||
-        c?.stateCode ||
-        c?.address?.stateCode ||
-        c?.addresses?.[0]?.stateCode ||
-        c?.address?.uf ||
-        ""
-      )
-        .toString()
-        .toUpperCase();
-
-      if (!watch("ddd") && cookieDDD) setValue("ddd", cookieDDD);
-      if (!watch("telefone") && cookiePhone) handlePhoneMask(cookiePhone, setValue, trigger, setError, clearErrors);
-      if (!watch("cep") && cookieCEP) handleCEPMask(cookieCEP, setValue, trigger, setError, clearErrors);
-      if (!watch("uf") && cookieUF) setValue("uf", cookieUF);
-    } catch {
-      /* ignore */
-    }
-  }, [setValue, trigger, setError, clearErrors, watch]);
-
-  function onSubmit(form: any) {
+  async function onSubmit(form: DadosEntregaFormData) {
     setSubmitting(true);
     try {
+      // Calcula totais do carrinho
+      const totalValue = cart.reduce((total, product) => total + (product.subtotal || 0), 0);
+      const frete = Number(Cookies.get("valorFrete") || "0") || 0;
+      const user = clientData?.result?.[0];
       const cpfCnpjShipping = form.cnpj_cpf.replace(/\D/g, "");
-      fetchSendAddress(
-        Number(clientData?.result[0].id),
-        "PJ",
-        form.contato_entrega,
-        form.razao_social,
-        cpfCnpjShipping,
-        form.inscricao_estadual || "",
-        form.email,
-        form.ddd,
-        form.telefone.replace(/\D/g, ""),
-        form.ibge || "",
-        form.cep.replace(/\D/g, ""),
-        form.logradouro,
-        form.numero,
-        form.complemento,
-        form.bairro,
-        form.municipio,
-        form.uf
-      );
+
+      // Monta o payload completo
+      const payload = {
+        storeId: "32",
+        userId: Number(cliente?.id || clientData?.result?.[0]?.id || 0),
+        entityType: user?.entityType || "PF",
+        legalName: user?.legalName || user?.fullName || "",
+        cpfCnpj: cpfCnpjShipping || "",
+        ie: user?.ie || form.inscricao_estadual || "",
+        email: user?.email || form.email || "",
+        areaCode: user?.phones?.[0]?.areaCode || form.ddd || "",
+        phone: user?.phones?.[0]?.number || form.telefone.replace(/\D/g, "") || "",
+
+        // Endereço de faturamento (fixo)
+        entityTypeBilling: "PJ",
+        legalNameBilling: "Caixa Vida e Previdencia S/A",
+        contactNameBilling: user?.fullName || "",
+        cpfCnpjBilling: "03730204000176",
+        ieBilling: user?.ie || "",
+        emailBilling: user?.email || form.email || "",
+        areaCodeBilling: user?.phones?.[0]?.areaCode || form.ddd || "",
+        phoneBilling: user?.phones?.[0]?.number || form.telefone.replace(/\D/g, "") || "",
+        addressIbgeCodeBilling: "",
+        zipCodeBilling: "04583110",
+        streetNameBilling: "Av. Doutor Chucri Zaidan",
+        streetNumberBilling: "246",
+        addressLine2Billing: "12º andar",
+        addressNeighborhoodBilling: "Vila Cordeiro",
+        addressCityBilling: "São Paulo",
+        addressStateCodeBilling: "SP",
+
+        // Endereço de entrega (do formulário)
+        entityTypeShipping: "PJ",
+        legalNameShipping: form.razao_social || "",
+        contactNameShipping: form.contato_entrega || "",
+        cpfCnpjShipping: cpfCnpjShipping,
+        ieShipping: form.inscricao_estadual || "",
+        emailShipping: form.email || "",
+        areaCodeShipping: form.ddd || "",
+        phoneShipping: form.telefone.replace(/\D/g, "") || "",
+        addressIbgeCodeShipping: (form as any).ibge || "",
+        zipCodeShipping: form.cep.replace(/\D/g, "") || "",
+        streetNameShipping: form.logradouro || "",
+        streetNumberShipping: form.numero || "",
+        addressLine2Shipping: form.complemento || "",
+        addressNeighborhoodShipping: form.bairro || "",
+        addressCityShipping: form.municipio || "",
+        addressStateCodeShipping: form.uf || "",
+
+        // Produtos do carrinho
+        products: cart.map((product) => ({
+          chavePro: product.chavePro,
+          codPro: product.codPro,
+          descrPro: product.productName,
+          descrProCor: product.color,
+          descrProTam: product.size || "",
+          quantityPro: product.quantity,
+          unitPriceTablePro: product.unitPriceBase,
+          unitPricePro: product.unitPriceEffective,
+          totalServiceAmount:
+            product.personalizations?.reduce(
+              (total, personalization) => total + personalization.precoUnitario * product.quantity,
+              0
+            ) || 0,
+          totalProductAmount: product.subtotal,
+          personals: product.personalizations?.map((personalization) => ({
+            chavePersonal: personalization.chavePersonal,
+            descrWebPersonal: personalization.descricao,
+            quantityPersonal: product.quantity,
+            unitPricePersonal: Number(personalization.precoUnitario).toFixed(2),
+            totalPersonalAmount: personalization.precoUnitario * product.quantity,
+          })),
+        })),
+
+        // Informações de pagamento e valores
+        paymentMethod: "Boleto",
+        numberOfInstallments: "1",
+        totalProductsAmount: totalValue.toFixed(2),
+        totalDiscountAmount: "0.00",
+        totalShippingAmount: frete.toFixed(2),
+        totalInterestAmount: "0.00",
+        orderTotalAmount: (totalValue + frete).toFixed(2),
+        totalTaxAmount: "0",
+        paymentStatus: "PENDENTE",
+        orderStatus: "Aguardando aprovação",
+        expectedDeliveryDate: "",
+        deliveryDate: "",
+        paymentDate: "",
+      };
+
+      // Salva o payload completo no temp-storage
+      await fetchPayloadStorage(payload, "PUT");
+      console.log("[FormDadosEntrega] Payload salvo no temp-storage com sucesso");
     } catch (error) {
       console.error("Erro ao enviar dados de entrega:", error);
+      setSubmitting(false);
+      return; // Não redireciona em caso de erro
     }
     setSubmitting(false);
     router.push("/forma-de-pagamento");
-  }
-
-  if (loading) {
-    return <SkeletonEntrega />;
   }
 
   return (

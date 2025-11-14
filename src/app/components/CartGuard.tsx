@@ -8,7 +8,7 @@ import Cookies from "js-cookie";
 interface CartGuardProps {
   children: React.ReactNode;
   /**
-   * Se true, permite acesso mesmo com carrinho vazio se houver pedidoPayload
+   * Se true, permite acesso mesmo com carrinho vazio se houver orderNumber
    * (útil para página de pedido após finalização)
    */
   allowEmptyWithPayload?: boolean;
@@ -58,18 +58,17 @@ export function CartGuard({ children, allowEmptyWithPayload = false }: CartGuard
     }
 
     // Tinha itens antes e agora está vazio (foi limpo)
-    // Verifica se pode permitir acesso com payload
+    // Verifica se pode permitir acesso com orderNumber (pedido já cadastrado)
     if (allowEmptyWithPayload) {
       try {
-        const hasPedidoPayload =
-          (typeof window !== "undefined" && localStorage.getItem("pedidoPayload")) || Cookies.get("pedidoPayload");
+        const hasOrderNumber = Cookies.get("orderNumber");
 
-        if (hasPedidoPayload) {
-          // Tem payload, permite acesso mesmo com carrinho vazio
+        if (hasOrderNumber) {
+          // Tem orderNumber, permite acesso mesmo com carrinho vazio (pedido já foi cadastrado)
           return;
         }
       } catch (error) {
-        console.error("Erro ao verificar pedidoPayload:", error);
+        console.error("Erro ao verificar orderNumber:", error);
       }
     }
 

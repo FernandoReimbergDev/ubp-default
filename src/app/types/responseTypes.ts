@@ -587,6 +587,8 @@ export type AuthContextType = {
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
   fetchUserData: () => Promise<boolean>; // NOVO
+  fetchUserDetails: (signal?: AbortSignal) => Promise<UsuarioResponse | undefined>;
+  getJti: () => Promise<string | undefined>;
   step: string;
   setStep: React.Dispatch<React.SetStateAction<"username" | "signIn" | "code" | "password" | "resetPassword">>;
   email: string;
@@ -596,7 +598,7 @@ export type AuthContextType = {
   orderNumber: string | null;
   signIn: (credentials: { userName: string; password: string }) => Promise<boolean>;
   signOut: () => Promise<void>;
-  fetchOrderNumber: () => Promise<void>;
+  fetchOrderNumber: (signal?: AbortSignal) => Promise<string | null>;
   requestAccess: (userName: string) => Promise<{
     success: boolean;
     status?: AccessStatus;
@@ -626,6 +628,7 @@ export type AuthContextType = {
     };
   }>;
   setCliente: (cliente: UsuarioContext) => void;
+  fetchPayloadStorage: (payload: unknown, method: string) => Promise<unknown>;
 };
 
 export interface ProductsContextType {
