@@ -10,7 +10,6 @@
     "gerar-theme": "node gerar-theme.js"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.10.0",
     "@hookform/resolvers": "^5.0.1",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/bcrypt": "^5.0.2",
