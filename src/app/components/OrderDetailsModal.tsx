@@ -26,7 +26,6 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
     purchaseDate,
     expectedDeliveryDate,
   } = order;
-
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
