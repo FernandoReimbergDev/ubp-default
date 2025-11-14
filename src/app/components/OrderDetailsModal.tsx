@@ -54,7 +54,11 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
             <h2 className="text-base md:text-lg font-semibold">Detalhes do Pedido</h2>
             <p className="text-xs md:text-sm text-gray-500">Order #{orderId}</p>
           </div>
-          <button type="button" className="text-sm md:text-base text-gray-600 hover:text-gray-900" onClick={onClose}>
+          <button
+            type="button"
+            className="text-sm md:text-base text-gray-600 hover:text-gray-900 cursor-pointer"
+            onClick={onClose}
+          >
             Fechar
           </button>
         </div>

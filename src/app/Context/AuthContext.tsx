@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { AuthContextType, UsuarioContext, UsuarioResponse } from "../types/responseTypes";
 import Cookies from "js-cookie";
+import { OrderPayload } from "../types/payloadPedido";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -210,11 +211,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push("/");
 
       //payload deafault vazio
-      const payload = {
+      const payload: OrderPayload = {
         storeId: "32",
         userId: cliente?.id,
         entityType: "",
         legalName: "",
+        fullName: "",
         cpfCnpj: "",
         ie: "",
         email: "",

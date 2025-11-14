@@ -210,8 +210,23 @@ export function SolicitarAprovacao() {
       // Usa o número do pedido obtido (já está salvo no cookie)
       const orderIdForEmail = currentOrderId;
 
+      // Garante que o orderNumber está no cookie antes de limpar o carrinho
+      // O fetchOrderNumber já salvou no cookie, mas garantimos aqui também
+      Cookies.set("orderNumber", currentOrderId, {
+        expires: 7,
+        sameSite: "Lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      });
+
+      // Limpa o carrinho ANTES de redirecionar (mas após garantir o cookie)
+      clearCart();
+
+      // Aguarda um pequeno delay para garantir que o carrinho foi limpo
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Se chegou aqui, tudo deu certo - redireciona
-      router.push("/pedido");
+      router.replace("/pedido");
 
       // Envia email de pedido aprovado em background (não bloqueia o redirecionamento)
       // Se falhar, apenas loga o erro, mas o pedido já foi cadastrado
@@ -274,9 +289,24 @@ export function SolicitarAprovacao() {
       // Usa o número do pedido obtido (já está salvo no cookie)
       const orderIdForEmail = currentOrderId;
 
-      // Se o cadastro foi bem-sucedido, redireciona imediatamente
+      // Garante que o orderNumber está no cookie antes de limpar o carrinho
+      // O fetchOrderNumber já salvou no cookie, mas garantimos aqui também
+      Cookies.set("orderNumber", currentOrderId, {
+        expires: 7,
+        sameSite: "Lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      });
+
+      // Limpa o carrinho ANTES de redirecionar (mas após garantir o cookie)
+      clearCart();
+
+      // Aguarda um pequeno delay para garantir que o carrinho foi limpo
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Se o cadastro foi bem-sucedido, redireciona
       // O envio de email pode acontecer em background, mas não bloqueia o redirecionamento
-      router.push("/pedido");
+      router.replace("/pedido");
 
       // Tenta enviar email em background (não bloqueia o redirecionamento)
       // Se falhar, apenas loga o erro, mas o pedido já foi cadastrado
