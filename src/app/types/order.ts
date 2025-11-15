@@ -6,7 +6,7 @@ export type OrderBuyer = {
   areaCode: string; // Código de área do telefone
   phone: string;
   key: string;
-  cpfCnpf: string; // CPF/CNPJ
+  cpfCnpj: string; // CPF/CNPJ
   ie?: string; // IE
 };
 
@@ -23,7 +23,7 @@ export type Address = {
 
 export type OrderBilling = {
   legalName: string;
-  cpfCnpf: string;
+  cpfCnpj: string;
   ie?: string; // IE
   im?: string; // IM
   entityType: string;
@@ -56,6 +56,7 @@ export type OrderPayment = {
   method: "Boleto" | "Cartao" | "Pix" | "Transferencia" | string;
   dueDate?: string; // data de vencimento
   paymentDate?: string; // data de pagamento
+  expirationDate?: string; // data de expiração do pagamento
   totalAmount: number;
   installments?: number;
   interestRate?: number; // percentual
@@ -103,8 +104,8 @@ export type OrderDetails = {
   storeId: string;
   sellerId: string;//id do vendedor
   sellerName: string;//nome do vendedor
-  status?: string;//Status geral do pedido
-  approvalStatus?: string;//Status de aprovação do pedido
+  // status?: string;//Status geral do pedido
+  orderStatus?: string;//Status do pedido
   buyer: OrderBuyer;//informações do solicitante / usuario que fez o pedido
   billing: OrderBilling;//informações do pagador / usuário que pagará o pedido
   delivery: OrderDelivery;//informações do destinatário / usuário que receberá o pedido
@@ -115,7 +116,7 @@ export type OrderDetails = {
   totalShippingAmount: number;//total de frete
   totalInterestAmount: number;//total de juros
   orderTotalAmount: number;//total do pedido
-  purchaseDate: string;//data da compra
+  // purchaseDate: string;//data da compra
   expectedDeliveryDate?: string;//data prevista de entrega
   deliveredDate?: string;//data de entrega      
   paymentDate?: string;//data de pagamento

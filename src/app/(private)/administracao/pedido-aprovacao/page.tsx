@@ -3,11 +3,11 @@ import { TitleSection } from "@/app/components/TitleSection";
 import { OrderDetailsModal } from "@/app/components/OrderDetailsModal";
 import type { OrderDetails } from "@/app/types/order";
 import { exportExcelFile } from "@/app/services/gerarPlanilha";
-import { formatPrice } from "@/app/utils/formatter";
+import { formatPrice, formatDateTime } from "@/app/utils/formatter";
 import { Search, SquareCheckBig, TableProperties } from "lucide-react";
 // import { useForm } from "react-hook-form";
 import { OrdersProvider, useOrders } from "@/app/Context/OrderContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Tipos movidos para src/app/types/order.ts
 
@@ -48,22 +48,43 @@ function TableRows({ onOpen }: { onOpen: (details: OrderDetails) => void }) {
           className="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-300"
         >
           {/* 🔹 Coluna fixa */}
-          <td className="sticky text-center bg-white z-5 px-3 py-2 border border-gray-300 whitespace-nowrap">
+          <td
+            className="sticky text-center bg-white z-5 px-3 py-2 border border-gray-300 whitespace-nowrap cursor-pointer"
+            onClick={() => window.dispatchEvent(new CustomEvent("set-pedido-filter", { detail: o.orderId }))}
+            title="Filtrar pelo número do pedido"
+          >
             {o.orderId}
           </td>
+          <td className="px-3 py-2 border border-gray-300 capitalize">{o.orderStatus || "-"}</td>
           <td className="px-3 py-2 border border-gray-300">{o.buyer?.legalName || "-"}</td>
           <td className="px-3 py-2 border border-gray-300">{o.billing?.legalName || "-"}</td>
-          <td className="px-3 py-2 border border-gray-300 whitespace-nowrap">
-            {formatPrice(o.totalProductsAmount || 0)}
+          <td className="px-3 py-2 border border-gray-300">
+            <div className="flex justify-between">
+              <span className="text-sm">R$</span>
+              <span className="text-sm">{formatPrice(o.totalProductsAmount || 0, false)}</span>
+            </div>
           </td>
-          <td className="px-3 py-2 border border-gray-300 whitespace-nowrap">
-            {formatPrice(o.totalShippingAmount || 0)}
+          <td className="px-3 py-2 border border-gray-300">
+            <div className="flex justify-between">
+              <span className="text-sm">R$</span>
+              <span className="text-sm">{formatPrice(o.totalShippingAmount || 0, false)}</span>
+            </div>
           </td>
-          <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(o.totalInterestAmount || 0)}</td>
-          <td className="px-3 py-2 border border-gray-300 text-right">{formatPrice(o.orderTotalAmount || 0)}</td>
-          <td className="px-3 py-2 border border-gray-300 text-center">{o.purchaseDate || "-"}</td>
+          <td className="px-3 py-2 border border-gray-300 text-right">
+            <div className="flex justify-between">
+              <span className="text-sm">R$</span>
+              <span className="text-sm">{formatPrice(o.totalInterestAmount || 0, false)}</span>
+            </div>
+          </td>
+          <td className="px-3 py-2 border border-gray-300 text-right">
+            <div className="flex justify-between">
+              <span className="text-sm">R$</span>
+              <span className="text-sm">{formatPrice(o.orderTotalAmount || 0, false)}</span>
+            </div>
+          </td>
+          <td className="px-3 py-2 border border-gray-300 text-center">{formatDateTime(o.createdAt) || "-"}</td>
           <td className="px-3 py-2 border border-gray-300 text-center">
-            {o.expectedDeliveryDate || o.deliveredDate || "-"}
+            {formatDateTime(o.expectedDeliveryDate || "-")}
           </td>
           <td className="px-3 py-2 border border-gray-300 text-center">
             <Search className="mx-auto cursor-pointer hover:text-primary" onClick={() => onOpen(o)} />
@@ -80,8 +101,45 @@ function FilterBar() {
   const [pedido, setPedido] = useState<string>("");
   const [solicitante, setSolicitante] = useState<string>("");
   const [faturamento, setFaturamento] = useState<string>("");
-  const [dataInicio, setDataInicio] = useState<string>("");
-  const [dataFinal, setDataFinal] = useState<string>("");
+  const [dataInicio, setDataInicio] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  const [dataFinal, setDataFinal] = useState<string>(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (typeof detail === "string") {
+        setPedido(detail);
+        const params = {
+          orderStatus: situacao,
+          context: "pedido-aprovacao",
+          orderId: detail,
+          legalName: solicitante,
+          legalNameBilling: faturamento,
+          createdAt: dataInicio,
+          createdAtEnd: dataFinal,
+        } as Record<string, string>;
+        const cleanParams = Object.fromEntries(
+          Object.entries(params).filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== "")
+        );
+        refresh(cleanParams);
+      }
+    };
+    window.addEventListener("set-pedido-filter", handler as EventListener);
+    return () => window.removeEventListener("set-pedido-filter", handler as EventListener);
+  }, [situacao, solicitante, faturamento, dataInicio, dataFinal, refresh]);
 
   const onFiltrar = () => {
     // Monta params e remove valores vazios/nulos antes de enviar
@@ -177,6 +235,7 @@ function FilterBar() {
                 type="date"
                 id="dataInicio"
                 value={dataInicio}
+                required
                 onChange={(e) => setDataInicio(e.target.value)}
                 className="w-full mx-auto px-1 text-xs py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -188,6 +247,7 @@ function FilterBar() {
               <input
                 type="date"
                 id="dataFinal"
+                required={true}
                 value={dataFinal}
                 onChange={(e) => setDataFinal(e.target.value)}
                 className="w-full mx-auto px-1 text-xs py-1 md:px-4 md:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -260,58 +320,69 @@ export default function PedidoAprovacao() {
                 <thead className="bg-gray-100 sticky top-0 z-20">
                   <tr>
                     {/* Primeira coluna fixa */}
-                    <th className="sticky left-0 z-30 bg-gray-100 px-3 py-2 text-left border border-gray-300 whitespace-nowrap">
+                    <th className="sticky left-0 z-30 bg-gray-100 px-3 py-2 text-center border border-gray-300 whitespace-nowrap">
                       N. Pedido
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
+                      title="Situação do pedido"
+                    >
+                      Situação
+                    </th>
+                    <th
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Nome do usuário que criou o pedido"
                     >
                       Solicitante
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Nome da empresa para quem o pedido será faturado"
                     >
                       Faturamento
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Valor total dos produtos no pedido"
                     >
                       Total Produtos
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Valor total do frete no pedido"
                     >
                       Total Frete
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Valor total dos juros no pedido"
                     >
                       Total Juros
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Valor total do pedido, incluindo produtos, frete e juros"
                     >
-                      Total Pedido
+                      Total Compra
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Data de compra do pedido"
                     >
                       Compra
                     </th>
                     <th
-                      className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap"
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
                       title="Data de entrega prevista do pedido"
                     >
-                      Entrega
+                      Entrega Prevista
                     </th>
-                    <th className="px-3 py-2 text-left border border-gray-300 whitespace-nowrap">Detalhes</th>
+                    <th
+                      className="px-3 py-2 text-center border border-gray-300 whitespace-nowrap"
+                      title="Detalhes do pedido"
+                    >
+                      Detalhes
+                    </th>
                   </tr>
                 </thead>
 

@@ -10,14 +10,14 @@ type ExternalOrder = {
   userId?: string;
   entityType: string;
   legalName: string;
-  cpfCnpf: string;
+  cpfCnpj: string;
   ie?: string;
   email: string;
   areaCode: string;
   phone: string;
   entityTypeBilling: string;
   legalNameBilling: string;
-  cpfCnpfBilling: string;
+  cpfCnpjBilling: string;
   ieBilling?: string;
   contactNameBilling: string;
   emailBilling: string;
@@ -33,7 +33,7 @@ type ExternalOrder = {
   addressStateCodeBilling: string;
   entityTypeShipping: string;
   legalNameShipping: string;
-  cpfCnpfShipping: string;
+  cpfCnpjShipping: string;
   ieShipping?: string;
   contactNameShipping: string;
   emailShipping?: string;
@@ -57,7 +57,8 @@ type ExternalOrder = {
   totalTaxAmount?: string;
   paymentStatus?: string;
   orderStatus?: string;
-  purchaseDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
   expectedDeliveryDate?: string;
   deliveryDate?: string;
   paymentDate?: string;
@@ -74,7 +75,7 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
     storeId: src.storeId,
     sellerId: src.userId || "",
     sellerName: "",
-    status: src.orderStatus || src.paymentStatus || "",
+    orderStatus: src.orderStatus || "",
     buyer: {
       entityType: src.entityType,
       legalName: src.legalName,
@@ -82,12 +83,12 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
       areaCode: src.areaCode,
       phone: src.phone,
       key: src.userId || "",
-      cpfCnpf: src.cpfCnpf,
+      cpfCnpj: src.cpfCnpj ,
       ie: src.ie,
     },
     billing: {
       legalName: src.legalNameBilling,
-      cpfCnpf: src.cpfCnpfBilling,
+      cpfCnpj: src.cpfCnpjBilling,
       ie: src.ieBilling,
       entityType: src.entityTypeBilling,
       contactName: src.contactNameBilling,
@@ -108,7 +109,7 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
     },
     delivery: {
       legalName: src.legalNameShipping,
-      cpfCnpf: src.cpfCnpfShipping,
+      cpfCnpf: src.cpfCnpjShipping,
       ie: src.ieShipping,
       entityType: src.entityTypeShipping,
       contactName: src.contactNameShipping,
@@ -137,6 +138,7 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
       interestAmount: toNumber(src.totalInterestAmount, 0),
       status: src.paymentStatus,
       paymentDate: src.paymentDate,
+      expirationDate: undefined,
     },
     products: [],
     totalProductsAmount: toNumber(src.totalProductsAmount, 0),
@@ -144,10 +146,11 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
     totalShippingAmount: toNumber(src.totalShippingAmount, 0),
     totalInterestAmount: toNumber(src.totalInterestAmount, 0),
     orderTotalAmount: toNumber(src.orderTotalAmount, 0),
-    purchaseDate: src.purchaseDate || "",
-    expectedDeliveryDate: src.expectedDeliveryDate,
-    deliveredDate: src.deliveryDate,
-    paymentDate: src.paymentDate,
+    createdAt: src.createdAt || "",
+    updatedAt: src.updatedAt || "",
+    expectedDeliveryDate: src.expectedDeliveryDate || "",
+    deliveredDate: src.deliveryDate || "",
+    paymentDate: src.paymentDate || "",
   };
 }
 
