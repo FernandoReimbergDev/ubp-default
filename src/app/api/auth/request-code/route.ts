@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import colors from "../../../../../cores.json";
 import { getDecryptedToken } from "../../../services/getDecryptedToken";
-import { sendEmail, sendEmailGroup } from "../../../services/sendEmail";
+import { sendEmail } from "../../../services/sendEmail";
 import { PasswordRecoveryResult } from "../../../types/responseTypes";
 import { ENVIRONMENT, STORE_ID, NOME_LOJA } from "../../../utils/env";
 
@@ -160,15 +160,6 @@ export async function POST(req: NextRequest) {
 
     </html>
             `;
-      await sendEmailGroup(
-        ["carlos.dias@unitybrindes.com.br", "fernando.reimberg@unitybrindes.com.br"],
-        ["carloseds@outlook.com"], // cc
-        ["fernandoreimberg14@hotmail.com"], // cco
-        "teste 1 do email aprovaçao",
-        "",
-        "<html>HTML do e-mail</html>", // html opcional
-        "ti@unitybrindes.com.br"
-      );
 
       await sendEmail(
         email,
