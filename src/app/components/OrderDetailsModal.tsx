@@ -296,17 +296,23 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
                   <div className="flex items-start gap-3">
                     {p.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.name || p.code} className="w-10 h-10 object-cover rounded" />
+                      <img src={p.imageUrl} alt={p.name || p.code} className="w-20 h-20 object-cover rounded" />
                     )}
                     <div className="space-y-1">
-                      <p className="text-sm md:text-base font-semibold text-gray-800"><span className="font-medium text-gray-700">Produto:</span> {p.descrPro || "-"}</p>
-                      <p className="text-sm md:text-base font-semibold text-gray-800"><span className="font-medium text-gray-700">Cor:</span> {p.descrProCor || "-"}</p>
-                      <p className="text-sm md:text-base font-semibold text-gray-800"><span className="font-medium text-gray-700">Tamanho:</span> {p.descrProTam || "-"}</p>
-                      <p className="text-sm text-gray-700"><span className="font-medium text-gray-700">Qtd:</span> {p.quantity}</p>
+                      <p className="text-xs font-semibold text-gray-800"><span className="font-medium text-gray-700">Produto:</span> {p.descrPro || "-"}</p>
+                      <p className="text-xs font-semibold text-gray-800"><span className="font-medium text-gray-700">Cor:</span> {p.descrProCor || "-"}</p>
+                      <p className="text-xs font-semibold text-gray-800"><span className="font-medium text-gray-700">Tamanho:</span> {p.descrProTam || "-"}</p>
+                      {/** adicionar personalizações */}
+                      {p.personals.map((personal) => (
+                        <p key={personal.orderProductPersonalId} className="text-xs font-semibold text-gray-800">
+                          <span className="font-medium text-gray-700">Personalização:</span> {personal.descrWebPersonal}
+                        </p>
+                      ))}
+                      <p className="text-xs font-semibold text-gray-800"><span className="font-medium text-gray-700">Qtd:</span> {p.quantity}</p>
                       <p className="text-xs text-gray-500"><span className="font-extralight text-gray-700">Código:</span> {p.code}</p>
+
                     </div>
-                    <div className="space-y-1">
-                    </div>
+
                   </div>
                   <div className="text-right">
                     <p className="text-sm md:text-base font-semibold text-gray-900"><span className="font-medium text-gray-700">Total:</span> {formatPrice(p.total)}</p>
