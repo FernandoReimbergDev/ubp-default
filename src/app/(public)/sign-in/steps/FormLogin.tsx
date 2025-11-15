@@ -1,7 +1,7 @@
 import { Button } from "@/app/components/Button";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ArrowRight, KeyRound, UserRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { InputField, InputIcon, InputRoot } from "../../../components/Input";
 import { useAuth } from "../../../Context/AuthContext";
@@ -45,7 +45,7 @@ export function LoginForm() {
     await handleLogin(data);
   };
 
-  async function handleForgotPassword(event: React.MouseEvent<HTMLButtonElement>) {
+  async function handleForgotPassword(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     setIsLoading(true);
     await requestCodePassword();

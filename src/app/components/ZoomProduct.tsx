@@ -1,7 +1,7 @@
 "use client";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
-import React, { useState } from "react";
+import { type MouseEvent, useState } from "react";
 
 interface ModalZoomProps {
   productImagens: string[];
@@ -21,7 +21,7 @@ export function ZoomProduct({ productImagens, targetZoom, closeZoom }: ModalZoom
     setIsZoomed(!isZoomed);
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!isZoomed) return;
 
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();

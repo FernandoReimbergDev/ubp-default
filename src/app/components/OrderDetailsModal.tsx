@@ -1,6 +1,6 @@
 "use client";
-import { formatDateTime, formatPrice, formatCpfCnpj, formatPhoneBR } from "@/app/utils/formatter";
-import { formatCep } from "@/app/services/utils";
+import { type MouseEvent } from "react";
+import { formatPrice } from "@/app/utils/formatter";
 import type { OrderDetails } from "@/app/types/order";
 
 type Props = {
@@ -32,7 +32,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
     createdAt,
     updatedAt,
   } = order;
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
 
