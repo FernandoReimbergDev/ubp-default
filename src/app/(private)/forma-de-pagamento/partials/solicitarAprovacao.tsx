@@ -298,13 +298,6 @@ export function SolicitarAprovacao() {
         secure: process.env.NODE_ENV === "production",
       });
 
-      // Limpa o carrinho ANTES de redirecionar (mas após garantir o cookie)
-      clearCart();
-
-      // Aguarda um pequeno delay para garantir que o carrinho foi limpo
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Se o cadastro foi bem-sucedido, redireciona
       // O envio de email pode acontecer em background, mas não bloqueia o redirecionamento
       router.replace("/pedido");
 

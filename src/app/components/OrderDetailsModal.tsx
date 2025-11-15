@@ -26,7 +26,6 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
     purchaseDate,
     expectedDeliveryDate,
   } = order;
-
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -43,9 +42,9 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-100 bg-black/50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
       role="dialog"
-      aria-modal="true"
+      aria-modal
       onClick={handleOverlayClick}
     >
       <div className="bg-white rounded-lg shadow-lg w-full max-w-[95vw] md:max-w-[990px] max-h-[85vh] overflow-y-auto">

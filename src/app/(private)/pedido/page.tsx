@@ -42,6 +42,26 @@ export default function PedidoSucesso() {
   const [orderId, setOrderId] = useState<string>("");
   const [pedidoPayload, setPedidoPayload] = useState<PedidoPayload | null>(null);
 
+  // -------- Previne voltar para páginas anteriores do checkout --------
+  useEffect(() => {
+    // Intercepta o evento de voltar do navegador
+    const handlePopState = () => {
+      // Quando o usuário clicar em voltar, redireciona para home
+      router.replace("/");
+    };
+
+    // Adiciona home como entrada anterior no histórico
+    // Isso garante que ao clicar em voltar, vá para home ao invés das páginas do checkout
+    window.history.pushState(null, "", "/");
+    window.history.pushState(null, "", "/pedido");
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [router]);
+
   // -------- Busca os dados do payload do temp-storage usando jti --------
   useEffect(() => {
     async function fetchPedido() {
@@ -57,6 +77,9 @@ export default function PedidoSucesso() {
         if (!jti) {
           throw new Error("Não foi possível obter o JTI do token");
         }
+
+        // Limpa o carrinho ANTES de redirecionar (mas após garantir o cookie)
+        clearCart();
 
         const response = await fetch("/api/send-request", {
           method: "POST",
