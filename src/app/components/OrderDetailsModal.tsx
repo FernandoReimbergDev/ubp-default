@@ -109,6 +109,10 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
                   <span className="ml-2">{formatDateTime(updatedAt || "-")}</span>
                 </div>
                 <div>
+                  <span className="font-medium text-gray-700">Entrega prevista:</span>
+                  <span className="ml-2">{formatDateTime(expectedDeliveryDate || "-")}</span>
+                </div>
+                <div>
                   <span className="font-medium text-gray-700">Valor Total:</span>
                   <span className="ml-2">{formatPrice(orderTotalAmount || 0)}</span>
                 </div>
@@ -296,14 +300,18 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
                       <img src={p.imageUrl} alt={p.name || p.code} className="w-10 h-10 object-cover rounded" />
                     )}
                     <div className="space-y-1">
-                      <p className="text-sm md:text-base font-semibold text-gray-800">{p.name || "-"}</p>
-                      <p className="text-xs text-gray-500 uppercase">{p.code}</p>
-                      <p className="text-sm text-gray-700">Qtd: {p.quantity}</p>
+                      <p className="text-sm md:text-base font-semibold text-gray-800"><span className="font-medium text-gray-700">Produto:</span> {p.descrPro || "-"}</p>
+                      <p className="text-sm md:text-base font-semibold text-gray-800"><span className="font-medium text-gray-700">Cor:</span> {p.descrProCor || "-"}</p>
+                      <p className="text-sm md:text-base font-semibold text-gray-800"><span className="font-medium text-gray-700">Tamanho:</span> {p.descrProTam || "-"}</p>
+                      <p className="text-sm text-gray-700"><span className="font-medium text-gray-700">Qtd:</span> {p.quantity}</p>
+                      <p className="text-xs text-gray-500"><span className="font-extralight text-gray-700">Código:</span> {p.code}</p>
+                    </div>
+                    <div className="space-y-1">
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm md:text-base font-semibold text-gray-900">{formatPrice(p.total)}</p>
-                    <p className="text-xs text-gray-500">Unitário: {formatPrice(p.unitPrice)}</p>
+                    <p className="text-sm md:text-base font-semibold text-gray-900"><span className="font-medium text-gray-700">Total:</span> {formatPrice(p.total)}</p>
+                    <p className="text-xs text-gray-500"><span className="font-medium text-gray-700">Unitário:</span> {formatPrice(p.unitPrice)}</p>
                   </div>
                 </div>
               ))}

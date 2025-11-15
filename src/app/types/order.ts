@@ -97,6 +97,30 @@ export type OrderProduct = {
   unitPrice: number;
   quantity: number;
   total: number;
+  orderProductId?: number;
+  chavePro?: string;
+  codPro?: string;
+  descrPro?: string;
+  descrProCor?: string;
+  descrProTam?: string;
+  quantityPro?: string;
+  unitPriceTablePro?: string;
+  unitPricePro?: string;
+  totalServiceAmount?: string;
+  totalProductAmount?: string;
+  imageDefaultUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  personals: {
+    orderProductPersonalId: number;
+    chavePersonal: number;
+    descrWebPersonal: string;
+    quantityPersonal: string;
+    unitPricePersonal: string;
+    totalPersonalAmount: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
 };
 
 export type OrderDetails = {
