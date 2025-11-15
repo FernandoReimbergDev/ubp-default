@@ -119,4 +119,6 @@ export type OrderDetails = {
   expectedDeliveryDate?: string;//data prevista de entrega
   deliveredDate?: string;//data de entrega      
   paymentDate?: string;//data de pagamento
+  createdAt?: string;//data de criação
+  updatedAt?: string;//data de atualização
 };
