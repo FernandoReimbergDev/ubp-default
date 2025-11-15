@@ -1,7 +1,8 @@
 "use client";
 import { type MouseEvent } from "react";
-import { formatPrice } from "@/app/utils/formatter";
+import { formatCpfCnpj, formatDateTime, formatPhoneBR, formatPrice } from "@/app/utils/formatter";
 import type { OrderDetails } from "@/app/types/order";
+import { formatCep } from "../services/utils";
 
 type Props = {
   isOpen: boolean;
