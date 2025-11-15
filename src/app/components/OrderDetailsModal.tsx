@@ -55,7 +55,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
       aria-modal="true"
       onClick={handleOverlayClick}
     >
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-[95vw] md:max-w-[990px] max-h-[85vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-[95vw] md:max-w-[990px] max-h-[85vh] flex flex-col">
         <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
           <div>
             <h2 className="text-base md:text-lg font-semibold">Detalhes do Pedido #{orderId}</h2>
@@ -69,7 +69,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
           </button>
         </div>
 
-        <div className="p-4 space-y-6 text-sm">
+        <div className="flex-1 p-4 space-y-6 text-sm overflow-y-auto">
           {/* Cards em grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Solicitanmte */}
