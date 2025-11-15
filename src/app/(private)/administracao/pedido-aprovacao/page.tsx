@@ -129,7 +129,7 @@ function FilterBar() {
                 className="w-full mx-auto h-8 md:h-9 px-1 md:px-4 text-xs py-1 md:py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Aguardando Aprovação">Aguardando Aprovação</option>
-                <option value="Aprovados">Aprovados</option>
+                <option value="Aprovado">Aprovados</option>
               </select>
             </div>
             <div className="w-full md:w-40 text-xs md:text-sm lg:text-base">
