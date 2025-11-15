@@ -305,7 +305,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
                       {/** adicionar personalizações */}
                       {p.personals.map((personal) => (
                         <p key={personal.orderProductPersonalId} className="text-xs font-semibold text-gray-800">
-                          <span className="font-medium text-gray-700">Personalização:</span> {personal.descrWebPersonal}
+                          <span className="font-medium text-gray-700">Serviço:</span> {personal.descrWebPersonal}
                         </p>
                       ))}
                       <p className="text-xs font-semibold text-gray-800"><span className="font-medium text-gray-700">Qtd:</span> {p.quantity}</p>
