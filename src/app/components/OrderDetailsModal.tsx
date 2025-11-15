@@ -69,7 +69,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 p-4 space-y-6 text-sm overflow-y-auto">
+        <div className="flex-1 p-4 space-y-6 text-sm overflow-y-auto scrollbar">
           {/* Cards em grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Solicitanmte */}
