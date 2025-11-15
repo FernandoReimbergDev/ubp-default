@@ -6,7 +6,7 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { InputField, InputIcon, InputRoot } from "../../../components/Input";
 import { codeSchema, type CodeForm } from "../steps/schemas";
 import { maskEmail } from "@/app/services/utils";
-import { useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 
 export function CodeForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +42,7 @@ export function CodeForm() {
     }
   }
 
-  async function handleResendCode(e?: React.MouseEvent<HTMLButtonElement>) {
+  async function handleResendCode(e?: MouseEvent<HTMLButtonElement>) {
     e?.preventDefault();
     e?.stopPropagation();
     setIsLoading(true);

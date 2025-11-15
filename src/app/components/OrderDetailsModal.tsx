@@ -1,4 +1,5 @@
 "use client";
+import { type MouseEvent } from "react";
 import { formatPrice } from "@/app/utils/formatter";
 import type { OrderDetails } from "@/app/types/order";
 
@@ -26,7 +27,7 @@ export function OrderDetailsModal({ isOpen, onClose, order }: Props) {
     purchaseDate,
     expectedDeliveryDate,
   } = order;
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
 

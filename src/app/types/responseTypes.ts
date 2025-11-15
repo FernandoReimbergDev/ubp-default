@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { JSX } from "react";
+import { type JSX, type MouseEvent } from "react";
 import { UseFormSetValue, UseFormTrigger, UseFormSetError, UseFormClearErrors, FieldValues } from "react-hook-form";
 
 export interface PasswordRecoveryResponse {
@@ -193,7 +193,7 @@ export interface CardProdutoProps {
   estControl: string;
   promotion?: boolean;
   percent_discont?: number;
-  click?: (event: React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>) => void;
+  click?: (event: MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement>) => void;
 }
 
 export type ProdutosGrid = {

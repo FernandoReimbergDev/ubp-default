@@ -2,7 +2,7 @@
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../Context/CartContext";
 import type { CartItemPersist, PersonalizacaoPreco } from "../types/cart";
 import type { PrecoProduto, ProdutoEstoqueItem } from "../types/responseTypes";
@@ -12,7 +12,7 @@ import { TitleSection } from "./TitleSection";
 import { Spinner } from "./Spinner";
 
 interface ModalProps {
-  handleClick?: (event: React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>) => void;
+  handleClick?: (event: MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement>) => void;
   isOpen: boolean;
 }
 
@@ -747,7 +747,7 @@ export const CartModal = ({ handleClick, isOpen }: ModalProps) => {
                     e.stopPropagation();
                     return;
                   }
-                  handleClick?.(e as React.MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement, MouseEvent>);
+                  handleClick?.(e as MouseEvent<HTMLButtonElement | SVGSVGElement | HTMLDivElement>);
                 }}
               >
                 Finalizar Compra
