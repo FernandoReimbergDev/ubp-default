@@ -10,14 +10,14 @@ type ExternalOrder = {
   userId?: string;
   entityType: string;
   legalName: string;
-  cpfCnpf: string;
+  cpfCnpj: string;
   ie?: string;
   email: string;
   areaCode: string;
   phone: string;
   entityTypeBilling: string;
   legalNameBilling: string;
-  cpfCnpfBilling: string;
+  cpfCnpjBilling: string;
   ieBilling?: string;
   contactNameBilling: string;
   emailBilling: string;
@@ -33,7 +33,7 @@ type ExternalOrder = {
   addressStateCodeBilling: string;
   entityTypeShipping: string;
   legalNameShipping: string;
-  cpfCnpfShipping: string;
+  cpfCnpjShipping: string;
   ieShipping?: string;
   contactNameShipping: string;
   emailShipping?: string;
@@ -57,10 +57,37 @@ type ExternalOrder = {
   totalTaxAmount?: string;
   paymentStatus?: string;
   orderStatus?: string;
-  purchaseDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
   expectedDeliveryDate?: string;
   deliveryDate?: string;
   paymentDate?: string;
+  products: {
+    orderProductId: number;
+    chavePro: string;
+    codPro: string;
+    descrPro: string;
+    descrProCor: string;
+    descrProTam: string;
+    quantityPro: string;
+    unitPriceTablePro: string;
+    unitPricePro: string;
+    totalServiceAmount: string;
+    totalProductAmount: string;
+    imageDefaultUrl?: string;
+    createdAt: string;
+    updatedAt: string;
+    personals: {
+      orderProductPersonalId: number;
+      chavePersonal: number;
+      descrWebPersonal: string;
+      quantityPersonal: string;
+      unitPricePersonal: string;
+      totalPersonalAmount: string;
+      createdAt: string;
+      updatedAt: string;
+    }[];
+  }[];
 };
 
 function toNumber(v: unknown, fallback = 0): number {
@@ -74,7 +101,7 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
     storeId: src.storeId,
     sellerId: src.userId || "",
     sellerName: "",
-    status: src.orderStatus || src.paymentStatus || "",
+    orderStatus: src.orderStatus || "",
     buyer: {
       entityType: src.entityType,
       legalName: src.legalName,
@@ -82,12 +109,12 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
       areaCode: src.areaCode,
       phone: src.phone,
       key: src.userId || "",
-      cpfCnpf: src.cpfCnpf,
+      cpfCnpj: src.cpfCnpj ,
       ie: src.ie,
     },
     billing: {
       legalName: src.legalNameBilling,
-      cpfCnpf: src.cpfCnpfBilling,
+      cpfCnpj: src.cpfCnpjBilling,
       ie: src.ieBilling,
       entityType: src.entityTypeBilling,
       contactName: src.contactNameBilling,
@@ -108,7 +135,7 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
     },
     delivery: {
       legalName: src.legalNameShipping,
-      cpfCnpf: src.cpfCnpfShipping,
+      cpfCnpf: src.cpfCnpjShipping,
       ie: src.ieShipping,
       entityType: src.entityTypeShipping,
       contactName: src.contactNameShipping,
@@ -137,17 +164,42 @@ function mapExternalOrderToOrderDetails(src: ExternalOrder): OrderDetails {
       interestAmount: toNumber(src.totalInterestAmount, 0),
       status: src.paymentStatus,
       paymentDate: src.paymentDate,
+      expirationDate: undefined,
     },
-    products: [],
+    products: Array.isArray(src.products)
+      ? src.products.map((p) => ({
+          code: p.codPro,
+          name: [p.descrPro, p.descrProCor, p.descrProTam].filter(Boolean).join(" ").trim(),
+          imageUrl: p.imageDefaultUrl || "",
+          unitPrice: toNumber(p.unitPricePro, 0),
+          quantity: toNumber(p.quantityPro, 0),
+          total: toNumber(p.totalProductAmount, 0),
+          orderProductId: p.orderProductId,
+          chavePro: p.chavePro,
+          codPro: p.codPro,
+          descrPro: p.descrPro,
+          descrProCor: p.descrProCor,
+          descrProTam: p.descrProTam,
+          quantityPro: p.quantityPro,
+          unitPriceTablePro: p.unitPriceTablePro,
+          unitPricePro: p.unitPricePro,
+          totalServiceAmount: p.totalServiceAmount,
+          totalProductAmount: p.totalProductAmount,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          personals: Array.isArray(p.personals) ? p.personals : [],
+        }))
+      : [],
     totalProductsAmount: toNumber(src.totalProductsAmount, 0),
     totalDiscountAmount: toNumber(src.totalDiscountAmount, 0),
     totalShippingAmount: toNumber(src.totalShippingAmount, 0),
     totalInterestAmount: toNumber(src.totalInterestAmount, 0),
     orderTotalAmount: toNumber(src.orderTotalAmount, 0),
-    purchaseDate: src.purchaseDate || "",
-    expectedDeliveryDate: src.expectedDeliveryDate,
-    deliveredDate: src.deliveryDate,
-    paymentDate: src.paymentDate,
+    createdAt: src.createdAt || "",
+    updatedAt: src.updatedAt || "",
+    expectedDeliveryDate: src.expectedDeliveryDate || "",
+    deliveredDate: src.deliveryDate || "",
+    paymentDate: src.paymentDate || "",
   };
 }
 
